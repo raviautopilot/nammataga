@@ -3,8 +3,12 @@ package tests
 import (
 	"flag"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -110,8 +114,85 @@ func SetupSuite() {
 	})
 }
 
+var (
+	chromeDriverCmd *exec.Cmd
+	chromeDriverMu  sync.Mutex
+)
+
+func startChromeDriverIfNeeded() {
+	chromeDriverMu.Lock()
+	defer chromeDriverMu.Unlock()
+
+	if chromeDriverCmd != nil {
+		return
+	}
+
+	seleniumURL := "http://localhost:9515"
+	if GlobalConfig != nil && GlobalConfig.SeleniumURL != "" {
+		seleniumURL = GlobalConfig.SeleniumURL
+	}
+
+	u, err := url.Parse(seleniumURL)
+	var addr string
+	var port string = "9515"
+	if err == nil {
+		addr = u.Host
+		if _, p, err := net.SplitHostPort(u.Host); err == nil {
+			port = p
+		} else if !strings.Contains(u.Host, ":") {
+			addr = u.Host + ":80"
+		}
+	} else {
+		addr = "127.0.0.1:9515"
+	}
+
+	// Check if port is already listening
+	conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+	if err == nil {
+		conn.Close()
+		// Chromedriver or another service is already running on this port, nothing to do
+		return
+	}
+
+	// Start chromedriver in the background
+	logger.Info("Auto-starting chromedriver on port %s...", port)
+	cmd := exec.Command("chromedriver", "--port="+port)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	if err := cmd.Start(); err != nil {
+		logger.Warn("Failed to auto-start chromedriver: %v. Tests might fail if webdriver is not running.", err)
+		return
+	}
+	chromeDriverCmd = cmd
+
+	// Wait up to 3 seconds for it to start
+	for i := 0; i < 15; i++ {
+		c, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+		if err == nil {
+			c.Close()
+			logger.Info("Chromedriver started successfully on port %s.", port)
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+func stopChromeDriver() {
+	chromeDriverMu.Lock()
+	defer chromeDriverMu.Unlock()
+
+	if chromeDriverCmd != nil && chromeDriverCmd.Process != nil {
+		logger.Info("Stopping auto-started chromedriver...")
+		_ = chromeDriverCmd.Process.Kill()
+		_ = chromeDriverCmd.Wait()
+		chromeDriverCmd = nil
+	}
+}
+
 // TeardownSuite generates test execution reports.
 func TeardownSuite() {
+	stopChromeDriver()
+
 	rep := report.GetGlobalReporter()
 	if err := rep.GenerateReports(ExecutionReportDir); err != nil {
 		logger.Error("Failed to compile test reports: %v", err)
@@ -147,6 +228,8 @@ func RunAPITest(t *testing.T, name string, fn func(t *testing.T, c *client.Clien
 
 // RunUITest is a wrapper executing a UI test case, injecting a Page Object model, managing ChromeDriver, and capturing screenshots on failure.
 func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) {
+	startChromeDriverIfNeeded()
+
 	rep := report.GetGlobalReporter()
 	startTime := time.Now()
 
