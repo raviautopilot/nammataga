@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tebeka/selenium"
 	"e2e-template/pkg/ui"
 	"e2e-template/tests"
+
+	"github.com/tebeka/selenium"
 )
 
 func TestUI_02_LoginValidation(t *testing.T) {
