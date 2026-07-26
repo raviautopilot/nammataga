@@ -141,3 +141,23 @@ func (p *Page) CaptureScreenshot(testName string) (string, error) {
 	logger.Info("Screenshot captured: %s", fullPath)
 	return fullPath, nil
 }
+
+// FindElementByTestID finds a web element by data-testid.
+func (p *Page) FindElementByTestID(testID string, timeout time.Duration) (selenium.WebElement, error) {
+	return p.WaitUntilVisible(fmt.Sprintf("css:[data-testid=\"%s\"]", testID), timeout)
+}
+
+// ClickByTestID finds an element by data-testid and clicks it.
+func (p *Page) ClickByTestID(testID string, timeout time.Duration) error {
+	return p.Click(fmt.Sprintf("css:[data-testid=\"%s\"]", testID), timeout)
+}
+
+// SendKeysByTestID finds an element by data-testid, clears it, and types text.
+func (p *Page) SendKeysByTestID(testID string, text string, timeout time.Duration) error {
+	return p.SendKeys(fmt.Sprintf("css:[data-testid=\"%s\"]", testID), text, timeout)
+}
+
+// GetTextByTestID finds an element by data-testid and retrieves its text.
+func (p *Page) GetTextByTestID(testID string, timeout time.Duration) (string, error) {
+	return p.GetText(fmt.Sprintf("css:[data-testid=\"%s\"]", testID), timeout)
+}

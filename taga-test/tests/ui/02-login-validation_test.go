@@ -1,64 +1,59 @@
 package ui_tests
 
 import (
-	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
 	"e2e-template/pkg/ui"
-	"e2e-template/pkg/ui/pages"
 	"e2e-template/tests"
 )
 
 func TestUI_02_LoginValidation(t *testing.T) {
-	// Start a local HTTP test server containing the target UI components
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, `
-			<!DOCTYPE html>
-			<html>
-			<head><title>Mock Login Portal</title></head>
-			<body>
-				<h2>Login</h2>
-				<form onsubmit="event.preventDefault(); document.getElementById('error-lbl').innerText = 'Invalid username or password';">
-					<input type="text" id="username" placeholder="Username"><br/>
-					<input type="password" id="password" placeholder="Password"><br/>
-					<button type="submit">Submit</button>
-				</form>
-				<div class="error-message" id="error-lbl"></div>
-			</body>
-			</html>
-		`)
-	})
+	tests.RunUITest(t, "Verify Nammataga Login Validation", func(t *testing.T, page *ui.Page) {
+		targetURL := tests.GlobalConfig.UiURL
+		if targetURL == "" {
+			t.Fatal("GlobalConfig.UiURL is empty")
+		}
 
-	server := httptest.NewServer(mux)
-	defer server.Close()
-
-	tests.RunUITest(t, "Verify Login Screen Error Message", func(t *testing.T, page *ui.Page) {
-		// 1. Navigate to target mock web app
-		if err := page.Driver.Get(server.URL); err != nil {
+		// 1. Navigate to target web app
+		if err := page.Driver.Get(targetURL); err != nil {
 			t.Fatalf("Failed to load page URL: %v", err)
 		}
 
-		loginPage := pages.NewLoginPage(page.Driver, page.ScreenshotDir)
-
-		// 2. Perform credentials login sequence
-		err := loginPage.Login("test-user", "incorrect-pwd", 3*time.Second)
+		// 2. Click: testid-member-login-button
+		err := page.ClickByTestID("testid-member-login-button", 5*time.Second)
 		if err != nil {
-			t.Fatalf("Form submission action failed: %v", err)
+			t.Fatalf("Failed to click member login button: %v", err)
 		}
 
-		// 3. Verify screen renders the error validation message
-		errMsg, err := loginPage.GetAlertText(3*time.Second)
+		// 3. Send value: testid-login-identifier-input (testuser@gmail.com)
+		err = page.SendKeysByTestID("testid-login-identifier-input", "testuser@gmail.com", 5*time.Second)
 		if err != nil {
-			t.Fatalf("Failed to retrieve error text from label: %v", err)
+			t.Fatalf("Failed to send login identifier: %v", err)
 		}
 
-		if errMsg != "Invalid username or password" {
-			t.Errorf("Expected validation text 'Invalid username or password', got '%s'", errMsg)
+		// 4. Send value: testid-login-password-input (test123)
+		err = page.SendKeysByTestID("testid-login-password-input", "test123", 5*time.Second)
+		if err != nil {
+			t.Fatalf("Failed to send login password: %v", err)
+		}
+
+		// 5. Click: testid-login-submit-button
+		err = page.ClickByTestID("testid-login-submit-button", 5*time.Second)
+		if err != nil {
+			t.Fatalf("Failed to click login submit button: %v", err)
+		}
+
+		// 6. Click: testid-forgot-password-button
+		err = page.ClickByTestID("testid-forgot-password-button", 5*time.Second)
+		if err != nil {
+			t.Fatalf("Failed to click forgot password button: %v", err)
+		}
+
+		// 7. Click: testid-change-password-button
+		err = page.ClickByTestID("testid-change-password-button", 5*time.Second)
+		if err != nil {
+			t.Fatalf("Failed to click change password button: %v", err)
 		}
 	})
 }
