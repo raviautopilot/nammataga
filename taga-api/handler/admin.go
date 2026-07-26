@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -21,6 +20,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -106,7 +106,7 @@ func HandleMemberRegistration(c *gin.Context) {
 
 	if len(allErrors) > 0 {
 		if err := sendErrorEmailToAdmin(allErrors); err != nil {
-			log.Printf("Failed to send error email to admin: %v", err)
+			config.Logger.Error("Failed to send error email to admin", zap.Error(err))
 		}
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"error":   "Registration validation failed",
@@ -120,7 +120,7 @@ func HandleMemberRegistration(c *gin.Context) {
 		tempPassword := generateTempPassword()
 
 		if err := storeMemberDetails(&reg, tempPassword, existingMembers); err != nil {
-			log.Printf("Failed to store member %s: %v", reg.EmailId, err)
+			config.Logger.Error("Failed to store member details", zap.String("email", reg.EmailId), zap.Error(err))
 			results = append(results, map[string]interface{}{
 				"email":  reg.EmailId,
 				"status": "failed",
@@ -130,7 +130,7 @@ func HandleMemberRegistration(c *gin.Context) {
 		}
 
 		if err := sendSuccessEmail(reg.EmailId, tempPassword); err != nil {
-			log.Printf("Failed to send email to %s: %v", reg.EmailId, err)
+			config.Logger.Error("Failed to send registration success email", zap.String("email", reg.EmailId), zap.Error(err))
 		}
 
 		results = append(results, map[string]interface{}{

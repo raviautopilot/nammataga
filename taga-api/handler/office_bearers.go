@@ -2,10 +2,12 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
+	"taga-api/config"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 /*
@@ -48,15 +50,15 @@ func readJSONFile(path string, target interface{}) error {
 // @Success 200 {array} StateExecutive
 // @Router /api/office-bearers/state-executive [get]
 func GetStateExecutive(c *gin.Context) {
-	fmt.Println("🔥 GetStateExecutive HIT")
+	config.Logger.Info("GetStateExecutive HIT")
 	var data []StateExecutive
 
 	filePath := "data/office_bearers/state-executive.json"
 
-	// 🔥 STEP 1: Check file exists
+	// Check file exists
 	file, err := os.ReadFile(filePath)
 	if err != nil {
-		fmt.Println("🔥 FILE READ ERROR:", err)
+		config.Logger.Error("FILE READ ERROR", zap.Error(err))
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -64,13 +66,13 @@ func GetStateExecutive(c *gin.Context) {
 		return
 	}
 
-	// 🔥 STEP 2: Debug file content
-	fmt.Println("✅ FILE READ SUCCESS")
+	// Debug file content
+	config.Logger.Debug("FILE READ SUCCESS")
 
-	// 🔥 STEP 3: Unmarshal JSON
+	// Unmarshal JSON
 	err = json.Unmarshal(file, &data)
 	if err != nil {
-		fmt.Println("🔥 JSON PARSE ERROR:", err)
+		config.Logger.Error("JSON PARSE ERROR", zap.Error(err))
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -78,7 +80,7 @@ func GetStateExecutive(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("✅ DATA LOADED:", data)
+	config.Logger.Debug("DATA LOADED", zap.Any("data", data))
 
 	c.JSON(http.StatusOK, data)
 }

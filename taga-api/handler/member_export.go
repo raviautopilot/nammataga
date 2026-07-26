@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"taga-api/config"
 	"time"
 
 	"taga-api/service/member"
 
 	"github.com/gin-gonic/gin"
 	"github.com/xuri/excelize/v2"
+	"go.uber.org/zap"
 )
 
 // ExportMembersToExcel godoc
@@ -29,9 +31,10 @@ func ExportMembersToExcel(c *gin.Context) {
 	paymentStatus := c.Query("payment_status")
 
 	// Debug: Log received filters
-	fmt.Printf("=== Export Members Called ===\n")
-	fmt.Printf("District filter: '%s'\n", district)
-	fmt.Printf("Payment Status filter: '%s'\n", paymentStatus)
+	config.Logger.Info("Export Members called",
+		zap.String("district_filter", district),
+		zap.String("payment_status_filter", paymentStatus),
+	)
 
 	// Get all members
 	allMembers, err := getAllMembersFromStorage()
@@ -40,18 +43,19 @@ func ExportMembersToExcel(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("Total members in storage: %d\n", len(allMembers))
+	config.Logger.Info("Total members in storage", zap.Int("count", len(allMembers)))
 
 	// Apply filters
 	filteredMembers := make([]map[string]interface{}, 0)
 	for idx, memberMap := range allMembers {
 		// Debug first few members
 		if idx < 5 {
-			fmt.Printf("Member %d - Name: '%s', Working District: '%s', Payment Status: '%s'\n",
-				idx,
-				getMapString(memberMap, "name"),
-				getMapString(memberMap, "working_district"),
-				getMapString(memberMap, "payment_status"))
+			config.Logger.Debug("Member details for export",
+				zap.Int("index", idx),
+				zap.String("name", getMapString(memberMap, "name")),
+				zap.String("working_district", getMapString(memberMap, "working_district")),
+				zap.String("payment_status", getMapString(memberMap, "payment_status")),
+			)
 		}
 
 		// Apply district filter
@@ -59,7 +63,10 @@ func ExportMembersToExcel(c *gin.Context) {
 			workingDistrict := getMapString(memberMap, "working_district")
 			if !strings.EqualFold(workingDistrict, district) {
 				if idx < 3 {
-					fmt.Printf("  Skipped due to district: '%s' != '%s'\n", workingDistrict, district)
+					config.Logger.Debug("Skipped member due to district mismatch",
+						zap.String("member_district", workingDistrict),
+						zap.String("filter_district", district),
+					)
 				}
 				continue
 			}
@@ -70,8 +77,11 @@ func ExportMembersToExcel(c *gin.Context) {
 			memberPaymentStatus := getMapString(memberMap, "payment_status")
 			// Debug comparison
 			if idx < 5 {
-				fmt.Printf("  Comparing payment: member='%s' vs filter='%s', EqualFold=%v\n",
-					memberPaymentStatus, paymentStatus, strings.EqualFold(memberPaymentStatus, paymentStatus))
+				config.Logger.Debug("Comparing payment status for export",
+					zap.String("member_status", memberPaymentStatus),
+					zap.String("filter_status", paymentStatus),
+					zap.Bool("equal", strings.EqualFold(memberPaymentStatus, paymentStatus)),
+				)
 			}
 			if !strings.EqualFold(memberPaymentStatus, paymentStatus) {
 				continue
@@ -81,18 +91,18 @@ func ExportMembersToExcel(c *gin.Context) {
 		filteredMembers = append(filteredMembers, memberMap)
 	}
 
-	fmt.Printf("Filtered members count: %d\n", len(filteredMembers))
+	config.Logger.Info("Filtered members count for export", zap.Int("count", len(filteredMembers)))
 
 	// If no members found, still create Excel with headers and summary
 	if len(filteredMembers) == 0 {
-		fmt.Printf("WARNING: No members found with current filters!\n")
+		config.Logger.Warn("No members found with current filters for export")
 	}
 
 	// Create new Excel file
 	f := excelize.NewFile()
 	defer func() {
 		if err := f.Close(); err != nil {
-			fmt.Println("Error closing Excel file:", err)
+			config.Logger.Error("Error closing Excel file", zap.Error(err))
 		}
 	}()
 
@@ -124,7 +134,7 @@ func ExportMembersToExcel(c *gin.Context) {
 		},
 	})
 	if err != nil {
-		fmt.Println("Error creating header style:", err)
+		config.Logger.Error("Error creating header style", zap.Error(err))
 	}
 
 	for i, header := range headers {
@@ -216,7 +226,7 @@ func ExportMembersToExcel(c *gin.Context) {
 	summarySheet := "Summary"
 	_, err = f.NewSheet(summarySheet)
 	if err != nil {
-		fmt.Println("Error creating summary sheet:", err)
+		config.Logger.Error("Error creating summary sheet", zap.Error(err))
 	}
 
 	// Summary title
@@ -308,15 +318,19 @@ func getAllMembersFromStorage() ([]map[string]interface{}, error) {
 		return nil, err
 	}
 
-	fmt.Printf("Raw members loaded from file: %d\n", len(members))
+	config.Logger.Debug("Raw members loaded from file for export", zap.Int("count", len(members)))
 
 	// Convert to slice of maps for easier handling
 	result := make([]map[string]interface{}, len(members))
 	for i, m := range members {
 		// Debug raw payment status for first few members
 		if i < 5 {
-			fmt.Printf("Raw member %d - Name: '%s', PaymentStatus: '%s', SubscriptionActive: %v\n",
-				i, m.Name, m.PaymentStatus, m.SubscriptionActive)
+			config.Logger.Debug("Raw member info for export",
+				zap.Int("index", i),
+				zap.String("name", m.Name),
+				zap.String("payment_status", m.PaymentStatus),
+				zap.Bool("subscription_active", m.SubscriptionActive),
+			)
 		}
 
 		// Determine membership status based on payment

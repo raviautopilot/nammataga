@@ -2,12 +2,13 @@ package handler
 
 import (
 	"encoding/csv"
-	"fmt"
 	"net/http"
 	"os"
+	"taga-api/config"
 	"taga-api/service"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // GetResourceCategories godoc
@@ -21,7 +22,7 @@ import (
 func GetResourceCategories(c *gin.Context) {
 	data, err := service.LoadResources()
 	if err != nil {
-		fmt.Println("ERROR in GetResourceCategories:", err)
+		config.Logger.Error("ERROR in GetResourceCategories", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -65,7 +66,7 @@ func GetDocumentsByCategory(c *gin.Context) {
 
 	data, err := service.LoadResources()
 	if err != nil {
-		fmt.Println("ERROR in GetResourceCategories:", err)
+		config.Logger.Error("ERROR in GetDocumentsByCategory", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
