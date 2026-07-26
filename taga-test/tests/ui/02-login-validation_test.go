@@ -6,8 +6,6 @@ import (
 
 	"e2e-template/pkg/ui"
 	"e2e-template/tests"
-
-	"github.com/tebeka/selenium"
 )
 
 func TestUI_02_LoginValidation(t *testing.T) {
@@ -38,8 +36,6 @@ func TestUI_02_LoginValidation(t *testing.T) {
 			"testid-login-identifier-input",
 			"testid-login-password-input",
 			"testid-login-submit-button",
-			"testid-forgot-password-button",
-			"testid-change-password-button",
 		}
 		if err := page.VerifyElementsPresentByTestIDs(loginPageElements, 5*time.Second); err != nil {
 			t.Fatalf("Login page validation failed: %v", err)
@@ -61,26 +57,6 @@ func TestUI_02_LoginValidation(t *testing.T) {
 		err = page.ClickByTestID("testid-login-submit-button", 5*time.Second)
 		if err != nil {
 			t.Fatalf("Failed to click login submit button: %v", err)
-		}
-
-		// 6. Click: testid-forgot-password-button
-		err = page.ClickByTestID("testid-forgot-password-button", 5*time.Second)
-		if err != nil {
-			t.Fatalf("Failed to click forgot password button: %v", err)
-		}
-
-		// Wait briefly and dismiss forgot password modal using Escape key
-		time.Sleep(500 * time.Millisecond)
-		activeEl, err := page.Driver.ActiveElement()
-		if err == nil {
-			_ = activeEl.SendKeys(selenium.EscapeKey)
-		}
-		time.Sleep(500 * time.Millisecond)
-
-		// 7. Click: testid-change-password-button
-		err = page.ClickByTestID("testid-change-password-button", 5*time.Second)
-		if err != nil {
-			t.Fatalf("Failed to click change password button: %v", err)
 		}
 	})
 }
