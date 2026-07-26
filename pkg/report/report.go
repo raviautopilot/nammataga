@@ -7,11 +7,16 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	texttemplate "text/template"
 	"time"
 )
 
 //go:embed template.html
 var htmlTemplate string
+
+//go:embed template.md
+var mdTemplate string
+
 
 // TestResult records metadata for a single test case execution.
 type TestResult struct {
@@ -116,7 +121,28 @@ func (r *Reporter) GenerateReports(outputDir string) error {
 	if err != nil {
 		return err
 	}
-	defer htmlFile.Close()
+	htmlErr := tmpl.Execute(htmlFile, r)
+	htmlFile.Close()
+	if htmlErr != nil {
+		return htmlErr
+	}
 
-	return tmpl.Execute(htmlFile, r)
+	// 3. Markdown Report
+	mdPath := filepath.Join(filepath.Dir(outputDir), "test-report.md")
+	mdTmpl, err := texttemplate.New("markdownReport").Parse(mdTemplate)
+	if err != nil {
+		return err
+	}
+
+	mdFile, err := os.Create(mdPath)
+	if err != nil {
+		return err
+	}
+	mdErr := mdTmpl.Execute(mdFile, r)
+	mdFile.Close()
+	if mdErr != nil {
+		return mdErr
+	}
+
+	return nil
 }
