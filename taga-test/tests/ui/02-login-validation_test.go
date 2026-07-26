@@ -20,10 +20,27 @@ func TestUI_02_LoginValidation(t *testing.T) {
 			t.Fatalf("Failed to load page URL: %v", err)
 		}
 
+		// Verify member login button is present on landing page first
+		if err := page.VerifyElementsPresentByTestIDs([]string{"testid-member-login-button"}, 5*time.Second); err != nil {
+			t.Fatalf("Landing page validation failed: %v", err)
+		}
+
 		// 2. Click: testid-member-login-button
 		err := page.ClickByTestID("testid-member-login-button", 5*time.Second)
 		if err != nil {
 			t.Fatalf("Failed to click member login button: %v", err)
+		}
+
+		// Verify all login form elements are loaded on the login page/modal before proceeding
+		loginPageElements := []string{
+			"testid-login-identifier-input",
+			"testid-login-password-input",
+			"testid-login-submit-button",
+			"testid-forgot-password-button",
+			"testid-change-password-button",
+		}
+		if err := page.VerifyElementsPresentByTestIDs(loginPageElements, 5*time.Second); err != nil {
+			t.Fatalf("Login page validation failed: %v", err)
 		}
 
 		// 3. Send value: testid-login-identifier-input (testuser@gmail.com)

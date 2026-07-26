@@ -161,3 +161,24 @@ func (p *Page) SendKeysByTestID(testID string, text string, timeout time.Duratio
 func (p *Page) GetTextByTestID(testID string, timeout time.Duration) (string, error) {
 	return p.GetText(fmt.Sprintf("css:[data-testid=\"%s\"]", testID), timeout)
 }
+
+// VerifyElementsPresentByTestIDs checks if all specified testID elements are visible on the page.
+// The first check uses the full timeout to allow components to load, while subsequent checks use a short 200ms timeout
+// to prevent cumulative delays.
+func (p *Page) VerifyElementsPresentByTestIDs(testIDs []string, timeout time.Duration) error {
+	var missing []string
+	for i, id := range testIDs {
+		t := timeout
+		if i > 0 {
+			t = 200 * time.Millisecond
+		}
+		_, err := p.FindElementByTestID(id, t)
+		if err != nil {
+			missing = append(missing, id)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("missing expected elements on page: %v", missing)
+	}
+	return nil
+}
