@@ -1,4 +1,4 @@
-package tests
+package ui_tests
 
 import (
 	"fmt"
@@ -9,9 +9,10 @@ import (
 
 	"e2e-template/pkg/ui"
 	"e2e-template/pkg/ui/pages"
+	"e2e-template/tests"
 )
 
-func TestUI_LoginValidation(t *testing.T) {
+func TestUI_02_LoginValidation(t *testing.T) {
 	// Start a local HTTP test server containing the target UI components
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +37,7 @@ func TestUI_LoginValidation(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	RunUITest(t, "Verify Login Screen Error Message", func(t *testing.T, page *ui.Page) {
+	tests.RunUITest(t, "Verify Login Screen Error Message", func(t *testing.T, page *ui.Page) {
 		// 1. Navigate to target mock web app
 		if err := page.Driver.Get(server.URL); err != nil {
 			t.Fatalf("Failed to load page URL: %v", err)
@@ -58,34 +59,6 @@ func TestUI_LoginValidation(t *testing.T) {
 
 		if errMsg != "Invalid username or password" {
 			t.Errorf("Expected validation text 'Invalid username or password', got '%s'", errMsg)
-		}
-	})
-}
-
-func TestUI_FailingExample(t *testing.T) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, `<html><body><h1>Mock Target Content</h1></body></html>`)
-	})
-
-	server := httptest.NewServer(mux)
-	defer server.Close()
-
-	RunUITest(t, "Intentionally Failing UI Test", func(t *testing.T, page *ui.Page) {
-		if err := page.Driver.Get(server.URL); err != nil {
-			t.Fatalf("Failed to navigate to mock url: %v", err)
-		}
-
-		// Try to verify header text
-		text, err := page.GetText("css:h1", 3*time.Second)
-		if err != nil {
-			t.Fatalf("Failed to get header text: %v", err)
-		}
-
-		// Assertion will fail, triggering the deferred failure screenshot handler
-		if text != "Expected Correct Header Text" {
-			t.Errorf("Header validation failed: expected 'Expected Correct Header Text', got '%s'", text)
 		}
 	})
 }

@@ -100,8 +100,101 @@ func (r *Reporter) GenerateReports(outputDir string) error {
 		return err
 	}
 
-	// 1. JSON Report
+	// Acquire a simple cross-process file lock
+	lockPath := filepath.Join(outputDir, "report.lock")
+	var lockFile *os.File
+	var err error
+	for i := 0; i < 50; i++ {
+		lockFile, err = os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+		if err == nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if err == nil {
+		defer func() {
+			lockFile.Close()
+			os.Remove(lockPath)
+		}()
+	}
+
 	jsonPath := filepath.Join(outputDir, "report.json")
+
+	// Try to load and merge existing report
+	var existingResults []TestResult
+	var existingStartTime time.Time
+	if data, err := os.ReadFile(jsonPath); err == nil {
+		var existingReporter struct {
+			Summary Summary      `json:"summary"`
+			Results []TestResult `json:"results"`
+		}
+		if err := json.Unmarshal(data, &existingReporter); err == nil {
+			existingResults = existingReporter.Results
+			existingStartTime = existingReporter.Summary.StartTime
+		}
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Merge results by name
+	var mergedResults []TestResult
+	seen := make(map[string]bool)
+
+	// Helper to find index
+	findResultIndex := func(results []TestResult, name string) int {
+		for idx, res := range results {
+			if res.Name == name {
+				return idx
+			}
+		}
+		return -1
+	}
+
+	// Add existing results, updated if they exist in the current run
+	for _, res := range existingResults {
+		if idx := findResultIndex(r.Results, res.Name); idx != -1 {
+			mergedResults = append(mergedResults, r.Results[idx])
+		} else {
+			mergedResults = append(mergedResults, res)
+		}
+		seen[res.Name] = true
+	}
+
+	// Add remaining new results from the current run
+	for _, res := range r.Results {
+		if !seen[res.Name] {
+			mergedResults = append(mergedResults, res)
+			seen[res.Name] = true
+		}
+	}
+
+	// Recalculate summary metrics
+	var total, passed, failed, skipped int
+	for _, res := range mergedResults {
+		total++
+		switch res.Status {
+		case "passed":
+			passed++
+		case "failed":
+			failed++
+		case "skipped":
+			skipped++
+		}
+	}
+
+	r.Summary.Total = total
+	r.Summary.Passed = passed
+	r.Summary.Failed = failed
+	r.Summary.Skipped = skipped
+	if !existingStartTime.IsZero() && existingStartTime.Before(r.Summary.StartTime) {
+		r.Summary.StartTime = existingStartTime
+		r.Summary.TotalDuration = r.Summary.EndTime.Sub(r.Summary.StartTime)
+		r.Summary.TotalDurationStr = r.Summary.TotalDuration.Round(time.Millisecond).String()
+	}
+	r.Results = mergedResults
+
+	// 1. JSON Report
 	jsonData, err := json.MarshalIndent(r, "", "  ")
 	if err != nil {
 		return err

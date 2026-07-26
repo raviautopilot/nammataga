@@ -34,6 +34,9 @@ for i in {1..10}; do
     sleep 0.5
 done
 
+# 3.5. Export a shared timestamp so all test packages run under the same run folder
+export E2E_RUN_TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+
 # 4. Run the Go E2E tests in headless mode
 echo "Running E2E test suite..."
 E2E_HEADLESS=true go test -v ./tests/... "$@"
