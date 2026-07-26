@@ -418,6 +418,7 @@ confirmPassword: ''
 setShowChangePasswordDialog(true);
 
 }}
+data-testid="testid-change-password-button"
 >
 Change Password
 </Button>

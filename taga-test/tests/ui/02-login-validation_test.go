@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tebeka/selenium"
 	"e2e-template/pkg/ui"
 	"e2e-template/tests"
 )
@@ -66,6 +67,14 @@ func TestUI_02_LoginValidation(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to click forgot password button: %v", err)
 		}
+
+		// Wait briefly and dismiss forgot password modal using Escape key
+		time.Sleep(500 * time.Millisecond)
+		activeEl, err := page.Driver.ActiveElement()
+		if err == nil {
+			_ = activeEl.SendKeys(selenium.EscapeKey)
+		}
+		time.Sleep(500 * time.Millisecond)
 
 		// 7. Click: testid-change-password-button
 		err = page.ClickByTestID("testid-change-password-button", 5*time.Second)
