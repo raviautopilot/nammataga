@@ -65,12 +65,30 @@ get_file_size() {
     fi
 }
 
+# Function to check if a file or directory is ignored by git
+is_ignored() {
+    local path="$1"
+    if command -v git &>/dev/null && git rev-parse --is-inside-work-tree &>/dev/null; then
+        git check-ignore -q "$path" 2>/dev/null
+        return $?
+    else
+        # Fallback basic checks if not in a git repo
+        if [[ "$path" == *"/.git"* || "$path" == *"/node_modules"* || "$path" == *"/graphify-out"* || "$path" == ".git" || "$path" == "node_modules" || "$path" == "graphify-out" ]]; then
+            return 0
+        fi
+        return 1
+    fi
+}
+
 # Function to check if we should process a file based on size
 should_process_file() {
     local file_path="$1"
     local max_size_mb=5  # Skip files larger than 5MB
     
     if [ -f "$file_path" ]; then
+        if is_ignored "$file_path"; then
+            return 1  # Don't process
+        fi
         local size_bytes=$(wc -c < "$file_path" 2>/dev/null || echo 0)
         local size_mb=$((size_bytes / 1048576))
         if [ $size_mb -gt $max_size_mb ]; then
@@ -85,9 +103,28 @@ get_files_sorted_by_size() {
     local directory="$1"
     local pattern="${2:-*.py,*.js,*.ts,*.go,*.rs,*.java,*.cpp,*.c,*.h,*.rb,*.php,*.cs}"
     
-    # Find all relevant files and sort by size
-    find "$directory" -type f \( -name "*.py" -o -name "*.js" -o -name "*.ts" -o -name "*.go" -o -name "*.rs" -o -name "*.java" -o -name "*.cpp" -o -name "*.c" -o -name "*.h" -o -name "*.rb" -o -name "*.php" -o -name "*.cs" \) 2>/dev/null | while read -r file; do
-        if should_process_file "$file"; then
+    local all_found_files
+    all_found_files=$(find "$directory" -type f \( -name "*.py" -o -name "*.js" -o -name "*.ts" -o -name "*.go" -o -name "*.rs" -o -name "*.java" -o -name "*.cpp" -o -name "*.c" -o -name "*.h" -o -name "*.rb" -o -name "*.php" -o -name "*.cs" \) 2>/dev/null)
+    
+    if [ -z "$all_found_files" ]; then
+        return 0
+    fi
+    
+    local filtered_files
+    if command -v git &>/dev/null && git rev-parse --is-inside-work-tree &>/dev/null; then
+        local ignored_files
+        ignored_files=$(echo "$all_found_files" | git check-ignore --stdin --no-index 2>/dev/null)
+        filtered_files=$(awk 'NR==FNR {ignored[$0]=1; next} !ignored[$0]' <(echo "$ignored_files") <(echo "$all_found_files"))
+    else
+        filtered_files="$all_found_files"
+    fi
+    
+    if [ -z "$filtered_files" ]; then
+        return 0
+    fi
+    
+    echo "$filtered_files" | while read -r file; do
+        if [ -n "$file" ] && should_process_file "$file"; then
             echo "$(wc -c < "$file" 2>/dev/null || echo 0) $file"
         fi
     done | sort -n | cut -d' ' -f2-
@@ -334,7 +371,9 @@ if [ -f "$GRAPHIFY_OUTPUT/graph.json" ]; then
                 folders=()
                 for dir in */; do
                     if [ -d "$dir" ] && [ "$dir" != "node_modules/" ] && [ "$dir" != ".git/" ] && [ "$dir" != "$GRAPHIFY_OUTPUT/" ]; then
-                        folders+=("${dir%/}")
+                        if ! is_ignored "$dir"; then
+                            folders+=("${dir%/}")
+                        fi
                     fi
                 done
                 process_folders_with_limiting "${folders[@]}"
@@ -369,10 +408,10 @@ if [ -f "$GRAPHIFY_OUTPUT/graph.json" ]; then
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             for i in {0..9}; do
                 if [ $i -lt $total_files ]; then
-                    local file="${all_files[$i]}"
-                    local size=$(get_file_size "$file")
-                    local filename=$(basename "$file")
-                    local tokens=$(estimate_tokens "$file")
+                    file="${all_files[$i]}"
+                    size=$(get_file_size "$file")
+                    filename=$(basename "$file")
+                    tokens=$(estimate_tokens "$file")
                     printf "  %2d. %-40s %8s  ~%5d tokens\n" $((i+1)) "$filename" "$size" "$tokens"
                 fi
             done
@@ -403,10 +442,10 @@ if [ -f "$GRAPHIFY_OUTPUT/graph.json" ]; then
                 print_info "📋 Files to process in this session:"
                 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 for i in "${!selected_files[@]}"; do
-                    local file="${selected_files[$i]}"
-                    local size=$(get_file_size "$file")
-                    local filename=$(basename "$file")
-                    local tokens=$(estimate_tokens "$file")
+                    file="${selected_files[$i]}"
+                    size=$(get_file_size "$file")
+                    filename=$(basename "$file")
+                    tokens=$(estimate_tokens "$file")
                     printf "  %2d. %-40s %8s  ~%5d tokens\n" $((i+1)) "$filename" "$size" "$tokens"
                 done
                 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -565,9 +604,9 @@ else
             
             # Show file size distribution
             print_info "File size distribution:"
-            local small=0 medium=0 large=0
+            small=0 medium=0 large=0
             for file in "${all_files[@]}"; do
-                local size=$(wc -c < "$file" 2>/dev/null || echo 0)
+                size=$(wc -c < "$file" 2>/dev/null || echo 0)
                 if [ $size -lt 10240 ]; then
                     small=$((small + 1))
                 elif [ $size -lt 102400 ]; then
