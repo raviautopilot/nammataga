@@ -15,6 +15,7 @@ import (
 type Page struct {
 	Driver        selenium.WebDriver
 	ScreenshotDir string
+	LastError     error
 }
 
 // NewPage initializes a base Page.
@@ -57,7 +58,9 @@ func (p *Page) WaitUntilVisible(locator string, timeout time.Duration) (selenium
 	}, timeout)
 
 	if err != nil {
-		return nil, fmt.Errorf("element '%s' was not visible after %v: %w", locator, timeout, err)
+		wrappedErr := fmt.Errorf("element '%s' was not visible after %v: %w", locator, timeout, err)
+		p.LastError = wrappedErr
+		return nil, wrappedErr
 	}
 	return elem, nil
 }
@@ -84,7 +87,9 @@ func (p *Page) WaitUntilClickable(locator string, timeout time.Duration) (seleni
 	}, timeout)
 
 	if err != nil {
-		return nil, fmt.Errorf("element '%s' was not clickable after %v: %w", locator, timeout, err)
+		wrappedErr := fmt.Errorf("element '%s' was not clickable after %v: %w", locator, timeout, err)
+		p.LastError = wrappedErr
+		return nil, wrappedErr
 	}
 	return elem, nil
 }
@@ -93,28 +98,46 @@ func (p *Page) WaitUntilClickable(locator string, timeout time.Duration) (seleni
 func (p *Page) Click(locator string, timeout time.Duration) error {
 	el, err := p.WaitUntilClickable(locator, timeout)
 	if err != nil {
+		p.LastError = err
 		return err
 	}
-	return el.Click()
+	err = el.Click()
+	if err != nil {
+		p.LastError = err
+		return err
+	}
+	return nil
 }
 
 // SendKeys waits for the element to be visible, clears it, and types text.
 func (p *Page) SendKeys(locator string, text string, timeout time.Duration) error {
 	el, err := p.WaitUntilVisible(locator, timeout)
 	if err != nil {
+		p.LastError = err
 		return err
 	}
 	_ = el.Clear()
-	return el.SendKeys(text)
+	err = el.SendKeys(text)
+	if err != nil {
+		p.LastError = err
+		return err
+	}
+	return nil
 }
 
 // GetText waits for the element to be visible and returns its text value.
 func (p *Page) GetText(locator string, timeout time.Duration) (string, error) {
 	el, err := p.WaitUntilVisible(locator, timeout)
 	if err != nil {
+		p.LastError = err
 		return "", err
 	}
-	return el.Text()
+	txt, err := el.Text()
+	if err != nil {
+		p.LastError = err
+		return "", err
+	}
+	return txt, nil
 }
 
 // CaptureScreenshot takes a PNG screenshot and writes it to the local screenshots/ directory.

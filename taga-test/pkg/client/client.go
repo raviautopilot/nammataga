@@ -57,6 +57,7 @@ type Client struct {
 	HTTPClient *http.Client
 	LogDir     string
 	mu         sync.Mutex
+	LastError  error
 }
 
 // NewClient initializes a new client with the given base URL and request logging directory.
@@ -71,7 +72,12 @@ func NewClient(baseURL string, timeout time.Duration, logDir string) *Client {
 }
 
 // SendHttpRequest executes the HTTP request, validates input/output pointers, performs auth, and logs details.
-func (c *Client) SendHttpRequest(method string, path string, headers map[string]string, reqBodyPtr interface{}, respBodyPtr interface{}, auth Authenticator) HttpError {
+func (c *Client) SendHttpRequest(method string, path string, headers map[string]string, reqBodyPtr interface{}, respBodyPtr interface{}, auth Authenticator) (httpErr HttpError) {
+	defer func() {
+		if httpErr != nil {
+			c.LastError = httpErr
+		}
+	}()
 	// 1. Validate pointers
 	if reqBodyPtr != nil {
 		val := reflect.ValueOf(reqBodyPtr)

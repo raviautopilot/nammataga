@@ -217,6 +217,9 @@ func RunAPITest(t *testing.T, name string, fn func(t *testing.T, c *client.Clien
 			if subT.Failed() {
 				status = "failed"
 				errStr = "API assertion or validation error."
+				if c.LastError != nil {
+					errStr = c.LastError.Error()
+				}
 			}
 
 			rep.Record(name, "API", status, duration, errStr, "")
@@ -251,6 +254,9 @@ func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) 
 			if subT.Failed() {
 				status = "failed"
 				errStr = "UI interaction or page assertion failure."
+				if page.LastError != nil {
+					errStr = page.LastError.Error()
+				}
 				if path, sErr := page.CaptureScreenshot(name); sErr == nil {
 					// Save just the filename to make it relative to the report file
 					screenshotPath = "screenshots/" + filepath.Base(path)
