@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E2E Test Execution Report</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #6366f1;
+            --success: #10b981;
+            --failure: #ef4444;
+            --warning: #f59e0b;
+            --border: #334155;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.25rem;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .timestamp {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-total { color: var(--primary); }
+        .stat-passed { color: var(--success); }
+        .stat-failed { color: var(--failure); }
+        .stat-skipped { color: var(--warning); }
+
+        .progress-bar-container {
+            background-color: var(--border);
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 2.5rem;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(to right, var(--success), #34d399);
+            transition: width 0.5s ease;
+        }
+
+        .test-list {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .test-header {
+            background-color: rgba(51, 65, 85, 0.5);
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+        }
+
+        .test-row {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            align-items: center;
+            transition: background-color 0.15s ease;
+        }
+
+        .test-row:last-child {
+            border-bottom: none;
+        }
+
+        .test-row:hover {
+            background-color: rgba(51, 65, 85, 0.2);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-passed {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .badge-failed {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--failure);
+        }
+
+        .badge-skipped {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .badge-type {
+            background-color: rgba(99, 102, 241, 0.15);
+            color: var(--primary);
+        }
+
+        .test-error {
+            grid-column: 1 / -1;
+            background-color: rgba(239, 68, 68, 0.05);
+            border-left: 4px solid var(--failure);
+            padding: 1rem;
+            margin-top: 0.5rem;
+            border-radius: 0 8px 8px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 0.875rem;
+        }
+
+        .screenshot-link {
+            color: #38bdf8;
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .screenshot-link:hover {
+            text-decoration: underline;
+        }
+
+        .screenshot-preview {
+            max-width: 400px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-top: 0.5rem;
+            display: block;
+        }
+
+        .meta-info {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>E2E Test Execution Report</h1>
+                <div class="timestamp">Started at: {{.Summary.StartTime.Format "2006-01-02 15:04:05"}}</div>
+            </div>
+            <div style="text-align: right">
+                <div class="badge badge-type" style="font-size: 0.875rem">Go Test Runner</div>
+                <div class="timestamp" style="margin-top: 0.25rem">Duration: {{.Summary.TotalDurationStr}}</div>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value stat-total">{{.Summary.Total}}</div>
+                <div class="stat-label">Total Tests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-passed">{{.Summary.Passed}}</div>
+                <div class="stat-label">Passed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-failed">{{.Summary.Failed}}</div>
+                <div class="stat-label">Failed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-skipped">{{.Summary.Skipped}}</div>
+                <div class="stat-label">Skipped</div>
+            </div>
+        </div>
+
+        <div class="progress-bar-container">
+            <!-- Simple calculation for width -->
+            <div class="progress-bar" style="width: calc(({{.Summary.Passed}} / {{.Summary.Total}}) * 100%)"></div>
+        </div>
+
+        <h2>Test Details</h2>
+        <div class="test-list">
+            <div class="test-header">
+                <div>Test Case / Description</div>
+                <div>Suite / Type</div>
+                <div>Status</div>
+                <div>Duration</div>
+            </div>
+            {{range .Results}}
+            <div class="test-row-wrapper">
+                <div class="test-row">
+                    <div style="font-weight: 500;">{{.Name}}</div>
+                    <div><span class="badge badge-type">{{.Type}}</span></div>
+                    <div><span class="badge badge-{{.Status}}">{{.Status}}</span></div>
+                    <div class="meta-info">{{.DurationStr}}</div>
+                </div>
+                {{if .Error}}
+                <div class="test-row" style="display: block; padding-top: 0;">
+                    <div class="test-error">
+                        <strong>Error Trace:</strong><br>
+                        {{.Error}}
+                    </div>
+                    {{if .Screenshot}}
+                    <div>
+                        <a href="../{{.Screenshot}}" class="screenshot-link" target="_blank">📸 View Screenshot Artifact ({{.Screenshot}})</a>
+                        <img src="../{{.Screenshot}}" class="screenshot-preview" alt="UI Failure State">
+                    </div>
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+            {{end}}
+        </div>
+    </div>
+</body>
+</html>

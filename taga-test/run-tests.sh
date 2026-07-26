@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Configuration
+PORT=9515
+
+echo "========================================="
+echo " Starting Chromedriver & E2E Test Suite "
+echo "========================================="
+
+# 1. Start chromedriver in the background
+chromedriver --port=$PORT > /dev/null 2>&1 &
+CHROMEDRIVER_PID=$!
+
+# 2. Setup automatic cleanup on exit (trap)
+cleanup() {
+    echo "Cleaning up: stopping chromedriver (PID: $CHROMEDRIVER_PID)..."
+    kill $CHROMEDRIVER_PID 2>/dev/null
+    wait $CHROMEDRIVER_PID 2>/dev/null
+    echo "Cleanup complete."
+}
+trap cleanup EXIT
+
+# 3. Wait for Chromedriver to become responsive
+echo "Waiting for Chromedriver to start on port $PORT..."
+for i in {1..10}; do
+    if curl -s http://localhost:$PORT/status | grep -q '"ready":true'; then
+        echo "Chromedriver is ready!"
+        break
+    fi
+    if [ $i -eq 10 ]; then
+        echo "Error: Chromedriver failed to start on port $PORT."
+        exit 1
+    fi
+    sleep 0.5
+done
+
+# 4. Run the Go E2E tests in headless mode
+echo "Running E2E test suite..."
+E2E_HEADLESS=true go test -v ./tests/... "$@"
+TEST_EXIT_CODE=$?
+
+echo "========================================="
+echo " Tests finished with exit code $TEST_EXIT_CODE"
+echo "========================================="
+
+exit $TEST_EXIT_CODE
