@@ -164,9 +164,11 @@ certs/
 *pnpm-lock.yaml
 
 # ============================================
-# ANTIGRAVITY (Google AI IDE)
+# ANTIGRAVITY (Google AI IDE) & AGENTS
 # ============================================
 .antigravity*
+.agent
+.agents/
 
 # ============================================
 # SCREENSHOTS
