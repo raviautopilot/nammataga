@@ -1,0 +1,4 @@
+ide.experimental.ui
+true
+switched.from.classic.to.islands
+false

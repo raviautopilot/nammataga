@@ -1,0 +1,22 @@
+{
+  "port": 1801,
+  "environment": "production",
+  "smtp_host": "smtp.gmail.com",
+  "smtp_port": 587,
+  "smtp_username": "nammataga@gmail.com",
+  "smtp_password": "cfqndeecysqdwacq",
+  "reset_password_url": "https://www.nammataga.com",
+  "from_email": "nammataga@gmail.com",
+  "admin_email": "nammataga@gmail.com",
+  "admin_password": "admin123",
+  "office_dir": "data/office",
+  "members_file": "data/member/members.json",
+  "about_file": "data/about/about.json",
+  "contact_file": "data/about/contact.json",
+  "objectives_file": "data/about/objectives.json",
+  "services_file": "data/about/services.json",
+  "jwt_secret": "ilovetaga",
+  "admin_api_key": "taga-admin-secret-key-2024",
+  "razorpay_key": "rzp_test_SeVBCSMzeFlqy8",
+  "razorpay_secret": "AgSFQehLYxH0LRVtsRQFhkzw"
+}

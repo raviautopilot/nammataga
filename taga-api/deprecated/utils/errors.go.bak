@@ -1,0 +1,57 @@
+package utils
+
+import (
+	"net/http"
+	"taga-api/config"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+)
+
+// Custom error types
+var (
+	ErrNotFound     = &APIError{Message: "Resource not found", Status: http.StatusNotFound}
+	ErrInvalidInput = &APIError{Message: "Invalid input provided", Status: http.StatusBadRequest}
+	ErrInternal     = &APIError{Message: "Internal server error", Status: http.StatusInternalServerError}
+	ErrUnauthorized = &APIError{Message: "Unauthorized access", Status: http.StatusUnauthorized}
+	ErrForbidden    = &APIError{Message: "Forbidden access", Status: http.StatusForbidden}
+)
+
+// APIError represents a structured error response
+type APIError struct {
+	Message string `json:"message"`
+	Status  int    `json:"-"`
+}
+
+func (e *APIError) Error() string {
+	return e.Message
+}
+
+// HandleError processes errors and sends appropriate HTTP responses
+func HandleError(c *gin.Context, err error) {
+	config.Logger.Error("Request processing error",
+		zap.String("path", c.Request.URL.Path),
+		zap.Error(err))
+
+	switch e := err.(type) {
+	case *APIError:
+		c.JSON(e.Status, gin.H{"error": e.Message})
+	default:
+		// Check if it's one of our predefined errors
+		switch err {
+		case ErrNotFound:
+			c.JSON(ErrNotFound.Status, gin.H{"error": ErrNotFound.Message})
+		case ErrInvalidInput:
+			c.JSON(ErrInvalidInput.Status, gin.H{"error": ErrInvalidInput.Message})
+		case ErrInternal:
+			c.JSON(ErrInternal.Status, gin.H{"error": ErrInternal.Message})
+		case ErrUnauthorized:
+			c.JSON(ErrUnauthorized.Status, gin.H{"error": ErrUnauthorized.Message})
+		case ErrForbidden:
+			c.JSON(ErrForbidden.Status, gin.H{"error": ErrForbidden.Message})
+		default:
+			// Default to internal server error for unhandled errors
+			c.JSON(ErrInternal.Status, gin.H{"error": ErrInternal.Message})
+		}
+	}
+}

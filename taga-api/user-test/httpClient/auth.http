@@ -1,0 +1,40 @@
+### Register Member ###
+// @no-cookie-jar
+POST {{apiUrl}}/api/auth/register
+
+{
+    "email":"raviregi@gmail.com",
+    "memberid":"ravinath",
+    "password":"test123"
+}
+###
+### Member Login ###
+// @no-cookie-jar
+POST {{apiUrl}}/api/auth/login
+
+{
+    "memberid":"ravinath",
+    "password":"test123"
+}
+###
+### Forgot Password ###
+// @no-cookie-jar
+POST {{apiUrl}}/api/auth/forgot-password
+
+{
+    "email":"raviregi@gmail.com"
+}
+###
+### Reset Password ###
+// @no-cookie-jar
+POST {{apiUrl}}/api/auth/reset-password
+
+{
+    "new_password":"art123"
+    "token":"ae5a7528647af8198f7f0c64f118298ba66e137abd98386145e0b60aa1e1dda7"
+}
+###
+
+
+
+"email":"raviregi@gmail.com",

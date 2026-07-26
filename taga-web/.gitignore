@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime files
+*.pid
+*.seed
+*.pid.lock
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Cache
+.cache/
+.eslintcache
+
+# Aider
+.aider*
+
+# Lock file (ONLY ignore if you intentionally do not want reproducible builds)
+# package-lock.json
+app-taga-ui.local.log
+app-taga-ui.local.pid

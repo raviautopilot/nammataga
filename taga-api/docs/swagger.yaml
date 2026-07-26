@@ -1,0 +1,2876 @@
+basePath: /
+definitions:
+  handler.AddMemberRequest:
+    properties:
+      cpsGpfNumber:
+        type: string
+      dateOfBirth:
+        type: string
+      designation:
+        type: string
+      educationalQualification:
+        type: string
+      email:
+        type: string
+      fatherName:
+        type: string
+      gender:
+        type: string
+      id:
+        type: string
+      initial:
+        type: string
+      mobileNumber:
+        type: string
+      motherName:
+        type: string
+      name:
+        type: string
+      nativeDistrict:
+        type: string
+      permanentAddress:
+        type: string
+      recruitmentBatch:
+        type: string
+      residentialAddress:
+        type: string
+      seniorityNumber:
+        type: string
+      tagaId:
+        type: string
+      tbfNumber:
+        type: string
+      workingDistrict:
+        type: string
+    required:
+    - dateOfBirth
+    - designation
+    - educationalQualification
+    - email
+    - gender
+    - initial
+    - mobileNumber
+    - name
+    - nativeDistrict
+    - tagaId
+    - workingDistrict
+    type: object
+  handler.AdminLoginRequest:
+    properties:
+      password:
+        example: admin123
+        type: string
+      username:
+        example: admin@taga.com
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handler.AdminLoginResponse:
+    properties:
+      expires_in:
+        type: integer
+      role:
+        type: string
+      token:
+        type: string
+    type: object
+  handler.AnnouncementRequest:
+    properties:
+      district:
+        type: string
+      message:
+        type: string
+      priority:
+        type: string
+      sendTo:
+        type: string
+      title:
+        type: string
+    required:
+    - message
+    - title
+    type: object
+  handler.AnnouncementResponse:
+    properties:
+      announcement_id:
+        type: string
+      message:
+        type: string
+      recipients:
+        type: integer
+      send_to:
+        type: string
+    type: object
+  handler.BulkUploadFailure:
+    properties:
+      email:
+        type: string
+      errors:
+        items:
+          type: string
+        type: array
+      row_number:
+        type: integer
+    type: object
+  handler.BulkUploadResult:
+    properties:
+      failed:
+        items:
+          $ref: '#/definitions/handler.BulkUploadFailure'
+        type: array
+      failed_count:
+        type: integer
+      processed_at:
+        type: string
+      success_count:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  handler.CreateOrderResponse:
+    properties:
+      key:
+        type: string
+      order:
+        additionalProperties: true
+        type: object
+    type: object
+  handler.DistrictBearer:
+    properties:
+      contact:
+        type: string
+      department:
+        type: string
+      name:
+        type: string
+      title:
+        type: string
+    type: object
+  handler.MemberListItem:
+    properties:
+      designation:
+        type: string
+      district:
+        type: string
+      email:
+        type: string
+      gender:
+        type: string
+      id:
+        type: string
+      initial:
+        type: string
+      membership_status:
+        type: string
+      mobile_number:
+        type: string
+      name:
+        type: string
+      payment_status:
+        type: string
+      recruitment_batch:
+        type: string
+      tagaId:
+        type: string
+    type: object
+  handler.MemberListResponse:
+    properties:
+      limit:
+        type: integer
+      members:
+        items:
+          $ref: '#/definitions/handler.MemberListItem'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handler.MemberLoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handler.MemberLoginResponse:
+    properties:
+      expires_in:
+        type: integer
+      forceChangePassword:
+        type: boolean
+      role:
+        type: string
+      token:
+        type: string
+      user: {}
+    type: object
+  handler.StateExecutive:
+    properties:
+      description:
+        type: string
+      designation:
+        type: string
+      experience:
+        type: integer
+      image:
+        description: optional
+        type: string
+      location:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      qualification:
+        type: string
+      sno:
+        type: integer
+    type: object
+  handler.SubscriptionPlanResponse:
+    properties:
+      allowCustomAmount:
+        type: boolean
+      amount:
+        type: number
+      description:
+        type: string
+      frequency:
+        type: string
+      id:
+        type: string
+      lastPaidDate:
+        type: string
+      name:
+        type: string
+      needBased:
+        type: boolean
+      nextDueDate:
+        type: string
+      oneTime:
+        type: boolean
+      status:
+        type: string
+    type: object
+  handler.UpdateMemberRequest:
+    properties:
+      cps_gpf_number:
+        type: string
+      date_of_birth:
+        type: string
+      designation:
+        type: string
+      educational_qualification:
+        type: string
+      emailId:
+        type: string
+      father_name:
+        type: string
+      gender:
+        type: string
+      initial:
+        type: string
+      mobile_number:
+        type: string
+      mother_name:
+        type: string
+      name:
+        type: string
+      native_district:
+        type: string
+      permanent_address:
+        type: string
+      recruitment_batch:
+        type: string
+      residential_address:
+        type: string
+      seniority_number:
+        type: string
+      tbf_number:
+        type: string
+      working_district:
+        type: string
+    type: object
+  model.AboutResponse:
+    properties:
+      acronym:
+        type: string
+      description:
+        type: string
+      established_year:
+        type: integer
+      hero_image_url:
+        type: string
+      id:
+        type: integer
+      mission:
+        type: string
+      name:
+        type: string
+      tagline:
+        type: string
+      vision:
+        type: string
+    type: object
+  model.BookingFor:
+    enum:
+    - self
+    - guest
+    type: string
+    x-enum-varnames:
+    - BookingForSelf
+    - BookingForGuest
+  model.BookingResponse:
+    properties:
+      advanceAmount:
+        type: integer
+      bedCount:
+        type: integer
+      bookerId:
+        type: string
+      bookerName:
+        type: string
+      bookingFor:
+        $ref: '#/definitions/model.BookingFor'
+      bookingStatus:
+        description: '✅ NEW: Computed booking status (upcoming, active, completed,
+          cancelled)'
+        type: string
+      checkInDate:
+        type: string
+      checkOutDate:
+        type: string
+      gender:
+        $ref: '#/definitions/model.Gender'
+      guestDetails:
+        items:
+          $ref: '#/definitions/model.GuestDetail'
+        type: array
+      id:
+        type: string
+      paymentStatus:
+        $ref: '#/definitions/model.PaymentStatus'
+      roomId:
+        type: string
+      roomName:
+        type: string
+    type: object
+  model.ContactResponse:
+    properties:
+      headquarters:
+        $ref: '#/definitions/model.Headquarters'
+      office_hours:
+        example: |-
+          Monday - Friday: 9:00 AM - 5:30 PM
+          Saturday: 9:00 AM - 1:00 PM
+          Sunday: Closed
+        type: string
+      primary_email:
+        example: info@taga-tn.org
+        type: string
+      primary_phone:
+        example: +91-422-6611-200
+        type: string
+      regional_offices:
+        items:
+          $ref: '#/definitions/model.RegionalOffice'
+        type: array
+      secondary_email:
+        example: info2@taga-tn.org
+        type: string
+      website:
+        example: www.taga-tn.org
+        type: string
+    type: object
+  model.CreateBookingRequest:
+    properties:
+      bedCount:
+        type: integer
+      bookerPhone:
+        type: string
+      bookingFor:
+        $ref: '#/definitions/model.BookingFor'
+      checkInDate:
+        type: string
+      checkOutDate:
+        description: '"2006-01-02"'
+        type: string
+      gender:
+        $ref: '#/definitions/model.Gender'
+      guestDetails:
+        items:
+          $ref: '#/definitions/model.GuestDetail'
+        type: array
+      roomId:
+        type: string
+      upiId:
+        type: string
+    required:
+    - bedCount
+    - bookerPhone
+    - bookingFor
+    - checkInDate
+    - checkOutDate
+    - roomId
+    type: object
+  model.Document:
+    properties:
+      category_id:
+        description: links to ResourceCategory
+        type: string
+      subcategory:
+        description: '"Central" or "State", optional'
+        type: string
+      title:
+        type: string
+      year:
+        type: string
+    type: object
+  model.Event:
+    properties:
+      attendees:
+        type: integer
+      date:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      location:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+    type: object
+  model.ForgotPasswordRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  model.GalleryImage:
+    properties:
+      date:
+        type: string
+      event:
+        type: string
+      id:
+        type: string
+      imageUrl:
+        type: string
+      title:
+        type: string
+      year:
+        type: integer
+    type: object
+  model.Gender:
+    enum:
+    - male
+    - female
+    type: string
+    x-enum-varnames:
+    - GenderMale
+    - GenderFemale
+  model.Grievance:
+    properties:
+      assignedTo:
+        type: string
+      category:
+        type: string
+      contactPhone:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      lastUpdate:
+        type: string
+      preferredResponse:
+        type: string
+      priority:
+        type: string
+      status:
+        type: string
+      subject:
+        type: string
+      submittedDate:
+        type: string
+    type: object
+  model.GuestDetail:
+    properties:
+      age:
+        type: integer
+      contact:
+        type: string
+      name:
+        type: string
+    type: object
+  model.Headquarters:
+    properties:
+      address:
+        example: |-
+          Tamil Nadu Agricultural University Campus
+          Coimbatore - 641003
+          Tamil Nadu, India
+        type: string
+      name:
+        example: TAGA Headquarters
+        type: string
+    type: object
+  model.MemberNotification:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      is_read:
+        type: boolean
+      member_email:
+        type: string
+      member_id:
+        type: string
+      message:
+        type: string
+      notification_id:
+        type: string
+      priority:
+        type: string
+      read_at:
+        type: string
+      taga_id:
+        type: string
+      title:
+        type: string
+    type: object
+  model.Membership:
+    properties:
+      address:
+        type: string
+      currentEmployment:
+        type: string
+      dateOfBirth:
+        type: string
+      district:
+        type: string
+      email:
+        type: string
+      experience:
+        type: string
+      firstName:
+        type: string
+      gender:
+        type: string
+      graduationYear:
+        type: string
+      lastName:
+        type: string
+      organization:
+        type: string
+      phone:
+        type: string
+      qualification:
+        type: string
+      references:
+        type: string
+      specialization:
+        type: string
+    type: object
+  model.Objective:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      order_index:
+        type: integer
+      title:
+        type: string
+    type: object
+  model.PaymentStatus:
+    enum:
+    - pending
+    - confirmed
+    - cancelled
+    - refunded
+    type: string
+    x-enum-varnames:
+    - PaymentPending
+    - PaymentConfirmed
+    - PaymentCancelled
+    - PaymentRefunded
+  model.RegionalOffice:
+    properties:
+      address:
+        example: 123 Agricultural Complex, GST Road, Chennai - 600032
+        type: string
+      city:
+        example: Chennai
+        type: string
+      id:
+        example: 1
+        type: integer
+      phone:
+        example: +91-44-2345-6789
+        type: string
+    type: object
+  model.ResetPasswordRequest:
+    properties:
+      email:
+        type: string
+      new_password:
+        type: string
+      old_password:
+        type: string
+    type: object
+  model.ResourceCategory:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      subcategories:
+        description: e.g., ["Central", "State"]
+        items:
+          type: string
+        type: array
+    type: object
+  model.Room:
+    properties:
+      allowSingleBed:
+        type: boolean
+      capacity:
+        type: integer
+      id:
+        type: string
+      name:
+        type: string
+      type:
+        $ref: '#/definitions/model.RoomType'
+    type: object
+  model.RoomAvailability:
+    properties:
+      available:
+        type: boolean
+      availableBeds:
+        type: integer
+      genderRestriction:
+        $ref: '#/definitions/model.Gender'
+      room:
+        $ref: '#/definitions/model.Room'
+    type: object
+  model.RoomType:
+    enum:
+    - apex-suite
+    - ac-room
+    - gents-dorm
+    - ladies-dorm
+    type: string
+    x-enum-varnames:
+    - RoomTypeApexSuite
+    - RoomTypeACRoom
+    - RoomTypeGentsDorm
+    - RoomTypeLadiesDorm
+  model.ServiceResponse:
+    properties:
+      category:
+        example: member-support
+        type: string
+      description:
+        example: Training programs, workshops, and skill enhancement opportunities
+          for career growth.
+        type: string
+      icon_name:
+        example: Users
+        type: string
+      id:
+        example: 1
+        type: integer
+      title:
+        example: Professional Development
+        type: string
+    type: object
+  model.StatsResponse:
+    description: Organization statistics item with label, value, and display properties
+    properties:
+      color_class:
+        type: string
+      icon_name:
+        type: string
+      id:
+        type: integer
+      label:
+        type: string
+      value:
+        type: integer
+    type: object
+  office_bearers.DistrictBearer:
+    properties:
+      contact:
+        type: string
+      name:
+        type: string
+      title:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: This is the Taga API server
+  title: Taga API
+  version: "1.0"
+paths:
+  /:
+    get:
+      description: Returns a welcome message from the API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success response
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get welcome message
+      tags:
+      - general
+  /api/admin/announcements/send:
+    post:
+      consumes:
+      - application/json
+      description: Send email announcement to members and store in database
+      parameters:
+      - description: Announcement details
+        in: body
+        name: announcement
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AnnouncementRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AnnouncementResponse'
+      security:
+      - BearerAuth: []
+      summary: Send announcement to members
+      tags:
+      - Admin Announcements
+  /api/admin/events/{id}:
+    delete:
+      description: Delete an event by ID
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an event
+      tags:
+      - Admin Content
+    put:
+      consumes:
+      - multipart/form-data
+      description: Update an event by ID using multipart form data
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Event title
+        in: formData
+        name: title
+        type: string
+      - description: Event date (YYYY-MM-DD HH:MM)
+        in: formData
+        name: date
+        type: string
+      - description: Event location
+        in: formData
+        name: location
+        type: string
+      - description: Event description
+        in: formData
+        name: description
+        type: string
+      - description: Event status (upcoming/ongoing/completed/cancelled)
+        in: formData
+        name: status
+        type: string
+      - description: Replacement event image
+        in: formData
+        name: image
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an existing event
+      tags:
+      - Admin Content
+  /api/admin/events/create:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Create a new event with optional image upload
+      parameters:
+      - description: Event title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Event date (YYYY-MM-DD HH:MM)
+        in: formData
+        name: date
+        required: true
+        type: string
+      - description: Event location
+        in: formData
+        name: location
+        type: string
+      - description: Event description
+        in: formData
+        name: description
+        type: string
+      - description: Event status (upcoming/past/completed)
+        in: formData
+        name: status
+        type: string
+      - description: Number of attendees
+        in: formData
+        name: attendees
+        type: integer
+      - description: Event image file
+        in: formData
+        name: image
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new event
+      tags:
+      - Admin Content
+  /api/admin/gallery/{id}:
+    delete:
+      description: Remove an image from the gallery by ID
+      parameters:
+      - description: Gallery image ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a gallery image
+      tags:
+      - Admin Content
+  /api/admin/gallery/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Add a new image to the photo gallery
+      parameters:
+      - description: Image title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Event name
+        in: formData
+        name: event
+        required: true
+        type: string
+      - description: Date (YYYY-MM-DD)
+        in: formData
+        name: date
+        required: true
+        type: string
+      - description: Year
+        in: formData
+        name: year
+        required: true
+        type: integer
+      - description: Image file (JPEG/PNG)
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload a gallery image
+      tags:
+      - Admin Content
+  /api/admin/init-password:
+    post:
+      consumes:
+      - application/json
+      description: Initialize passwords for all members, a specific member, or none
+        (default).
+      parameters:
+      - description: 'Member ID or keyword: all | none (default)'
+        in: query
+        name: memberId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password initialization result
+          schema:
+            type: string
+        "400":
+          description: Invalid or missing parameter
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Initialize member password(s)
+      tags:
+      - Admin
+  /api/admin/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates admin user and returns JWT token for subsequent API
+        calls
+      parameters:
+      - description: Admin Login Credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AdminLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AdminLoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Admin Login
+      tags:
+      - Admin Authentication
+  /api/admin/member-registration:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Process new member registration file upload, validate data, store
+        member details, and send email with temporary password
+      parameters:
+      - description: Registration file (JSON/CSV format)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Registration successful
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid file or validation errors
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Registration validation failed
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Handle new member registration
+      tags:
+      - Admin
+  /api/admin/members:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of members with search and filters
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search by name, email, mobile
+        in: query
+        name: search
+        type: string
+      - description: Filter by district
+        in: query
+        name: district
+        type: string
+      - description: Filter by payment status (paid/unpaid)
+        in: query
+        name: payment_status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.MemberListResponse'
+      security:
+      - BearerAuth: []
+      summary: Get list of members
+      tags:
+      - Admin Members
+  /api/admin/members/{id}:
+    delete:
+      description: Admin hard-deletes a member by ID (removes from JSON)
+      parameters:
+      - description: Member ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a member permanently
+      tags:
+      - Admin Members
+    put:
+      consumes:
+      - application/json
+      description: Admin updates member details (all fields except password and TAGA
+        ID)
+      parameters:
+      - description: Member ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated member fields
+        in: body
+        name: member
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update member details
+      tags:
+      - Admin Members
+  /api/admin/members/add:
+    post:
+      consumes:
+      - application/json
+      description: Admin adds a new member with a generated temporary password
+      parameters:
+      - description: Member details
+        in: body
+        name: member
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AddMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add a new member
+      tags:
+      - Admin Members
+  /api/admin/members/bulk-upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload multiple members via CSV or Excel file (supports .csv, .xlsx,
+        .xls)
+      parameters:
+      - description: CSV or Excel file (.csv, .xlsx, .xls)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.BulkUploadResult'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Bulk upload members
+      tags:
+      - Admin Members
+  /api/admin/members/districts:
+    get:
+      consumes:
+      - application/json
+      description: Get all districts that have members
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get list of districts with member counts
+      tags:
+      - Admin Members
+  /api/admin/members/export:
+    get:
+      consumes:
+      - application/json
+      description: Export all members with filters to Excel file with summary sheet
+      parameters:
+      - description: Filter by district
+        in: query
+        name: district
+        type: string
+      - description: Filter by payment status (paid/unpaid)
+        in: query
+        name: payment_status
+        type: string
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Export members to Excel
+      tags:
+      - Admin Reports
+  /api/admin/members/stats:
+    get:
+      consumes:
+      - application/json
+      description: Get total members, active, unpaid counts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get member statistics
+      tags:
+      - Admin Members
+  /api/admin/office-bearers/backup/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restores the district office bearers data from a specified backup
+        file
+      parameters:
+      - description: Backup file path
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Restore district bearers from a backup file
+      tags:
+      - Admin Office Bearers
+  /api/admin/office-bearers/backups:
+    get:
+      description: Returns a list of all backup files for district office bearers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: list of backup files
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all available backup files
+      tags:
+      - Admin Office Bearers
+  /api/admin/office-bearers/district/{district}:
+    get:
+      description: Returns all 6 office bearers for the specified district
+      parameters:
+      - description: District name
+        in: path
+        name: district
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: bearers list
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid district name
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get office bearers for a specific district
+      tags:
+      - Admin Office Bearers
+    put:
+      consumes:
+      - application/json
+      description: Updates all 6 office bearers for the specified district. Creates
+        backup before update.
+      parameters:
+      - description: District name
+        in: path
+        name: district
+        required: true
+        type: string
+      - description: Array of 6 bearers
+        in: body
+        name: bearers
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/office_bearers.DistrictBearer'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success message with backup path
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: District not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update all office bearers for a specific district
+      tags:
+      - Admin Office Bearers
+  /api/admin/office-bearers/districts:
+    get:
+      description: Returns a list of all districts that have office bearers data
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: districts list
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all districts for office bearers management
+      tags:
+      - Admin Office Bearers
+  /api/admin/reports/members:
+    get:
+      consumes:
+      - application/json
+      description: Export member data as CSV report
+      parameters:
+      - description: Report type (membership/financial/activities/district)
+        in: query
+        name: report_type
+        type: string
+      - description: Period (current_month/last_month/current_quarter/current_year/all_time)
+        in: query
+        name: period
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Generate member report
+      tags:
+      - Admin Reports
+  /api/admin/resources/{categoryId}/{documentTitle}:
+    delete:
+      description: Delete a resource document from a category
+      parameters:
+      - description: Resource category ID
+        in: path
+        name: categoryId
+        required: true
+        type: string
+      - description: Document title to delete
+        in: path
+        name: documentTitle
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a resource document
+      tags:
+      - Admin Content
+  /api/admin/resources/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a PDF document to a specific resource category
+      parameters:
+      - description: Resource category ID
+        in: formData
+        name: categoryId
+        required: true
+        type: string
+      - description: Document title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Year (e.g., 2025)
+        in: formData
+        name: year
+        required: true
+        type: string
+      - description: 'Subcategory (for Scheme G.Os: Central or State)'
+        in: formData
+        name: subcategory
+        type: string
+      - description: PDF file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload a new resource document
+      tags:
+      - Admin Content
+  /api/admin/send-renewal-reminders:
+    post:
+      consumes:
+      - application/json
+      description: Sends renewal emails to all unpaid members if today is a reminder
+        date
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Manually trigger renewal reminders (for testing)
+      tags:
+      - Admin
+  /api/auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Change member password using old password verification
+      parameters:
+      - description: Change Password Request
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Change member password
+      tags:
+      - Member Auth
+  /api/auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Initiates a password reset process
+      parameters:
+      - description: Email address
+        in: body
+        name: forgotPasswordRequest
+        required: true
+        schema:
+          $ref: '#/definitions/model.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset email sent
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Email not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Forgot Password
+      tags:
+      - Member Auth
+  /api/auth/member-forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Send reset email
+      parameters:
+      - description: Forgot Password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Member Forgot Password
+      tags:
+      - Member Auth
+  /api/auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Resets the password using a valid reset token
+      parameters:
+      - description: Reset details
+        in: body
+        name: resetRequest
+        required: true
+        schema:
+          $ref: '#/definitions/model.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset successful
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid or expired token
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Reset Password
+      tags:
+      - Member Auth
+  /api/categories:
+    get:
+      description: Fetch all grievance categories from JSON file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Get grievance categories
+      tags:
+      - Grievances
+  /api/events/upcoming:
+    get:
+      description: Returns upcoming events
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Event'
+            type: array
+      summary: Get upcoming events
+      tags:
+      - Events
+  /api/gallery:
+    get:
+      description: Returns gallery images for selected year
+      parameters:
+      - description: 'Gallery Year (default: current year)'
+        in: query
+        name: year
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.GalleryImage'
+            type: array
+      summary: Get gallery images by year
+      tags:
+      - gallery
+  /api/gallery/years:
+    get:
+      description: Returns available gallery years
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: integer
+            type: array
+      summary: Get gallery years
+      tags:
+      - gallery
+  /api/grievances:
+    get:
+      description: Fetch all submitted grievances
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Grievance'
+            type: array
+      summary: Get all grievances
+      tags:
+      - Grievances
+    post:
+      consumes:
+      - application/json
+      description: Submit a grievance with subject, category, priority, etc.
+      parameters:
+      - description: Grievance Data
+        in: body
+        name: grievance
+        required: true
+        schema:
+          $ref: '#/definitions/model.Grievance'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Grievance'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Submit a new grievance
+      tags:
+      - Grievances
+  /api/grievances/{id}:
+    delete:
+      parameters:
+      - description: Grievance ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete grievance
+      tags:
+      - Grievances
+    get:
+      parameters:
+      - description: Grievance ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Grievance'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get grievance by ID
+      tags:
+      - Grievances
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Grievance ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated Data
+        in: body
+        name: grievance
+        required: true
+        schema:
+          $ref: '#/definitions/model.Grievance'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Grievance'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update grievance
+      tags:
+      - Grievances
+  /api/logo:
+    get:
+      description: Returns the URL of the application logo
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logo URL response
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get application logo
+      tags:
+      - office
+  /api/member/banner:
+    get:
+      consumes:
+      - application/json
+      description: Returns member banner image path
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get member banner
+      tags:
+      - Member
+  /api/member/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates member and returns JWT token
+      parameters:
+      - description: Member credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/handler.MemberLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.MemberLoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Member Login
+      tags:
+      - Member Auth
+  /api/member/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout member successfully
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Member logout
+      tags:
+      - Member Auth
+  /api/member/notifications:
+    get:
+      consumes:
+      - application/json
+      description: Get all notifications for a specific member
+      parameters:
+      - description: Member ID
+        in: query
+        name: member_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.MemberNotification'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get notifications for a member
+      tags:
+      - Member Notifications
+  /api/member/notifications/{id}/read:
+    put:
+      consumes:
+      - application/json
+      description: Mark a specific notification as read
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mark notification as read
+      tags:
+      - Member Notifications
+  /api/member/notifications/unread/count:
+    get:
+      consumes:
+      - application/json
+      description: Get count of unread notifications for a specific member
+      parameters:
+      - description: Member ID
+        in: query
+        name: member_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get unread notification count for a member
+      tags:
+      - Member Notifications
+  /api/member/profile:
+    get:
+      consumes:
+      - application/json
+      description: Fetch logged-in member profile using JWT token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get member profile
+      tags:
+      - Member Profile
+    put:
+      consumes:
+      - application/json
+      description: Update logged-in member profile
+      parameters:
+      - description: Profile Update Request
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update member profile
+      tags:
+      - Member Profile
+  /api/membership/apply:
+    post:
+      consumes:
+      - application/json
+      description: Submit a new TAGA membership application
+      parameters:
+      - description: Membership Application Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.Membership'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Application submitted successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Apply for Membership
+      tags:
+      - Membership
+  /api/membership/districts:
+    get:
+      description: Retrieve list of districts for membership form
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of districts
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get Districts
+      tags:
+      - Membership
+  /api/membership/list:
+    get:
+      description: Retrieve all membership applications (Admin purpose)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of memberships
+          schema:
+            items:
+              $ref: '#/definitions/model.Membership'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get Membership List
+      tags:
+      - Membership
+  /api/office:
+    get:
+      description: Retrieve office bearer data based on the path parameter. Use 'state'
+        for state officers or a district name for district officers
+      parameters:
+      - default: state
+        description: Office type (state or district name)
+        in: query
+        name: pathParam
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Office data
+          schema: {}
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Office information not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to load office information
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get office bearer information
+      tags:
+      - office
+  /api/office-bearers/district-office-bearers:
+    get:
+      parameters:
+      - description: District name
+        in: query
+        name: district
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.DistrictBearer'
+            type: array
+      summary: Get district office bearers
+      tags:
+      - OfficeBearers
+  /api/office-bearers/districts:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Get district list
+      tags:
+      - OfficeBearers
+  /api/office-bearers/state-executive:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.StateExecutive'
+            type: array
+      summary: Get State Executive Committee
+      tags:
+      - OfficeBearers
+  /api/priorities:
+    get:
+      description: Fetch all grievance priorities from JSON file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties:
+                type: string
+              type: object
+            type: array
+      summary: Get grievance priorities
+      tags:
+      - Grievances
+  /api/public/about:
+    get:
+      description: Returns detailed information about TAGA organization
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Organization information
+          schema:
+            $ref: '#/definitions/model.AboutResponse'
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get organization information
+      tags:
+      - about
+  /api/public/about/contact:
+    get:
+      description: Fetches all contact details including headquarters, office hours,
+        and regional offices.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response with contact information
+          schema:
+            $ref: '#/definitions/model.ContactResponse'
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get contact information
+      tags:
+      - about
+  /api/public/about/objectives:
+    get:
+      description: Returns the list of TAGA organization objectives
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of organization objectives
+          schema:
+            items:
+              $ref: '#/definitions/model.Objective'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get organization objectives
+      tags:
+      - about
+  /api/public/about/services:
+    get:
+      description: Returns a list of services provided by the organization, including
+        their title, description, and category.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of organization services
+          schema:
+            items:
+              $ref: '#/definitions/model.ServiceResponse'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get organization services
+      tags:
+      - about
+  /api/public/about/stats:
+    get:
+      description: Returns key statistics and metrics about TAGA organization including
+        member count, years of service, districts covered, and programs/events
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of organization statistics
+          schema:
+            items:
+              $ref: '#/definitions/model.StatsResponse'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get organization statistics
+      tags:
+      - about
+  /api/resources:
+    get:
+      description: Returns list of resource categories (without documents)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ResourceCategory'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all resource categories
+      tags:
+      - Resources
+  /api/resources/{id}:
+    get:
+      description: Returns all documents for a given resource category ID
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Optional subcategory: Central or State'
+        in: query
+        name: subcategory
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Document'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get documents by category
+      tags:
+      - Resources
+  /api/resources/external-links:
+    get:
+      description: Returns list of external links (title + URL) from CSV file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties:
+                type: string
+              type: object
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get external links from CSV
+      tags:
+      - Resources
+  /api/subscriptions:
+    get:
+      consumes:
+      - application/json
+      description: Fetch all subscription details for members
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.SubscriptionPlanResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get subscriptions
+      tags:
+      - Subscription
+  /api/towers/admin/bookings:
+    get:
+      description: Returns all bookings across all users. Used by the admin occupancy
+        schedule tab.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.BookingResponse'
+            type: array
+      summary: Get all bookings (admin only — for occupancy schedule)
+      tags:
+      - TAGA Towers
+  /api/towers/availability:
+    get:
+      parameters:
+      - description: Room ID
+        in: query
+        name: roomId
+        required: true
+        type: string
+      - description: Date
+        in: query
+        name: date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.RoomAvailability'
+      summary: Check room availability
+      tags:
+      - TAGA Towers
+  /api/towers/bookings:
+    get:
+      parameters:
+      - description: Booker ID
+        in: query
+        name: bookerId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.BookingResponse'
+            type: array
+      summary: Get user bookings
+      tags:
+      - TAGA Towers
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Booking Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateBookingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.BookingResponse'
+      summary: Create a new booking
+      tags:
+      - TAGA Towers
+  /api/towers/bookings/{id}:
+    delete:
+      parameters:
+      - description: Booking ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cancel a booking
+      tags:
+      - TAGA Towers
+  /api/towers/bookings/{id}/confirm-payment:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Booking ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: UPI ID
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Confirm payment
+      tags:
+      - TAGA Towers
+  /api/towers/create-order:
+    post:
+      consumes:
+      - application/json
+      description: Create Razorpay order for payment
+      parameters:
+      - description: Amount in paise
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.CreateOrderResponse'
+      summary: Create Razorpay order
+      tags:
+      - TAGA Towers
+  /api/towers/rooms:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Room'
+            type: array
+      summary: Get all rooms
+      tags:
+      - TAGA Towers
+  /api/towers/verify-payment:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Payment verification data
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Verify Razorpay payment
+      tags:
+      - TAGA Towers
+  /api/webhook/razorpay:
+    post:
+      consumes:
+      - application/json
+      description: Receives payment.captured events from Razorpay and sends admin
+        notifications
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Handle Razorpay webhook
+      tags:
+      - Webhook
+  /health:
+    get:
+      description: Returns the health status of the API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: health status
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check
+      tags:
+      - general
+swagger: "2.0"

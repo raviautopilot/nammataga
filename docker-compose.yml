@@ -1,0 +1,36 @@
+services:
+
+  # ==========================================
+  # Backend API Service (Go App)
+  # ==========================================
+  taga-backend:
+    image: taga-api:local
+    container_name: taga-api-local
+    build:
+      context: ./taga-api
+      dockerfile: Dockerfile
+    ports:
+      - "1801:1801"
+    environment:
+      - PORT=1801
+      - ENVIRONMENT=development
+    volumes:
+      - ./taga-api/data:/app/data
+    restart: unless-stopped
+
+  # ==========================================
+  # Frontend UI Service (Nginx Static Server)
+  # ==========================================
+  taga-frontend:
+    image: taga-web:local
+    container_name: taga-web-local
+    build:
+      context: ./taga-web
+      dockerfile: Dockerfile
+    ports:
+      - "1701:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:1801/api
+    depends_on:
+      - taga-backend
+    restart: unless-stopped

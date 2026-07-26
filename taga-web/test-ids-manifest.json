@@ -1,0 +1,1808 @@
+{
+  "generatedAt": "2026-05-03T19:21:38.619Z",
+  "source": "git diff additions",
+  "totalAddedTestIds": 197,
+  "countsByElementType": {
+    "unknown": 84,
+    "button": 35,
+    "scrollarea": 3,
+    "div": 12,
+    "dialogcontent": 12,
+    "tabs": 4,
+    "tabslist": 3,
+    "tabstrigger": 10,
+    "selecttrigger": 17,
+    "form": 5,
+    "alert": 3,
+    "tabscontent": 2,
+    "p": 3,
+    "card": 4
+  },
+  "countsByUserFlow": {
+    "form-submission": 27,
+    "registration": 49,
+    "login": 41,
+    "payment": 9,
+    "grievance-management": 11,
+    "content-management": 31,
+    "announcement": 8,
+    "reporting": 7,
+    "room-booking": 13,
+    "subscription-management": 1
+  },
+  "testIds": [
+    {
+      "id": "home-link",
+      "location": {
+        "filePath": "src/App.tsx",
+        "lineNumber": 155
+      },
+      "elementType": "unknown",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-logout-button",
+      "location": {
+        "filePath": "src/App.tsx",
+        "lineNumber": 196
+      },
+      "elementType": "button",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-mobile-menu-button",
+      "location": {
+        "filePath": "src/App.tsx",
+        "lineNumber": 208
+      },
+      "elementType": "unknown",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-mobile-logout-button",
+      "location": {
+        "filePath": "src/App.tsx",
+        "lineNumber": 246
+      },
+      "elementType": "unknown",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-membership-button",
+      "location": {
+        "filePath": "src/App.tsx",
+        "lineNumber": 272
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-admin-login-button",
+      "location": {
+        "filePath": "src/App.tsx",
+        "lineNumber": 301
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-registration-activities-scroll-area",
+      "location": {
+        "filePath": "src/components/ActivityDetails.tsx",
+        "lineNumber": 179
+      },
+      "elementType": "scrollarea",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-registration-activities-list",
+      "location": {
+        "filePath": "src/components/ActivityDetails.tsx",
+        "lineNumber": 180
+      },
+      "elementType": "div",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-payment-activities-scroll-area",
+      "location": {
+        "filePath": "src/components/ActivityDetails.tsx",
+        "lineNumber": 241
+      },
+      "elementType": "scrollarea",
+      "userFlow": "payment"
+    },
+    {
+      "id": "testid-payment-activities-list",
+      "location": {
+        "filePath": "src/components/ActivityDetails.tsx",
+        "lineNumber": 242
+      },
+      "elementType": "div",
+      "userFlow": "payment"
+    },
+    {
+      "id": "testid-grievance-activities-scroll-area",
+      "location": {
+        "filePath": "src/components/ActivityDetails.tsx",
+        "lineNumber": 302
+      },
+      "elementType": "scrollarea",
+      "userFlow": "grievance-management"
+    },
+    {
+      "id": "testid-grievance-activities-list",
+      "location": {
+        "filePath": "src/components/ActivityDetails.tsx",
+        "lineNumber": 303
+      },
+      "elementType": "div",
+      "userFlow": "grievance-management"
+    },
+    {
+      "id": "testid-activity-details-modal",
+      "location": {
+        "filePath": "src/components/ActivityDetails.tsx",
+        "lineNumber": 380
+      },
+      "elementType": "dialogcontent",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-manage-content-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 313
+      },
+      "elementType": "button",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-content-management-modal",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 318
+      },
+      "elementType": "dialogcontent",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-content-management-tabs-form",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 326
+      },
+      "elementType": "tabs",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-content-management-tabs-list",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 327
+      },
+      "elementType": "tabslist",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-resources-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 328
+      },
+      "elementType": "tabstrigger",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-events-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 329
+      },
+      "elementType": "tabstrigger",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-gallery-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 330
+      },
+      "elementType": "tabstrigger",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-resource-category-select",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 339
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-resource-year-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 358
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-resource-file-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 369
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-upload-resource-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 378
+      },
+      "elementType": "button",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-event-title-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 395
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-event-date-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 407
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-event-time-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 418
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-event-location-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 430
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-event-description-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 442
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-event-image-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 453
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-publish-event-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 462
+      },
+      "elementType": "button",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-gallery-date-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 479
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-gallery-description-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 491
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-gallery-photo-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 502
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-upload-photo-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 511
+      },
+      "elementType": "button",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-add-member-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 535
+      },
+      "elementType": "button",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-modal",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 540
+      },
+      "elementType": "dialogcontent",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-name-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 555
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-initial-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 565
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-gender-select",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 571
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-father-name-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 588
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-mother-name-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 598
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-educational-qualification-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 608
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-designation-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 618
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-working-district-select",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 624
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-native-district-select",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 637
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-recruitment-batch-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 654
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-seniority-number-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 664
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-date-of-birth-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 674
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-mobile-number-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 684
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-email-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 695
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-tbf-number-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 705
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-cps-gpf-number-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 715
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-residential-address-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 726
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-add-member-permanent-address-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 737
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-cancel-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 742
+      },
+      "elementType": "button",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-add-member-submit-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 745
+      },
+      "elementType": "button",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-bulk-member-upload-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 756
+      },
+      "elementType": "button",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-bulk-upload-modal",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 761
+      },
+      "elementType": "dialogcontent",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-bulk-upload-file-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 787
+      },
+      "elementType": "unknown",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-download-sample-template-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 796
+      },
+      "elementType": "button",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-bulk-upload-cancel-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 815
+      },
+      "elementType": "button",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-bulk-upload-submit-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 818
+      },
+      "elementType": "button",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-send-announcement-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 829
+      },
+      "elementType": "button",
+      "userFlow": "announcement"
+    },
+    {
+      "id": "testid-send-announcement-modal",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 834
+      },
+      "elementType": "dialogcontent",
+      "userFlow": "announcement"
+    },
+    {
+      "id": "testid-announcement-title-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 849
+      },
+      "elementType": "unknown",
+      "userFlow": "announcement"
+    },
+    {
+      "id": "testid-announcement-message-input",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 860
+      },
+      "elementType": "unknown",
+      "userFlow": "announcement"
+    },
+    {
+      "id": "testid-announcement-priority-select",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 867
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "announcement"
+    },
+    {
+      "id": "testid-announcement-send-to-select",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 880
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "announcement"
+    },
+    {
+      "id": "testid-announcement-cancel-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 893
+      },
+      "elementType": "button",
+      "userFlow": "announcement"
+    },
+    {
+      "id": "testid-announcement-submit-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 896
+      },
+      "elementType": "button",
+      "userFlow": "announcement"
+    },
+    {
+      "id": "testid-generate-excel-report-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 907
+      },
+      "elementType": "button",
+      "userFlow": "reporting"
+    },
+    {
+      "id": "testid-generate-report-modal",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 912
+      },
+      "elementType": "dialogcontent",
+      "userFlow": "reporting"
+    },
+    {
+      "id": "testid-report-type-select",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 923
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "reporting"
+    },
+    {
+      "id": "testid-report-period-select",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 937
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "reporting"
+    },
+    {
+      "id": "testid-generate-report-cancel-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 951
+      },
+      "elementType": "button",
+      "userFlow": "reporting"
+    },
+    {
+      "id": "testid-download-excel-report-button",
+      "location": {
+        "filePath": "src/components/AdminActions.tsx",
+        "lineNumber": 954
+      },
+      "elementType": "button",
+      "userFlow": "reporting"
+    },
+    {
+      "id": "testid-admin-login-form",
+      "location": {
+        "filePath": "src/components/AdminLogin.tsx",
+        "lineNumber": 83
+      },
+      "elementType": "form",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-error-message",
+      "location": {
+        "filePath": "src/components/AdminLogin.tsx",
+        "lineNumber": 85
+      },
+      "elementType": "alert",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-admin-login-username-input",
+      "location": {
+        "filePath": "src/components/AdminLogin.tsx",
+        "lineNumber": 99
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-admin-login-password-input",
+      "location": {
+        "filePath": "src/components/AdminLogin.tsx",
+        "lineNumber": 113
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-admin-login-password-visibility-button",
+      "location": {
+        "filePath": "src/components/AdminLogin.tsx",
+        "lineNumber": 121
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-admin-login-submit-button",
+      "location": {
+        "filePath": "src/components/AdminLogin.tsx",
+        "lineNumber": 136
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-events-form",
+      "location": {
+        "filePath": "src/components/Events.tsx",
+        "lineNumber": 172
+      },
+      "elementType": "tabs",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-events-tabs-list",
+      "location": {
+        "filePath": "src/components/Events.tsx",
+        "lineNumber": 173
+      },
+      "elementType": "tabslist",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-gallery-button",
+      "location": {
+        "filePath": "src/components/Events.tsx",
+        "lineNumber": 174
+      },
+      "elementType": "tabstrigger",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-upcoming-events-button",
+      "location": {
+        "filePath": "src/components/Events.tsx",
+        "lineNumber": 175
+      },
+      "elementType": "tabstrigger",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-gallery-tab-content",
+      "location": {
+        "filePath": "src/components/Events.tsx",
+        "lineNumber": 179
+      },
+      "elementType": "tabscontent",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-upcoming-events-tab-content",
+      "location": {
+        "filePath": "src/components/Events.tsx",
+        "lineNumber": 244
+      },
+      "elementType": "tabscontent",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-gallery-image-modal",
+      "location": {
+        "filePath": "src/components/Events.tsx",
+        "lineNumber": 278
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-success-message",
+      "location": {
+        "filePath": "src/components/Grievance.tsx",
+        "lineNumber": 108
+      },
+      "elementType": "alert",
+      "userFlow": "grievance-management"
+    },
+    {
+      "id": "testid-grievance-form",
+      "location": {
+        "filePath": "src/components/Grievance.tsx",
+        "lineNumber": 129
+      },
+      "elementType": "form",
+      "userFlow": "grievance-management"
+    },
+    {
+      "id": "testid-grievance-subject-input",
+      "location": {
+        "filePath": "src/components/Grievance.tsx",
+        "lineNumber": 140
+      },
+      "elementType": "unknown",
+      "userFlow": "grievance-management"
+    },
+    {
+      "id": "testid-grievance-category-select",
+      "location": {
+        "filePath": "src/components/Grievance.tsx",
+        "lineNumber": 147
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "grievance-management"
+    },
+    {
+      "id": "testid-grievance-priority-select",
+      "location": {
+        "filePath": "src/components/Grievance.tsx",
+        "lineNumber": 161
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "grievance-management"
+    },
+    {
+      "id": "testid-grievance-contact-phone-input",
+      "location": {
+        "filePath": "src/components/Grievance.tsx",
+        "lineNumber": 180
+      },
+      "elementType": "unknown",
+      "userFlow": "grievance-management"
+    },
+    {
+      "id": "testid-grievance-description-input",
+      "location": {
+        "filePath": "src/components/Grievance.tsx",
+        "lineNumber": 194
+      },
+      "elementType": "unknown",
+      "userFlow": "grievance-management"
+    },
+    {
+      "id": "testid-grievance-preferred-response-select",
+      "location": {
+        "filePath": "src/components/Grievance.tsx",
+        "lineNumber": 203
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "grievance-management"
+    },
+    {
+      "id": "testid-submit-grievance-button",
+      "location": {
+        "filePath": "src/components/Grievance.tsx",
+        "lineNumber": 221
+      },
+      "elementType": "button",
+      "userFlow": "grievance-management"
+    },
+    {
+      "id": "testid-member-search-input",
+      "location": {
+        "filePath": "src/components/MemberListTable.tsx",
+        "lineNumber": 96
+      },
+      "elementType": "unknown",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-member-district-filter-select",
+      "location": {
+        "filePath": "src/components/MemberListTable.tsx",
+        "lineNumber": 103
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-member-payment-status-filter-select",
+      "location": {
+        "filePath": "src/components/MemberListTable.tsx",
+        "lineNumber": 118
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "payment"
+    },
+    {
+      "id": "testid-member-details-modal",
+      "location": {
+        "filePath": "src/components/MemberListTable.tsx",
+        "lineNumber": 214
+      },
+      "elementType": "dialogcontent",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-close-button",
+      "location": {
+        "filePath": "src/components/MemberListTable.tsx",
+        "lineNumber": 300
+      },
+      "elementType": "button",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-toggle-membership-button",
+      "location": {
+        "filePath": "src/components/MemberListTable.tsx",
+        "lineNumber": 304
+      },
+      "elementType": "button",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-login-form",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 191
+      },
+      "elementType": "form",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-error-message",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 194
+      },
+      "elementType": "alert",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-login-identifier-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 207
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-login-password-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 221
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-login-password-visibility-button",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 228
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-login-submit-button",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 235
+      },
+      "elementType": "button",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-forgot-password-button",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 245
+      },
+      "elementType": "button",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-forgot-password-modal",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 248
+      },
+      "elementType": "dialogcontent",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-forgot-password-form",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 253
+      },
+      "elementType": "form",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-forgot-password-membership-id-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 260
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-forgot-password-email-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 268
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-forgot-password-security-question-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 276
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-forgot-password-security-answer-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 284
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-reset-button",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 287
+      },
+      "elementType": "button",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-apply-membership-button",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 295
+      },
+      "elementType": "button",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-membership-modal",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 298
+      },
+      "elementType": "dialogcontent",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-form",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 303
+      },
+      "elementType": "form",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-first-name-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 317
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-last-name-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 328
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-email-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 341
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-phone-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 352
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-date-of-birth-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 366
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-gender-select",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 378
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-address-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 396
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-district-select",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 411
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-qualification-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 444
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-graduation-year-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 455
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-specialization-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 467
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-current-employment-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 483
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-organization-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 494
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-experience-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 505
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-references-input",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 515
+      },
+      "elementType": "unknown",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-register-submit-button",
+      "location": {
+        "filePath": "src/components/MemberLogin.tsx",
+        "lineNumber": 524
+      },
+      "elementType": "button",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-admin-tabs-form",
+      "location": {
+        "filePath": "src/components/MembersDashboard.tsx",
+        "lineNumber": 299
+      },
+      "elementType": "tabs",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-manage-members-button",
+      "location": {
+        "filePath": "src/components/MembersDashboard.tsx",
+        "lineNumber": 301
+      },
+      "elementType": "tabstrigger",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-content-management-button",
+      "location": {
+        "filePath": "src/components/MembersDashboard.tsx",
+        "lineNumber": 302
+      },
+      "elementType": "tabstrigger",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-reports-button",
+      "location": {
+        "filePath": "src/components/MembersDashboard.tsx",
+        "lineNumber": 303
+      },
+      "elementType": "tabstrigger",
+      "userFlow": "reporting"
+    },
+    {
+      "id": "testid-renew-membership-button",
+      "location": {
+        "filePath": "src/components/MembersDashboard.tsx",
+        "lineNumber": 491
+      },
+      "elementType": "button",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-payment-history-button",
+      "location": {
+        "filePath": "src/components/MembersDashboard.tsx",
+        "lineNumber": 494
+      },
+      "elementType": "button",
+      "userFlow": "payment"
+    },
+    {
+      "id": "testid-membership-login-required-message",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 218
+      },
+      "elementType": "p",
+      "userFlow": "login"
+    },
+    {
+      "id": "testid-membership-loading-message",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 222
+      },
+      "elementType": "p",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-membership-error-message",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 226
+      },
+      "elementType": "p",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-membership-page",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 234
+      },
+      "elementType": "div",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-membership-hero-banner",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 237
+      },
+      "elementType": "div",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-membership-tabs-form",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 264
+      },
+      "elementType": "tabs",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-membership-tabs-list",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 267
+      },
+      "elementType": "tabslist",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-member-profile-button",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 268
+      },
+      "elementType": "tabstrigger",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-member-subscriptions-button",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 269
+      },
+      "elementType": "tabstrigger",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-request-profile-edit-button",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 305
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-membership-payment-modal-overlay",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 507
+      },
+      "elementType": "div",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-membership-payment-modal",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 509
+      },
+      "elementType": "div",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-membership-custom-amount-input",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 535
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-membership-payment-cancel-button",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 565
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-membership-payment-submit-button",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 574
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-profile-edit-modal-overlay",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 585
+      },
+      "elementType": "div",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-profile-edit-modal",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 587
+      },
+      "elementType": "div",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-profile-edit-mobile-input",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 610
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-profile-edit-email-input",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 623
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-profile-edit-designation-input",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 636
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-profile-edit-working-district-input",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 649
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-profile-edit-residential-address-input",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 664
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-profile-edit-permanent-address-input",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 677
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-profile-edit-remarks-input",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 690
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-profile-edit-cancel-button",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 712
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-profile-edit-submit-button",
+      "location": {
+        "filePath": "src/components/Membership.tsx",
+        "lineNumber": 720
+      },
+      "elementType": "unknown",
+      "userFlow": "registration"
+    },
+    {
+      "id": "testid-office-bearers-district-select",
+      "location": {
+        "filePath": "src/components/OfficeBearers.tsx",
+        "lineNumber": 237
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-resource-central-button",
+      "location": {
+        "filePath": "src/components/Resources.tsx",
+        "lineNumber": 161
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-resource-state-button",
+      "location": {
+        "filePath": "src/components/Resources.tsx",
+        "lineNumber": 171
+      },
+      "elementType": "unknown",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-warning-message",
+      "location": {
+        "filePath": "src/components/Resources.tsx",
+        "lineNumber": 252
+      },
+      "elementType": "div",
+      "userFlow": "content-management"
+    },
+    {
+      "id": "testid-taga-towers-locked-page",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 367
+      },
+      "elementType": "div",
+      "userFlow": "room-booking"
+    },
+    {
+      "id": "testid-manage-subscription-button",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 400
+      },
+      "elementType": "button",
+      "userFlow": "subscription-management"
+    },
+    {
+      "id": "testid-taga-towers-page",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 408
+      },
+      "elementType": "div",
+      "userFlow": "room-booking"
+    },
+    {
+      "id": "testid-taga-towers-date-selection-card",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 451
+      },
+      "elementType": "card",
+      "userFlow": "room-booking"
+    },
+    {
+      "id": "testid-room-date-range-calendar",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 462
+      },
+      "elementType": "unknown",
+      "userFlow": "room-booking"
+    },
+    {
+      "id": "testid-taga-towers-room-availability-card",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 490
+      },
+      "elementType": "card",
+      "userFlow": "room-booking"
+    },
+    {
+      "id": "testid-my-bookings-card",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 602
+      },
+      "elementType": "card",
+      "userFlow": "room-booking"
+    },
+    {
+      "id": "testid-caretaker-contact-card",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 659
+      },
+      "elementType": "card",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-room-booking-modal",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 707
+      },
+      "elementType": "dialogcontent",
+      "userFlow": "room-booking"
+    },
+    {
+      "id": "testid-booker-phone-input",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 728
+      },
+      "elementType": "unknown",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-booking-for-radio-group",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 742
+      },
+      "elementType": "unknown",
+      "userFlow": "room-booking"
+    },
+    {
+      "id": "testid-bed-count-select",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 763
+      },
+      "elementType": "selecttrigger",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-booking-gender-radio-group",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 784
+      },
+      "elementType": "unknown",
+      "userFlow": "room-booking"
+    },
+    {
+      "id": "testid-add-guest-button",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 803
+      },
+      "elementType": "button",
+      "userFlow": "form-submission"
+    },
+    {
+      "id": "testid-booking-modal-cancel-button",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 862
+      },
+      "elementType": "button",
+      "userFlow": "room-booking"
+    },
+    {
+      "id": "testid-booking-proceed-payment-button",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 865
+      },
+      "elementType": "button",
+      "userFlow": "payment"
+    },
+    {
+      "id": "testid-room-payment-modal",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 874
+      },
+      "elementType": "dialogcontent",
+      "userFlow": "payment"
+    },
+    {
+      "id": "testid-upi-id-input",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 911
+      },
+      "elementType": "unknown",
+      "userFlow": "payment"
+    },
+    {
+      "id": "testid-room-payment-cancel-button",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 932
+      },
+      "elementType": "unknown",
+      "userFlow": "payment"
+    },
+    {
+      "id": "testid-room-payment-submit-button",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 948
+      },
+      "elementType": "button",
+      "userFlow": "payment"
+    },
+    {
+      "id": "testid-booking-cancel-modal",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 957
+      },
+      "elementType": "dialogcontent",
+      "userFlow": "room-booking"
+    },
+    {
+      "id": "testid-cancel-booking-close-button",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 974
+      },
+      "elementType": "button",
+      "userFlow": "room-booking"
+    },
+    {
+      "id": "testid-confirm-booking-cancel-button",
+      "location": {
+        "filePath": "src/components/TAGATowers.tsx",
+        "lineNumber": 977
+      },
+      "elementType": "button",
+      "userFlow": "room-booking"
+    }
+  ]
+}

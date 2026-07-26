@@ -1,0 +1,7 @@
+```text
+1. Add JWT imports and helper functions to memberlogin.go
+2. Modify MemberLoginHandler to generate JWT token on success
+3. Create JWT validation middleware function
+4. Update MemberLoginHandler to use middleware for protected routes
+5. Ensure JWT includes sub, roles, exp, iat claims
+```

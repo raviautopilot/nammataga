@@ -1,0 +1,51 @@
+=== 1. Disabling default Nginx site config ===
+Removed /etc/nginx/sites-enabled/default
+
+=== 2. Stopping existing Nginx processes ===
+Found running Nginx PIDs: 2792
+4501
+Killed active Nginx processes
+
+=== 3. Testing Nginx Configuration ===
+
+=== 4. Starting Nginx Service ===
+Restarting nginx: nginx.
+
+=== 5. Checking Listening Ports (80 & 443) ===
+tcp   LISTEN 0      511                             0.0.0.0:443        0.0.0.0:*   
+tcp   LISTEN 0      511                             0.0.0.0:80         0.0.0.0:*   
+
+=== 6. Testing local requests to nammataga.com ===
+--- Testing HTTP (Port 80) ---
+HTTP/1.1 301 Moved Permanently
+Server: nginx
+Date: Fri, 24 Jul 2026 16:23:32 GMT
+Content-Type: text/html
+Content-Length: 162
+Connection: keep-alive
+Location: https://nammataga.com/
+
+HTTP/1.1 200 OK
+Server: nginx
+Date: Fri, 24 Jul 2026 16:23:32 GMT
+Content-Type: text/html
+Content-Length: 579
+Connection: keep-alive
+Last-Modified: Fri, 24 Jul 2026 15:34:39 GMT
+ETag: "6a63860f-243"
+Accept-Ranges: bytes
+
+
+--- Testing HTTPS (Port 443) ---
+HTTP/1.1 200 OK
+Server: nginx
+Date: Fri, 24 Jul 2026 16:23:32 GMT
+Content-Type: text/html
+Content-Length: 579
+Connection: keep-alive
+Last-Modified: Fri, 24 Jul 2026 15:34:39 GMT
+ETag: "6a63860f-243"
+Accept-Ranges: bytes
+
+
+=== Complete! ===

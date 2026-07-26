@@ -1,0 +1,265 @@
+package handler
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	"net/http"
+	"os"
+	"taga-api/config"
+	"taga-api/model"
+	"taga-api/service"
+	"time"
+)
+
+var grievances []model.Grievance
+
+// CreateGrievance godoc
+// @Summary Submit a new grievance
+// @Description Submit a grievance with subject, category, priority, etc.
+// @Tags Grievances
+// @Accept json
+// @Produce json
+// @Param grievance body model.Grievance true "Grievance Data"
+// @Success 200 {object} model.Grievance
+// @Failure 400 {object} map[string]string
+// @Router /api/grievances [post]
+func CreateGrievance(c *gin.Context) {
+	config.Logger.Info("CreateGrievance called")
+	var newGrievance model.Grievance
+
+	// 1. Bind request JSON
+	if err := c.ShouldBindJSON(&newGrievance); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	config.Logger.Debug("Received grievance payload", zap.Any("grievance", newGrievance))
+	// 2. Read existing file
+	filePath := "data/grievance/grievanceg.json"
+
+	var grievances []model.Grievance
+
+	file, err := os.ReadFile(filePath)
+	if err == nil {
+		json.Unmarshal(file, &grievances)
+	}
+
+	// 3. Add ID + Dates
+	newGrievance.ID = fmt.Sprintf("GRV-%d", time.Now().Unix())
+	newGrievance.Status = "Pending"
+	newGrievance.SubmittedDate = time.Now()
+	newGrievance.LastUpdate = time.Now()
+
+	// 4. Append new grievance
+	grievances = append(grievances, newGrievance)
+
+	// 5. Write back to file
+	updatedData, err := json.MarshalIndent(grievances, "", "  ")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to prepare grievance",
+		})
+		return
+	}
+
+	err = os.WriteFile(filePath, updatedData, 0644)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to save grievance",
+		})
+		return
+	}
+
+	// Send email after save
+	err = service.SendGrievanceEmail(
+		newGrievance.Subject,
+		newGrievance.Category,
+		newGrievance.Priority,
+		newGrievance.Description,
+		newGrievance.ContactPhone,
+	)
+
+	if err != nil {
+		config.Logger.Error(
+			"Failed to send grievance email",
+			zap.Error(err),
+		)
+	} else {
+		config.Logger.Info("Grievance email sent successfully")
+	}
+
+	// Return response
+	c.JSON(http.StatusOK, newGrievance)
+}
+
+// GetGrievances godoc
+// @Summary Get all grievances
+// @Description Fetch all submitted grievances
+// @Tags Grievances
+// @Produce json
+// @Success 200 {array} model.Grievance
+// @Router /api/grievances [get]
+func GetGrievances(c *gin.Context) {
+	filePath := "data/grievance/grievanceg.json"
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		os.WriteFile(filePath, []byte("[]"), 0644)
+	}
+	var grievances []model.Grievance
+
+	file, err := os.ReadFile(filePath)
+	if err != nil {
+		c.JSON(http.StatusOK, []model.Grievance{})
+		return
+	}
+
+	json.Unmarshal(file, &grievances)
+
+	c.JSON(http.StatusOK, grievances)
+}
+
+// GetGrievanceByID godoc
+// @Summary Get grievance by ID
+// @Tags Grievances
+// @Produce json
+// @Param id path string true "Grievance ID"
+// @Success 200 {object} model.Grievance
+// @Failure 404 {object} map[string]string
+// @Router /api/grievances/{id} [get]
+func GetGrievanceByID(c *gin.Context) {
+	id := c.Param("id")
+
+	for _, g := range grievances {
+		if g.ID == id {
+			c.JSON(http.StatusOK, g)
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{
+		"error": "Grievance not found",
+	})
+}
+
+// UpdateGrievance godoc
+// @Summary Update grievance
+// @Tags Grievances
+// @Accept json
+// @Produce json
+// @Param id path string true "Grievance ID"
+// @Param grievance body model.Grievance true "Updated Data"
+// @Success 200 {object} model.Grievance
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /api/grievances/{id} [put]
+func UpdateGrievance(c *gin.Context) {
+	id := c.Param("id")
+
+	var updated model.Grievance
+	if err := c.ShouldBindJSON(&updated); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	for i, g := range grievances {
+		if g.ID == id {
+			// Update fields
+			grievances[i].Subject = updated.Subject
+			grievances[i].Category = updated.Category
+			grievances[i].Priority = updated.Priority
+			grievances[i].Description = updated.Description
+			grievances[i].ContactPhone = updated.ContactPhone
+			grievances[i].PreferredResponse = updated.PreferredResponse
+			grievances[i].Status = updated.Status
+			grievances[i].AssignedTo = updated.AssignedTo
+			grievances[i].LastUpdate = time.Now()
+
+			c.JSON(http.StatusOK, grievances[i])
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{
+		"error": "Grievance not found",
+	})
+}
+
+// DeleteGrievance godoc
+// @Summary Delete grievance
+// @Tags Grievances
+// @Param id path string true "Grievance ID"
+// @Success 200 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /api/grievances/{id} [delete]
+func DeleteGrievance(c *gin.Context) {
+	id := c.Param("id")
+
+	for i, g := range grievances {
+		if g.ID == id {
+			// Remove from slice
+			grievances = append(grievances[:i], grievances[i+1:]...)
+
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Grievance deleted successfully",
+			})
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{
+		"error": "Grievance not found",
+	})
+}
+
+func GetGrievanceBanner(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"image": "/images/grievance-banner.jpg",
+	})
+}
+
+// GetCategories godoc
+// @Summary Get grievance categories
+// @Description Fetch all grievance categories from JSON file
+// @Tags Grievances
+// @Produce json
+// @Success 200 {array} string
+// @Router /api/categories [get]
+func GetCategories(c *gin.Context) {
+	filePath := "data/grievance/categories.json"
+
+	file, err := os.ReadFile(filePath)
+	if err != nil {
+		c.JSON(http.StatusOK, []string{})
+		return
+	}
+
+	var categories []string
+	json.Unmarshal(file, &categories)
+
+	c.JSON(http.StatusOK, categories)
+}
+
+// GetPriorities godoc
+// @Summary Get grievance priorities
+// @Description Fetch all grievance priorities from JSON file
+// @Tags Grievances
+// @Produce json
+// @Success 200 {array} map[string]string
+// @Router /api/priorities [get]
+func GetPriorities(c *gin.Context) {
+	filePath := "data/grievance/priorities.json"
+
+	file, err := os.ReadFile(filePath)
+	if err != nil {
+		c.JSON(http.StatusOK, []map[string]string{})
+		return
+	}
+
+	var priorities []map[string]string
+	json.Unmarshal(file, &priorities)
+
+	c.JSON(http.StatusOK, priorities)
+}

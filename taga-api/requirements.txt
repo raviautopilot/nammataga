@@ -1,0 +1,6 @@
+>  register a new router endpoint for member login /api/office/{pathParam}
+>  introduce a new handler for member login in handler/office.go
+>  this endpoint will take a path param and read the file fromdata/office/{pathParam}.json
+>  implement a service for retrieving the office bearers
+>  write indepth unit test for login feature
+>  if needed create a service package

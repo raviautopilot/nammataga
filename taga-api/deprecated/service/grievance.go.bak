@@ -1,0 +1,69 @@
+package service
+
+import (
+	"errors"
+	"time"
+
+	"github.com/google/uuid"
+	"taga-api/model"
+)
+
+var grievances []model.Grievance
+
+// 🟢 CREATE
+func CreateGrievance(g model.Grievance) model.Grievance {
+	g.ID = "GRV-" + uuid.New().String()[:8]
+	g.Status = "Submitted"
+	g.SubmittedDate = time.Now()
+	g.LastUpdate = time.Now()
+
+	grievances = append(grievances, g)
+
+	return g
+}
+
+// 🔵 GET ALL
+func GetAllGrievances() []model.Grievance {
+	return grievances
+}
+
+// 🟣 GET BY ID
+func GetGrievanceByID(id string) (model.Grievance, error) {
+	for _, g := range grievances {
+		if g.ID == id {
+			return g, nil
+		}
+	}
+	return model.Grievance{}, errors.New("grievance not found")
+}
+
+// 🟡 UPDATE
+func UpdateGrievance(id string, updated model.Grievance) (model.Grievance, error) {
+	for i, g := range grievances {
+		if g.ID == id {
+			grievances[i].Subject = updated.Subject
+			grievances[i].Category = updated.Category
+			grievances[i].Priority = updated.Priority
+			grievances[i].Description = updated.Description
+			grievances[i].ContactPhone = updated.ContactPhone
+			grievances[i].PreferredResponse = updated.PreferredResponse
+			grievances[i].Status = updated.Status
+			grievances[i].AssignedTo = updated.AssignedTo
+			grievances[i].LastUpdate = time.Now()
+
+			return grievances[i], nil
+		}
+	}
+	return model.Grievance{}, errors.New("grievance not found")
+}
+
+// 🔴 DELETE
+func DeleteGrievance(id string) error {
+	for i, g := range grievances {
+		if g.ID == id {
+			grievances = append(grievances[:i], grievances[i+1:]...)
+			return nil
+		}
+	}
+	return errors.New("grievance not found")
+}

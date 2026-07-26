@@ -1,0 +1,960 @@
+package deprecated
+
+/*
+This file contains dead and unreachable functions extracted from active codebase files.
+They have been safely moved here to clean up the active code while preserving them for retrieval if needed.
+*/
+
+// ==========================================
+// Extracted from: handler/about.go
+// ==========================================
+
+/*
+func GetHomeBanner(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"image": "data/image/about.jpg",
+	})
+}
+*/
+
+// ==========================================
+// Extracted from: handler/announcement.go
+// ==========================================
+
+/*
+func DebugMembers(c *gin.Context) {
+	members, err := readExistingMembers()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var memberEmails []string
+	var memberDistricts []string
+	var memberPaymentStatuses []string
+
+	for _, m := range members {
+		if email, ok := m["emailId"].(string); ok {
+			memberEmails = append(memberEmails, email)
+		}
+		if district, ok := m["working_district"].(string); ok {
+			memberDistricts = append(memberDistricts, district)
+		}
+		if paymentStatus, ok := m["payment_status"].(string); ok {
+			memberPaymentStatuses = append(memberPaymentStatuses, paymentStatus)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"total_members":           len(members),
+		"member_emails":           memberEmails,
+		"member_districts":        memberDistricts,
+		"member_payment_statuses": memberPaymentStatuses,
+		"available_districts":     getUniqueDistricts(members),
+	})
+}
+
+func getUniqueDistricts(members []map[string]interface{}) []string {
+	districtMap := make(map[string]bool)
+	for _, m := range members {
+		if district, ok := m["working_district"].(string); ok && district != "" {
+			districtMap[district] = true
+		}
+	}
+	districts := make([]string, 0, len(districtMap))
+	for d := range districtMap {
+		districts = append(districts, d)
+	}
+	return districts
+}
+*/
+
+// ==========================================
+// Extracted from: handler/auth.go
+// ==========================================
+
+/*
+// generateJWT creates a JWT token with user claims
+func generateJWT(member *model.Member) (string, error) {
+	// Get secret from environment
+	secret := config.Config.JwtSecret
+	if secret == "" {
+		return "", jwt.ErrSignatureInvalid
+	}
+
+	// Define roles - for now default to USER, can be extended based on user model
+	roles := []string{"USER"}
+
+	// Create token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":   member.EmailId, // user identifier
+		"roles": roles,
+		"exp":   time.Now().Add(time.Hour * 24).Unix(), // 24 hours expiration
+		"iat":   time.Now().Unix(),
+	})
+
+	// Sign token
+	return token.SignedString([]byte(secret))
+}
+
+// JWTMiddleware validates JWT tokens and attaches claims to context
+func JWTMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get token from Authorization header
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+			c.Abort()
+			return
+		}
+
+		// Extract token from Bearer format
+		var tokenString string
+		fmt.Sscanf(authHeader, "Bearer %s", &tokenString)
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization format"})
+			c.Abort()
+			return
+		}
+
+		// Parse and validate token
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			// Validate signing method
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return []byte(os.Getenv("JWT_SECRET")), nil
+		})
+
+		if err != nil || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			c.Abort()
+			return
+		}
+
+		// Extract claims
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			// Attach claims to context for use in handlers
+			c.Set("claims", claims)
+			c.Set("email", claims["sub"])
+			c.Set("roles", claims["roles"])
+		} else {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+*/
+
+// ==========================================
+// Extracted from: handler/bulk_upload.go
+// ==========================================
+
+/*
+// parseJSONFileForBulk parses JSON file for bulk upload
+func parseJSONFileForBulk(filePath string) ([]RegistrationRequest, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var registrations []RegistrationRequest
+	if err := json.Unmarshal(data, &registrations); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	return registrations, nil
+}
+*/
+
+// ==========================================
+// Extracted from: handler/email_helper.go
+// ==========================================
+
+/*
+// loadSentPayments loads previously sent payments from JSON file
+func loadSentPayments() {
+	sentPaymentsLock.Lock()
+	defer sentPaymentsLock.Unlock()
+
+	data, err := os.ReadFile(sentPaymentsFile)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			safeLogWarn("Failed to load sent payments file", zap.Error(err))
+		}
+		return
+	}
+
+	var payments []SentPayment
+	if err := json.Unmarshal(data, &payments); err != nil {
+		safeLogWarn("Failed to parse sent payments", zap.Error(err))
+		return
+	}
+
+	for _, p := range payments {
+		sentPayments[p.PaymentID] = p
+	}
+	safeLogInfo("Loaded sent payments", zap.Int("count", len(sentPayments)))
+}
+
+// loadFailedEmails loads previously failed emails from JSON file
+func loadFailedEmails() {
+	failedEmailsLock.Lock()
+	defer failedEmailsLock.Unlock()
+
+	data, err := os.ReadFile(failedEmailsFile)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			safeLogWarn("Failed to load failed emails file", zap.Error(err))
+		}
+		return
+	}
+
+	var emails []FailedEmail
+	if err := json.Unmarshal(data, &emails); err != nil {
+		safeLogWarn("Failed to parse failed emails", zap.Error(err))
+		return
+	}
+
+	failedEmails = emails
+	safeLogInfo("Loaded failed emails", zap.Int("count", len(failedEmails)))
+}
+*/
+
+// ==========================================
+// Extracted from: handler/event.go
+// ==========================================
+
+/*
+func loadEvents() ([]model.Event, error) {
+	file, err := os.ReadFile(eventsFile)
+	if err != nil {
+		return nil, err
+	}
+
+	var events []model.Event
+	err = json.Unmarshal(file, &events)
+
+	if events == nil {
+		events = []model.Event{}
+	}
+
+	return events, err
+}
+
+// GetEventsBanner godoc
+// @Summary Get events banner image
+// @Tags Events
+// @Produce json
+// @Router /api/events/banner [get]
+func GetEventsBanner(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"image": "/api/images/events-banner.jpg",
+	})
+}
+*/
+
+// ==========================================
+// Extracted from: handler/health.go
+// ==========================================
+
+/*
+// getActiveMembersStat returns the active members statistic
+func getActiveMembersStat() model.StatsResponse {
+	// In production, this would query your database:
+	// activeMembers := getActiveMembersCountFromDB()
+	activeMembers := 2500 // Mock data - replace with database call
+
+	return model.StatsResponse{
+		ID:         1,
+		Label:      "Active Members",
+		Value:      activeMembers,
+		IconName:   "Users",
+		ColorClass: "text-primary",
+	}
+}
+
+// getYearsOfServiceStat returns the years of service statistic
+func getYearsOfServiceStat() model.StatsResponse {
+	organizationFoundedYear := 1920 // Change to your actual founding year
+	currentYear := time.Now().Year()
+	yearsOfService := currentYear - organizationFoundedYear
+
+	return model.StatsResponse{
+		ID:         2,
+		Label:      "Years of Service",
+		Value:      yearsOfService,
+		IconName:   "Award",
+		ColorClass: "text-green-600",
+	}
+}
+
+// getDistrictsCoveredStat returns the districts covered statistic
+func getDistrictsCoveredStat() model.StatsResponse {
+	// In production, this would query your database:
+	// districts := getDistrictsCoveredFromDB()
+	districtsCovered := 38 // Mock data - replace with database call
+
+	return model.StatsResponse{
+		ID:         3,
+		Label:      "Districts Covered",
+		Value:      districtsCovered,
+		IconName:   "Target",
+		ColorClass: "text-green-700",
+	}
+}
+
+// getProgramsEventsStat returns the programs and events statistic
+func getProgramsEventsStat() model.StatsResponse {
+	// In production, this would query your database:
+	// programs := getProgramsEventsCountFromDB()
+	programsEvents := 25 // Mock data - replace with database call
+
+	return model.StatsResponse{
+		ID:         4,
+		Label:      "Programs & Events",
+		Value:      programsEvents,
+		IconName:   "Heart",
+		ColorClass: "text-green-800",
+	}
+}
+
+// formatNumberWithPlus formats a number with comma separation and adds a plus sign
+// Example: 2500 -> "2,500+"
+func formatNumberWithPlus(count int) string {
+	formatted := strconv.FormatInt(int64(count), 10)
+
+	// Add comma separators for thousands (simple implementation)
+	if count >= 1000 {
+		n := len(formatted)
+		if n > 3 {
+			formatted = formatted[:n-3] + "," + formatted[n-3:]
+		}
+	}
+
+	return formatted + "+"
+}
+*/
+
+// ==========================================
+// Extracted from: handler/member.go
+// ==========================================
+
+/*
+// GetMemberProfile
+func GetMemberProfile(c *gin.Context) {
+	email := c.Query("email")
+	if email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email is required"})
+		return
+	}
+
+	reader := &auth.FileMemberReader{}
+	members, err := reader.ReadMembers()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read members"})
+		return
+	}
+
+	for _, m := range members {
+		if strings.EqualFold(m.EmailId, email) {
+			c.JSON(http.StatusOK, gin.H{"user": m})
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+}
+*/
+
+// ==========================================
+// Extracted from: handler/member_list.go
+// ==========================================
+
+/*
+// getPaymentStatus reads payment status from member data
+func getPaymentStatus(member map[string]interface{}) string {
+	paymentStatus := getString(member, "payment_status")
+	if paymentStatus == "" {
+		return "Unpaid"
+	}
+	return paymentStatus
+}
+*/
+
+// ==========================================
+// Extracted from: handler/office_bearers.go
+// ==========================================
+
+/*
+func GetOfficeBearersBanner(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"image": "/api/images/office-bearers.jpg",
+	})
+}
+*/
+
+// ==========================================
+// Extracted from: handler/subscription_payment.go
+// ==========================================
+
+/*
+func savePaymentTransaction(transaction model.PaymentTransaction) {
+	filePath := getPaymentTransactionsFilePath()
+	os.MkdirAll(filepath.Dir(filePath), 0755)
+
+	var transactions []model.PaymentTransaction
+	data, err := os.ReadFile(filePath)
+	if err == nil {
+		json.Unmarshal(data, &transactions)
+	}
+
+	transactions = append(transactions, transaction)
+	updatedData, _ := json.MarshalIndent(transactions, "", "  ")
+	os.WriteFile(filePath, updatedData, 0644)
+}
+
+func getMemberIDByEmail(email string) string {
+	members, err := readExistingMembers()
+	if err != nil {
+		return ""
+	}
+	for _, m := range members {
+		if mEmail, ok := m["emailId"].(string); ok && mEmail == email {
+			if id, ok := m["id"].(string); ok {
+				return id
+			}
+		}
+	}
+	return ""
+}
+*/
+
+// ==========================================
+// Extracted from: handler/tagatower.go
+// ==========================================
+
+/*
+func GetTagaTowersBanner(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"image": "/api/images/taga-towers.jpg",
+	})
+}
+*/
+
+// ==========================================
+// Extracted from: middleware/admin_auth.go
+// ==========================================
+
+/*
+// APIKeyAuthMiddleware for internal/admin access
+func APIKeyAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		apiKey := c.GetHeader("X-API-Key")
+
+		expectedKey := os.Getenv("ADMIN_API_KEY")
+		if expectedKey == "" {
+			expectedKey = config.GetConfig().AdminAPIKey
+		}
+
+		if apiKey == "" || apiKey != expectedKey {
+			config.Logger.Warn("Invalid or missing API key")
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Valid API key required"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// GetJWTSecret exports the function for other packages
+func GetJWTSecret() string {
+	return jwt.GetJWTSecret()
+}
+*/
+
+// ==========================================
+// Extracted from: service/auth/auth.go
+// ==========================================
+
+/*
+func Authenticate(username, password string) (*model.Member, error) {
+	return AuthenticateMember(username, password, defaultReader)
+}
+
+func AuthenticateMember(username, password string, reader MemberReader) (*model.Member, error) {
+	members, err := reader.ReadMembers()
+	if err != nil {
+		return nil, err
+	}
+
+	config.Logger.Info("Loaded members", zap.Int("count", len(members)))
+
+	for _, member := range members {
+		if strings.TrimSpace(member.EmailId) != strings.TrimSpace(username) {
+			continue
+		}
+		// ✅ FIX: success = err == nil
+		err := bcrypt.CompareHashAndPassword(
+			[]byte(member.Password),
+			[]byte(strings.TrimSpace(password)),
+		)
+
+		if err == nil {
+			// ✅ SUCCESS LOGIN
+
+			responseMember := &model.Member{
+				Username:                 member.Username,
+				FirstLogin:               member.FirstLogin,
+				CpsGpfNumber:             member.CpsGpfNumber,
+				DateOfBirth:              member.DateOfBirth,
+				Designation:              member.Designation,
+				EducationalQualification: member.EducationalQualification,
+				EmailId:                  member.EmailId,
+				FatherName:               member.FatherName,
+				Gender:                   member.Gender,
+				Initial:                  member.Initial,
+				MobileNumber:             member.MobileNumber,
+				MotherName:               member.MotherName,
+				Name:                     member.Name,
+				NativeDistrict:           member.NativeDistrict,
+				PermanentAddress:         member.PermanentAddress,
+				RecruitmentBatch:         member.RecruitmentBatch,
+				ResidentialAddress:       member.ResidentialAddress,
+				SNo:                      member.SNo,
+				SeniorityNumber:          member.SeniorityNumber,
+				TbfNumber:                member.TbfNumber,
+				WorkingDistrict:          member.WorkingDistrict,
+			}
+
+			return responseMember, nil
+		}
+	}
+	return nil, &AuthenticationError{"member not found"}
+}
+
+func Register(username, password, email string) error {
+	// Read existing members
+	members, err := defaultReader.ReadMembers()
+	if err != nil {
+		return err
+	}
+
+	// Check if username already exists
+	for _, member := range members {
+		if member.Username == username {
+			return &AuthenticationError{"username already exists"}
+		}
+	}
+
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	// Create new member with minimal required fields
+	newMember := model.Member{
+		Username:   username,
+		Password:   string(hashedPassword),
+		EmailId:    email,
+		FirstLogin: false,
+	}
+
+	// Add to members list
+	members = append(members, newMember)
+
+	// Write back to file
+	data, err := json.MarshalIndent(members, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(config.Config.MembersFile, data, 0644)
+}
+*/
+
+// ==========================================
+// Extracted from: service/jwt/jwt_service.go
+// ==========================================
+
+/*
+// GetJWTSecret returns the JWT secret from config
+func GetJWTSecret() string {
+	cfg := config.GetConfig()
+	secret := cfg.JwtSecret
+	if secret == "" {
+		secret = "ilovetaga"
+	}
+	return secret
+}
+*/
+
+// ==========================================
+// Extracted from: service/member/repository.go
+// ==========================================
+
+/*
+// GetMemberByEmail retrieves a member by email
+func GetMemberByEmail(email string) (*model.Member, error) {
+	membersLock.RLock()
+	defer membersLock.RUnlock()
+
+	cfg := config.GetConfig()
+	data, err := os.ReadFile(cfg.MembersFile)
+	if err != nil {
+		return nil, err
+	}
+
+	var allMembers []model.Member
+	if err := json.Unmarshal(data, &allMembers); err != nil {
+		return nil, err
+	}
+
+	for _, m := range allMembers {
+		if m.EmailId == email {
+			return &m, nil
+		}
+	}
+	return nil, nil
+}
+*/
+
+// ==========================================
+// Extracted from: service/office_bearers/service.go
+// ==========================================
+
+/*
+// CreateBackup creates a timestamped backup of the district bearers file
+func CreateBackup() (string, error) {
+	mu.Lock()
+	defer mu.Unlock()
+	return createBackupLocked()
+}
+
+// createBackupLocked creates backup (must be called with lock held)
+func createBackupLocked() (string, error) {
+	// Ensure backup directory exists
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create backup directory: %w", err)
+	}
+
+	// Check if source file exists
+	if _, err := os.Stat(dataFile); os.IsNotExist(err) {
+		// No file to backup, create empty data structure
+		emptyData := make(DistrictBearersData)
+		if err := writeDataFileLocked(emptyData); err != nil {
+			return "", fmt.Errorf("failed to create empty data file: %w", err)
+		}
+	}
+
+	// Generate backup filename with timestamp
+	timestamp := time.Now().Format("20060102_150405")
+	backupFile := filepath.Join(backupDir, fmt.Sprintf("district_office_bearers_backup_%s.json", timestamp))
+
+	// Read source file
+	sourceData, err := os.ReadFile(dataFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to read source file: %w", err)
+	}
+
+	// Write backup
+	if err := os.WriteFile(backupFile, sourceData, 0644); err != nil {
+		return "", fmt.Errorf("failed to write backup file: %w", err)
+	}
+
+	return backupFile, nil
+}
+*/
+
+// ==========================================
+// Extracted from: service/tagatower.go
+// ==========================================
+
+/*
+// Get booking file path by date
+func getBookingFilePathByDate(date time.Time) string {
+	dateStr := date.Format("2006-01-02") // YYYY-MM-DD
+	return getFilePath("data", "towers", "bookings", fmt.Sprintf("%s.json", dateStr))
+}
+
+func ReadBookingsForDate(date time.Time) ([]model.Booking, error) {
+	filePath := getBookingFilePathByDate(date)
+
+	file, err := os.ReadFile(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []model.Booking{}, nil // No bookings for this date yet
+		}
+		log.Printf("Error reading bookings file: %v", err)
+		return nil, err
+	}
+
+	var bookings []model.Booking
+	if err := json.Unmarshal(file, &bookings); err != nil {
+		log.Printf("Error parsing bookings JSON: %v", err)
+		return nil, err
+	}
+
+	return bookings, nil
+}
+
+func saveBookingsForDate(date time.Time, bookings []model.Booking) error {
+	filePath := getBookingFilePathByDate(date)
+
+	// Create directory if not exists
+	dir := filepath.Dir(filePath)
+	os.MkdirAll(dir, 0755)
+
+	data, err := json.MarshalIndent(bookings, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filePath, data, 0644)
+}
+
+func DeleteBooking(bookingID string) error {
+
+	allBookings, err := ReadAllBookings()
+	fmt.Println("DEBUG: All bookings:", allBookings)
+	fmt.Println("DEBUG: Searching for:", bookingID)
+	if err != nil {
+		return err
+	}
+
+	for i := range allBookings {
+
+		if allBookings[i].ID == bookingID {
+
+			// 🚫 prevent cancel if already paid
+			if allBookings[i].PaymentStatus == model.PaymentConfirmed {
+				return fmt.Errorf("use refund flow for paid bookings")
+			}
+
+			allBookings[i].PaymentStatus = model.PaymentCancelled
+
+			return SaveAllBookings(allBookings)
+		}
+	}
+
+	return fmt.Errorf("booking not found")
+}
+
+func MarkBookingRefunded(bookingID string) error {
+
+	allBookings, err := ReadAllBookings()
+	if err != nil {
+		return err
+	}
+
+	for i := range allBookings {
+
+		if allBookings[i].ID == bookingID {
+			// Treat as cancelled — no refund status exposed to users
+			allBookings[i].PaymentStatus = model.PaymentCancelled
+			return SaveAllBookings(allBookings)
+		}
+	}
+
+	return fmt.Errorf("booking not found")
+}
+*/
+
+// ==========================================
+// Extracted from: utils/json.go
+// ==========================================
+
+/*
+// WriteJSON writes struct data into a JSON file
+func WriteJSON(filePath string, data interface{}) error {
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filePath, jsonData, 0644)
+}
+*/
+
+// ==========================================
+// Extracted from: utils/map_helper.go
+// ==========================================
+
+/*
+// GetIntFromMap safely extracts an int value from a map
+func GetIntFromMap(m map[string]interface{}, key string) int {
+	if val, ok := m[key]; ok && val != nil {
+		switch v := val.(type) {
+		case int:
+			return v
+		case float64:
+			return int(v)
+		case int64:
+			return int(v)
+		}
+	}
+	return 0
+}
+
+// GetBoolFromMap safely extracts a bool value from a map
+func GetBoolFromMap(m map[string]interface{}, key string) bool {
+	if val, ok := m[key]; ok && val != nil {
+		if b, ok := val.(bool); ok {
+			return b
+		}
+	}
+	return false
+}
+
+// GetFloat64FromMap safely extracts a float64 value from a map
+func GetFloat64FromMap(m map[string]interface{}, key string) float64 {
+	if val, ok := m[key]; ok && val != nil {
+		switch v := val.(type) {
+		case float64:
+			return v
+		case int:
+			return float64(v)
+		case int64:
+			return float64(v)
+		}
+	}
+	return 0
+}
+*/
+
+// ==========================================
+// Extracted from: utils/membership.go
+// ==========================================
+
+/*
+// CurrentMembershipStart returns the start of the current membership year (April 1).
+func CurrentMembershipStart(now time.Time) time.Time {
+	year := now.Year()
+	if now.Month() < 4 {
+		year-- // still in previous membership year
+	}
+	return time.Date(year, 4, 1, 0, 0, 0, 0, now.Location())
+}
+*/
+
+// ==========================================
+// Extracted from: utils/password.go
+// ==========================================
+
+/*
+// TestGenerateTempPassword is a test helper
+func TestGenerateTempPassword(t *testing.T) {
+	password := GenerateTempPassword()
+	if len(password) != 8 {
+		t.Errorf("GenerateTempPassword() length = %v, want 8", len(password))
+	}
+
+	// Check if all characters are from the expected set
+	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	for _, c := range password {
+		found := false
+		for _, valid := range chars {
+			if c == valid {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("GenerateTempPassword() contains invalid character: %c", c)
+		}
+	}
+}
+
+// TestHashPassword is a test helper
+func TestHashPassword(t *testing.T) {
+	password := "testpassword123"
+	hash := HashPassword(password)
+
+	// Verify the hash can be compared
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	if err != nil {
+		t.Errorf("HashPassword() produced invalid hash: %v", err)
+	}
+
+	// Wrong password should fail
+	wrongPassword := "wrongpassword"
+	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(wrongPassword))
+	if err == nil {
+		t.Errorf("HashPassword() should not match wrong password")
+	}
+}
+
+// ✅ Compare password (ADD THIS — IMPORTANT)
+func CheckPassword(hash, password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+*/
+
+// ==========================================
+// Extracted from: utils/validator.go
+// ==========================================
+
+/*
+// TestValidateMember is a test helper that can be used in test files
+func TestValidateMember(t *testing.T) {
+	tests := []struct {
+		name    string
+		member  model.Member
+		wantLen int
+	}{
+		{
+			name: "Valid member",
+			member: model.Member{
+				Username:     "testuser",
+				EmailId:      "test@example.com",
+				CpsGpfNumber: "12345",
+			},
+			wantLen: 0,
+		},
+		{
+			name: "Missing username",
+			member: model.Member{
+				EmailId:      "test@example.com",
+				CpsGpfNumber: "12345",
+			},
+			wantLen: 1,
+		},
+		{
+			name: "Missing email",
+			member: model.Member{
+				Username:     "testuser",
+				CpsGpfNumber: "12345",
+			},
+			wantLen: 1,
+		},
+		{
+			name: "Missing cpsGpfNumber",
+			member: model.Member{
+				Username: "testuser",
+				EmailId:  "test@example.com",
+			},
+			wantLen: 1,
+		},
+		{
+			name:    "All missing",
+			member:  model.Member{},
+			wantLen: 3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ValidateMember(tt.member)
+			if len(got) != tt.wantLen {
+				t.Errorf("ValidateMember() error count = %v, want %v", len(got), tt.wantLen)
+			}
+		})
+	}
+}
+*/

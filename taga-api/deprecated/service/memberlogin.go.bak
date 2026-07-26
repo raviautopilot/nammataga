@@ -1,0 +1,46 @@
+package service
+
+import (
+	//"encoding/json"
+	//"os"
+	"taga-api/model"
+	"taga-api/utils"
+)
+
+var loginFile = "./data/memberlogin/memberlogin.json"
+
+func Login(data model.LoginRequest) (bool, error) {
+	var users []model.UserFull
+
+	err := utils.ReadJSONFile(loginFile, &users) // ✅ HERE
+	if err != nil {
+		return false, err
+	}
+
+	for _, u := range users {
+		if u.Email == data.Email && utils.CheckPassword(u.Password, data.Password) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+func ForgotPassword(data model.MemberForgotPasswordHandler) (bool, error) {
+	var users []model.UserFull
+
+	err := utils.ReadJSONFile(loginFile, &users) // ✅ HERE
+	if err != nil {
+		return false, err
+	}
+
+	for _, u := range users {
+		if u.Identifier == data.MembershipID &&
+			u.Email == data.Email &&
+			u.SecurityQuestion == data.SecurityQuestion &&
+			u.SecurityAnswer == data.SecurityAnswer {
+
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
