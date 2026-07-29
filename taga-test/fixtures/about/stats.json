@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "label": "Active Members",
+    "value": 12500,
+    "icon_name": "Users",
+    "color_class": "text-emerald-600"
+  },
+  {
+    "id": 2,
+    "label": "Years of Service",
+    "value": 58,
+    "icon_name": "Award",
+    "color_class": "text-blue-600"
+  },
+  {
+    "id": 3,
+    "label": "Districts Covered",
+    "value": 38,
+    "icon_name": "MapPin",
+    "color_class": "text-purple-600"
+  }
+]

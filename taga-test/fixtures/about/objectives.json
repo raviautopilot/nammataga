@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "title": "Professional Welfare",
+    "description": "To protect and promote the professional rights, status, and interests of agricultural graduates.",
+    "order_index": 1
+  },
+  {
+    "id": 2,
+    "title": "Agricultural Knowledge Sharing",
+    "description": "To disseminate modern agricultural technologies and scientific advancements to members and farmers.",
+    "order_index": 2
+  }
+]

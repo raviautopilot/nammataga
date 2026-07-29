@@ -1,0 +1,19 @@
+{
+  "headquarters": {
+    "name": "TAGA Headquarters",
+    "address": "Tamil Nadu Agricultural University Campus, Coimbatore - 641003"
+  },
+  "office_hours": "Monday - Friday: 9:00 AM - 5:30 PM",
+  "primary_phone": "+91-422-6611-200",
+  "primary_email": "info@taga-tn.org",
+  "secondary_email": "info2@taga-tn.org",
+  "website": "www.taga-tn.org",
+  "regional_offices": [
+    {
+      "id": 1,
+      "city": "Chennai",
+      "phone": "+91-44-2345-6789",
+      "address": "123 Agricultural Complex, GST Road, Chennai - 600032"
+    }
+  ]
+}
