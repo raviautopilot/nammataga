@@ -12,29 +12,41 @@
 | **End Time** | {{.Summary.EndTime.Format "2006-01-02 15:04:05"}} |
 | **Total Duration** | {{.Summary.TotalDurationStr}} |
 
-## Test Details
+---
 
-| Test Case / Description | Suite / Type | Status | Duration |
-| :--- | :--- | :--- | :--- |
-{{range .Results}}| {{.Name}} | {{.Type}} | {{if eq .Status "passed"}}🟢 Passed{{else if eq .Status "failed"}}🔴 Failed{{else}}🟡 Skipped{{end}} | {{.DurationStr}} |
+## Detailed Test Results Categorized by Test File
+
+{{range .GroupedResults}}
+### 📄 `{{.Category}}` (Passed: {{.Passed}}, Failed: {{.Failed}}, Total: {{.Total}})
+
+| Test Case Name & Purpose | Expected Result | Actual Result (Got) | Status | Duration |
+| :--- | :--- | :--- | :--- | :--- |
+{{range .Results}}| **{{.Name}}**<br>_{{.Description}}_ | `{{if .Expected}}{{.Expected}}{{else}}200 OK Response{{end}}` | `{{if .Actual}}{{.Actual}}{{else}}{{.Status}}{{end}}` | {{if eq .Status "passed"}}🟢 Passed{{else if eq .Status "failed"}}🔴 Failed{{else}}🟡 Skipped{{end}} | {{.DurationStr}} |
+{{end}}
+
 {{end}}
 
 {{if gt .Summary.Failed 0}}
-## Failures & Errors
+---
 
-{{range .Results}}{{if eq .Status "failed"}}
-### ❌ {{.Name}}
+## Failed Tests & Diagnoses
 
-- **Type**: {{.Type}}
+{{range .GroupedResults}}{{range .Results}}{{if eq .Status "failed"}}
+### ❌ [{{.Category}}] {{.Name}}
+
+- **Description / Purpose**: {{.Description}}
+- **Expected Result**: `{{.Expected}}`
+- **Actual Result (Got)**: `{{.Actual}}`
 - **Duration**: {{.DurationStr}}
-- **Error Trace**:
+- **Failure Reason**:
 ```
-{{.Error}}
+{{if .FailureReason}}{{.FailureReason}}{{else}}{{.Error}}{{end}}
 ```
 {{if .Screenshot}}
-- **Screenshot**:
+- **Failure Screenshot**:
   ![Screenshot]({{.Screenshot}})
 {{end}}
 
 ---
 {{end}}{{end}}{{end}}
+{{end}}

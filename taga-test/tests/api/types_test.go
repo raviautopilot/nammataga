@@ -72,3 +72,15 @@ type ContactResponse struct {
 	RegionalOffices []RegionalOffice `json:"regional_offices"`
 }
 
+// RootResponse represents the root welcome payload
+type RootResponse struct {
+	Message string `json:"message"`
+	Status  string `json:"status"`
+}
+
+// HealthResponse represents the health check status payload
+type HealthResponse struct {
+	Status string `json:"status"`
+}
+
+

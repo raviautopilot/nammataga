@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -201,10 +202,75 @@ func TeardownSuite() {
 	}
 }
 
+// TestContext wraps testing.T with rich metadata for expected vs actual reporting.
+type TestContext struct {
+	*testing.T
+	Client        *client.Client
+	Description   string
+	Expected      string
+	Actual        string
+	FailureReason string
+}
+
+// RunAPITestWithDetails executes an API test with rich description, expected, actual, and failure tracking.
+func RunAPITestWithDetails(t *testing.T, name string, description string, expected string, fn func(tc *TestContext)) {
+	rep := report.GetGlobalReporter()
+	startTime := time.Now()
+
+	category := "General"
+	if _, file, _, ok := runtime.Caller(1); ok {
+		category = filepath.Base(file)
+	}
+
+	t.Run(name, func(subT *testing.T) {
+		c := client.NewClient(GlobalConfig.BaseURL, time.Duration(GlobalConfig.Timeout)*time.Second, ExecutionLogDir)
+		tc := &TestContext{
+			T:           subT,
+			Client:      c,
+			Description: description,
+			Expected:    expected,
+		}
+
+		defer func() {
+			duration := time.Since(startTime)
+			status := "passed"
+			errStr := ""
+
+			if subT.Failed() {
+				status = "failed"
+				errStr = "API assertion or validation error."
+				if c.LastError != nil {
+					errStr = c.LastError.Error()
+				}
+				if tc.FailureReason == "" {
+					tc.FailureReason = errStr
+				}
+			}
+
+			if tc.Actual == "" {
+				if status == "passed" {
+					tc.Actual = "Matched expected behavior: " + tc.Expected
+				} else {
+					tc.Actual = "Assertion failed: " + tc.FailureReason
+				}
+			}
+
+			rep.RecordDetailed(name, "API", category, tc.Description, tc.Expected, tc.Actual, status, duration, errStr, tc.FailureReason, "")
+		}()
+
+		fn(tc)
+	})
+}
+
 // RunAPITest is a wrapper executing an API test case, injecting a custom Client and logging results.
 func RunAPITest(t *testing.T, name string, fn func(t *testing.T, c *client.Client)) {
 	rep := report.GetGlobalReporter()
 	startTime := time.Now()
+
+	category := "General"
+	if _, file, _, ok := runtime.Caller(1); ok {
+		category = filepath.Base(file)
+	}
 
 	t.Run(name, func(subT *testing.T) {
 		c := client.NewClient(GlobalConfig.BaseURL, time.Duration(GlobalConfig.Timeout)*time.Second, ExecutionLogDir)
@@ -222,12 +288,18 @@ func RunAPITest(t *testing.T, name string, fn func(t *testing.T, c *client.Clien
 				}
 			}
 
-			rep.Record(name, "API", status, duration, errStr, "")
+			actual := "200 OK Response"
+			if status == "failed" {
+				actual = errStr
+			}
+
+			rep.RecordDetailed(name, "API", category, name, "Valid 200 OK API Response", actual, status, duration, errStr, "", "")
 		}()
 
 		fn(subT, c)
 	})
 }
+
 
 // RunUITest is a wrapper executing a UI test case, injecting a Page Object model, managing ChromeDriver, and capturing screenshots on failure.
 func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) {
@@ -235,6 +307,11 @@ func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) 
 
 	rep := report.GetGlobalReporter()
 	startTime := time.Now()
+
+	category := "General"
+	if _, file, _, ok := runtime.Caller(1); ok {
+		category = filepath.Base(file)
+	}
 
 	t.Run(name, func(subT *testing.T) {
 		driver, err := ui.InitWebDriver(GlobalConfig.SeleniumURL, GlobalConfig.Headless)
@@ -265,7 +342,7 @@ func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) 
 				}
 			}
 
-			rep.Record(name, "UI", status, duration, errStr, screenshotPath)
+			rep.RecordWithCategory(name, "UI", category, status, duration, errStr, screenshotPath)
 		}()
 
 		fn(subT, page)

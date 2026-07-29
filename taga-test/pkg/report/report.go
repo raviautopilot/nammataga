@@ -17,17 +17,31 @@ var htmlTemplate string
 //go:embed template.md
 var mdTemplate string
 
-
 // TestResult records metadata for a single test case execution.
 type TestResult struct {
-	Name        string        `json:"name"`
-	Type        string        `json:"type"` // "API" or "UI"
-	Status      string        `json:"status"` // "passed", "failed", "skipped"
-	Duration    time.Duration `json:"duration"`
-	DurationStr string        `json:"duration_str"`
-	Error       string        `json:"error,omitempty"`
-	Screenshot  string        `json:"screenshot,omitempty"`
-	Timestamp   time.Time     `json:"timestamp"`
+	Name          string        `json:"name"`
+	Type          string        `json:"type"`          // "API" or "UI"
+	Category      string        `json:"category"`      // e.g. "05-health-api_test.go"
+	Description   string        `json:"description"`   // Test scenario purpose / details
+	Expected      string        `json:"expected"`      // Expected HTTP status / body / behavior
+	Actual        string        `json:"actual"`        // Actual HTTP status / body / behavior (Got)
+	Status        string        `json:"status"`        // "passed", "failed", "skipped"
+	Duration      time.Duration `json:"duration"`
+	DurationStr   string        `json:"duration_str"`
+	Error         string        `json:"error,omitempty"`
+	FailureReason string        `json:"failure_reason,omitempty"`
+	Screenshot    string        `json:"screenshot,omitempty"`
+	Timestamp     time.Time     `json:"timestamp"`
+}
+
+// CategoryGroup collects results grouped by test file or category.
+type CategoryGroup struct {
+	Category string       `json:"category"`
+	Total    int          `json:"total"`
+	Passed   int          `json:"passed"`
+	Failed   int          `json:"failed"`
+	Skipped  int          `json:"skipped"`
+	Results  []TestResult `json:"results"`
 }
 
 // Summary collects overall metrics for the execution run.
@@ -44,9 +58,10 @@ type Summary struct {
 
 // Reporter gathers results thread-safely during test runs.
 type Reporter struct {
-	mu      sync.Mutex
-	Summary Summary      `json:"summary"`
-	Results []TestResult `json:"results"`
+	mu             sync.Mutex
+	Summary        Summary         `json:"summary"`
+	Results        []TestResult    `json:"results"`
+	GroupedResults []CategoryGroup `json:"grouped_results"`
 }
 
 var globalReporter = &Reporter{
@@ -62,18 +77,40 @@ func GetGlobalReporter() *Reporter {
 
 // Record saves a single test case result in the reporter.
 func (r *Reporter) Record(name string, testType string, status string, duration time.Duration, err string, screenshot string) {
+	r.RecordDetailed(name, testType, "General", "", "", "", status, duration, err, "", screenshot)
+}
+
+// RecordWithCategory saves a single test case result along with its category/file name.
+func (r *Reporter) RecordWithCategory(name string, testType string, category string, status string, duration time.Duration, err string, screenshot string) {
+	r.RecordDetailed(name, testType, category, "", "", "", status, duration, err, "", screenshot)
+}
+
+// RecordDetailed saves a test result with complete expected, actual, description, and failure reason details.
+func (r *Reporter) RecordDetailed(name, testType, category, description, expected, actual, status string, duration time.Duration, errStr, failureReason, screenshot string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	if category == "" {
+		category = "General"
+	}
+	if description == "" {
+		description = name
+	}
+
 	result := TestResult{
-		Name:        name,
-		Type:        testType,
-		Status:      status,
-		Duration:    duration,
-		DurationStr: duration.Round(time.Millisecond).String(),
-		Error:       err,
-		Screenshot:  screenshot,
-		Timestamp:   time.Now(),
+		Name:          name,
+		Type:          testType,
+		Category:      category,
+		Description:   description,
+		Expected:      expected,
+		Actual:        actual,
+		Status:        status,
+		Duration:      duration,
+		DurationStr:   duration.Round(time.Millisecond).String(),
+		Error:         errStr,
+		FailureReason: failureReason,
+		Screenshot:    screenshot,
+		Timestamp:     time.Now(),
 	}
 	r.Results = append(r.Results, result)
 
@@ -88,7 +125,7 @@ func (r *Reporter) Record(name string, testType string, status string, duration 
 	}
 }
 
-// GenerateReports compiles test stats and outputs JSON and HTML report files.
+// GenerateReports compiles test stats and outputs JSON, HTML, and Markdown report files.
 func (r *Reporter) GenerateReports(outputDir string) error {
 	r.mu.Lock()
 	r.Summary.EndTime = time.Now()
@@ -193,6 +230,41 @@ func (r *Reporter) GenerateReports(outputDir string) error {
 		r.Summary.TotalDurationStr = r.Summary.TotalDuration.Round(time.Millisecond).String()
 	}
 	r.Results = mergedResults
+
+	// Build GroupedResults by Category / File
+	groupMap := make(map[string]*CategoryGroup)
+	var groupOrder []string
+
+	for _, res := range mergedResults {
+		cat := res.Category
+		if cat == "" {
+			cat = "General / Uncategorized"
+		}
+		grp, exists := groupMap[cat]
+		if !exists {
+			grp = &CategoryGroup{
+				Category: cat,
+			}
+			groupMap[cat] = grp
+			groupOrder = append(groupOrder, cat)
+		}
+		grp.Results = append(grp.Results, res)
+		grp.Total++
+		switch res.Status {
+		case "passed":
+			grp.Passed++
+		case "failed":
+			grp.Failed++
+		case "skipped":
+			grp.Skipped++
+		}
+	}
+
+	var groupedResults []CategoryGroup
+	for _, cat := range groupOrder {
+		groupedResults = append(groupedResults, *groupMap[cat])
+	}
+	r.GroupedResults = groupedResults
 
 	// 1. JSON Report
 	jsonData, err := json.MarshalIndent(r, "", "  ")

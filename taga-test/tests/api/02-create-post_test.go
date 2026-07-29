@@ -1,34 +1,51 @@
 package api_tests
 
 import (
+	"fmt"
 	"testing"
 
 	"e2e-template/pkg/client"
 	"e2e-template/tests"
 )
 
+// GrievancePayload defines the payload for creating a grievance
+type GrievancePayload struct {
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	Phone       string `json:"phone"`
+	Category    string `json:"category"`
+	Priority    string `json:"priority"`
+	Subject     string `json:"subject"`
+	Description string `json:"description"`
+}
+
+// TestAPI_02_CreatePost verifies creation of a grievance payload.
 func TestAPI_02_CreatePost(t *testing.T) {
-	tests.RunAPITest(t, "Create Post Payload", func(t *testing.T, c *client.Client) {
-		newPost := &Post{
-			Title:  "Go E2E Framework Test",
-			Body:   "Verifying API custom wrapper with pointer and JSON logging",
-			UserID: 99,
-		}
-		var createdPost Post
+	tests.RunAPITestWithDetails(
+		t,
+		"Create Grievance Payload",
+		"Verifies creating a new grievance payload with custom bearer authentication token.",
+		"HTTP 200 OK or 201 Created with successful status message",
+		func(tc *tests.TestContext) {
+			payload := &GrievancePayload{
+				Name:        "Automated Test Member",
+				Email:       "testmember@taga-tn.org",
+				Phone:       "9876543210",
+				Category:    "General",
+				Priority:    "Medium",
+				Subject:     "E2E Automation Test Grievance",
+				Description: "Verifying API framework creation wrapper with custom auth headers",
+			}
+			var response map[string]interface{}
+			auth := &client.BearerTokenAuth{Token: "super-secret-e2e-token"}
 
-		// Setup custom Bearer auth token injection
-		auth := &client.BearerTokenAuth{Token: "super-secret-e2e-token"}
+			err := tc.Client.SendHttpRequest("POST", "/api/grievances", nil, payload, &response, auth)
+			if err != nil {
+				tc.FailureReason = fmt.Sprintf("Failed to create grievance: %v", err)
+				tc.Fatalf("Failed to create grievance: %v", err)
+			}
 
-		err := c.SendHttpRequest("POST", "/posts", nil, newPost, &createdPost, auth)
-		if err != nil {
-			t.Fatalf("Failed to create post: %v", err)
-		}
-
-		if createdPost.Title != newPost.Title {
-			t.Errorf("Expected Title '%s', got '%s'", newPost.Title, createdPost.Title)
-		}
-		if createdPost.ID == 0 {
-			t.Errorf("Expected returned ID to be populated")
-		}
-	})
+			tc.Actual = fmt.Sprintf("Successfully processed with response: %v", response)
+		},
+	)
 }

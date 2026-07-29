@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Ensure we are inside taga-test directory where go.mod is defined
+if [ -d "taga-test" ]; then
+    cd taga-test
+fi
+
 # Configuration
 PORT=9515
 
