@@ -8,8 +8,9 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_02_LoginValidation(t *testing.T) {
-	tests.RunUITest(t, "Verify Nammataga Login Validation", func(t *testing.T, page *ui.Page) {
+// TestUI_02_MemberLoginValidation verifies that the member login button and form fields are present.
+func TestUI_02_MemberLoginValidation(t *testing.T) {
+	tests.RunUITest(t, "Verify Member Login Available", func(t *testing.T, page *ui.Page) {
 		targetURL := tests.GlobalConfig.UiURL
 		if targetURL == "" {
 			t.Fatal("GlobalConfig.UiURL is empty")
@@ -20,43 +21,61 @@ func TestUI_02_LoginValidation(t *testing.T) {
 			t.Fatalf("Failed to load page URL: %v", err)
 		}
 
-		// Verify member login button is present on landing page first
+		// 2. Verify member login button is present on landing page
 		if err := page.VerifyElementsPresentByTestIDs([]string{"testid-member-login-button"}, 5*time.Second); err != nil {
-			t.Fatalf("Landing page validation failed: %v", err)
+			t.Fatalf("Member login button validation failed: %v", err)
 		}
 
-		// 2. Click: testid-member-login-button
-		err := page.ClickByTestID("testid-member-login-button", 5*time.Second)
-		if err != nil {
+		// 3. Click member login button
+		if err := page.ClickByTestID("testid-member-login-button", 5*time.Second); err != nil {
 			t.Fatalf("Failed to click member login button: %v", err)
 		}
 
-		// Verify all login form elements are loaded on the login page/modal before proceeding
-		loginPageElements := []string{
+		// 4. Verify member login form fields, submit button, forgot password, and change password buttons are present
+		memberPageElements := []string{
 			"testid-login-identifier-input",
 			"testid-login-password-input",
 			"testid-login-submit-button",
+			"testid-forgot-password-button",
+			"testid-change-password-button",
 		}
-		if err := page.VerifyElementsPresentByTestIDs(loginPageElements, 5*time.Second); err != nil {
-			t.Fatalf("Login page validation failed: %v", err)
+		if err := page.VerifyElementsPresentByTestIDs(memberPageElements, 5*time.Second); err != nil {
+			t.Fatalf("Member login form fields validation failed: %v", err)
+		}
+	})
+}
+
+// TestUI_02_AdminLoginValidation verifies that the admin login button and form fields are present.
+func TestUI_02_AdminLoginValidation(t *testing.T) {
+	tests.RunUITest(t, "Verify Admin Login Available", func(t *testing.T, page *ui.Page) {
+		targetURL := tests.GlobalConfig.UiURL
+		if targetURL == "" {
+			t.Fatal("GlobalConfig.UiURL is empty")
 		}
 
-		// 3. Send value: testid-login-identifier-input (testuser@gmail.com)
-		err = page.SendKeysByTestID("testid-login-identifier-input", "testuser@gmail.com", 5*time.Second)
-		if err != nil {
-			t.Fatalf("Failed to send login identifier: %v", err)
+		// 1. Navigate to target web app
+		if err := page.Driver.Get(targetURL); err != nil {
+			t.Fatalf("Failed to load page URL: %v", err)
 		}
 
-		// 4. Send value: testid-login-password-input (test123)
-		err = page.SendKeysByTestID("testid-login-password-input", "test123", 5*time.Second)
-		if err != nil {
-			t.Fatalf("Failed to send login password: %v", err)
+		// 2. Verify admin login button is present on landing page
+		if err := page.VerifyElementsPresentByTestIDs([]string{"testid-admin-login-button"}, 5*time.Second); err != nil {
+			t.Fatalf("Admin login button validation failed: %v", err)
 		}
 
-		// 5. Click: testid-login-submit-button
-		err = page.ClickByTestID("testid-login-submit-button", 5*time.Second)
-		if err != nil {
-			t.Fatalf("Failed to click login submit button: %v", err)
+		// 3. Click admin login button
+		if err := page.ClickByTestID("testid-admin-login-button", 5*time.Second); err != nil {
+			t.Fatalf("Failed to click admin login button: %v", err)
+		}
+
+		// 4. Verify admin login form fields and submit button are present
+		adminPageElements := []string{
+			"testid-admin-login-username-input",
+			"testid-admin-login-password-input",
+			"testid-admin-login-submit-button",
+		}
+		if err := page.VerifyElementsPresentByTestIDs(adminPageElements, 5*time.Second); err != nil {
+			t.Fatalf("Admin login form fields validation failed: %v", err)
 		}
 	})
 }
