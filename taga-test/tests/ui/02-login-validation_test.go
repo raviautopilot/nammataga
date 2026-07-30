@@ -9,54 +9,42 @@ import (
 )
 
 func TestUI_02_LoginValidation(t *testing.T) {
-	tests.RunUITest(t, "Verify Nammataga Login Validation", func(t *testing.T, page *ui.Page) {
-		targetURL := tests.GlobalConfig.UiURL
-		if targetURL == "" {
-			t.Fatal("GlobalConfig.UiURL is empty")
+	tests.RunUITest(t, "Verify Admin and Member Login Element Availability", func(t *testing.T, page *ui.Page) {
+		cfg := tests.GlobalConfig
+		url := cfg.UiURL
+		timeout := 5 * time.Second
+
+		// 1. Go to Home Page
+		if err := page.GoToHome(url); err != nil {
+			t.Fatalf("Failed to open Home Page: %v", err)
 		}
 
-		// 1. Navigate to target web app
-		if err := page.Driver.Get(targetURL); err != nil {
-			t.Fatalf("Failed to load page URL: %v", err)
+		// 2. Open Admin Login & capture screenshot of Admin Login Modal
+		if err := page.OpenAdminLogin(cfg.AdminLoginButtonTestID, timeout); err != nil {
+			t.Fatalf("Failed to open Admin Login: %v", err)
+		}
+		if err := page.VerifyFormElements(cfg.AdminLoginTestIDs, timeout); err != nil {
+			t.Fatalf("Failed to verify Admin Form Elements: %v", err)
+		}
+		_, _ = page.CaptureScreenshot("Admin_Login_Page")
+
+		// 3. Return to Home Page
+		if err := page.GoToHome(url); err != nil {
+			t.Fatalf("Failed to return Home: %v", err)
 		}
 
-		// Verify member login button is present on landing page first
-		if err := page.VerifyElementsPresentByTestIDs([]string{"testid-member-login-button"}, 5*time.Second); err != nil {
-			t.Fatalf("Landing page validation failed: %v", err)
+		// 4. Open Member Login & capture screenshot of Member Login Modal
+		if err := page.OpenMemberLogin(cfg.MemberLoginButtonTestID, timeout); err != nil {
+			t.Fatalf("Failed to open Member Login: %v", err)
 		}
+		if err := page.VerifyFormElements(cfg.MemberLoginTestIDs, timeout); err != nil {
+			t.Fatalf("Failed to verify Member Form Elements: %v", err)
+		}
+		_, _ = page.CaptureScreenshot("Member_Login_Page")
 
-		// 2. Click: testid-member-login-button
-		err := page.ClickByTestID("testid-member-login-button", 5*time.Second)
-		if err != nil {
-			t.Fatalf("Failed to click member login button: %v", err)
-		}
-
-		// Verify all login form elements are loaded on the login page/modal before proceeding
-		loginPageElements := []string{
-			"testid-login-identifier-input",
-			"testid-login-password-input",
-			"testid-login-submit-button",
-		}
-		if err := page.VerifyElementsPresentByTestIDs(loginPageElements, 5*time.Second); err != nil {
-			t.Fatalf("Login page validation failed: %v", err)
-		}
-
-		// 3. Send value: testid-login-identifier-input (testuser@gmail.com)
-		err = page.SendKeysByTestID("testid-login-identifier-input", "testuser@gmail.com", 5*time.Second)
-		if err != nil {
-			t.Fatalf("Failed to send login identifier: %v", err)
-		}
-
-		// 4. Send value: testid-login-password-input (test123)
-		err = page.SendKeysByTestID("testid-login-password-input", "test123", 5*time.Second)
-		if err != nil {
-			t.Fatalf("Failed to send login password: %v", err)
-		}
-
-		// 5. Click: testid-login-submit-button
-		err = page.ClickByTestID("testid-login-submit-button", 5*time.Second)
-		if err != nil {
-			t.Fatalf("Failed to click login submit button: %v", err)
+		// 5. Return to Home Page
+		if err := page.GoToHome(url); err != nil {
+			t.Fatalf("Failed to return Home at end: %v", err)
 		}
 	})
 }

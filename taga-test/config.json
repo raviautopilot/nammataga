@@ -3,5 +3,19 @@
   "uiUrl": "https://nammataga.com",
   "seleniumUrl": "http://localhost:9515",
   "headless": false,
-  "timeout": 10
+  "timeout": 10,
+  "adminLoginButtonTestID": "testid-admin-login-button",
+  "memberLoginButtonTestID": "testid-member-login-button",
+  "adminLoginTestIDs": [
+    "testid-admin-login-username-input",
+    "testid-admin-login-password-input",
+    "testid-admin-login-submit-button"
+  ],
+  "memberLoginTestIDs": [
+    "testid-login-identifier-input",
+    "testid-login-password-input",
+    "testid-login-submit-button",
+    "testid-forgot-password-button",
+    "testid-change-password-button"
+  ]
 }

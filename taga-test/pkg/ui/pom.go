@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/tebeka/selenium"
@@ -21,6 +22,38 @@ type Page struct {
 // NewPage initializes a base Page.
 func NewPage(driver selenium.WebDriver, screenshotDir string) *Page {
 	return &Page{Driver: driver, ScreenshotDir: screenshotDir}
+}
+
+// GoToHomePage navigates the browser to the root application URL specified in targetURL.
+func (p *Page) GoToHomePage(targetURL string) error {
+	if targetURL == "" {
+		return fmt.Errorf("target URL is empty")
+	}
+	if err := p.Driver.Get(targetURL); err != nil {
+		p.LastError = err
+		return fmt.Errorf("failed to navigate to home page (%s): %w", targetURL, err)
+	}
+	return nil
+}
+
+// GoToHome navigates to the configured UiURL.
+func (p *Page) GoToHome(targetURL string) error {
+	return p.GoToHomePage(targetURL)
+}
+
+// OpenAdminLogin clicks the admin login button.
+func (p *Page) OpenAdminLogin(btnTestID string, timeout time.Duration) error {
+	return p.ClickByTestID(btnTestID, timeout)
+}
+
+// OpenMemberLogin clicks the member login button.
+func (p *Page) OpenMemberLogin(btnTestID string, timeout time.Duration) error {
+	return p.ClickByTestID(btnTestID, timeout)
+}
+
+// VerifyFormElements verifies present testID elements.
+func (p *Page) VerifyFormElements(testIDs []string, timeout time.Duration) error {
+	return p.VerifyElementsPresentByTestIDs(testIDs, timeout)
 }
 
 // parseLocator routes selectors by prefix (e.g. xpath://... or css:#...) or defaults to CSS.
@@ -202,6 +235,39 @@ func (p *Page) VerifyElementsPresentByTestIDs(testIDs []string, timeout time.Dur
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("missing expected elements on page: %v", missing)
+	}
+	return nil
+}
+
+// VerifyElementsPresentConcurrently validates that all specified data-testid elements exist on page in parallel.
+func (p *Page) VerifyElementsPresentConcurrently(testIDs []string, timeout time.Duration) error {
+	if len(testIDs) == 0 {
+		return nil
+	}
+
+	errChan := make(chan string, len(testIDs))
+	var wg sync.WaitGroup
+
+	for _, id := range testIDs {
+		wg.Add(1)
+		go func(testID string) {
+			defer wg.Done()
+			if _, err := p.FindElementByTestID(testID, timeout); err != nil {
+				errChan <- testID
+			}
+		}(id)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	var missing []string
+	for id := range errChan {
+		missing = append(missing, id)
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("concurrent element verification failed, missing: %v", missing)
 	}
 	return nil
 }

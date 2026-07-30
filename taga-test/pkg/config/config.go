@@ -8,11 +8,15 @@ import (
 
 // Config holds the configuration values for the testing framework.
 type Config struct {
-	BaseURL     string `json:"baseUrl"`
-	UiURL       string `json:"uiUrl"`
-	SeleniumURL string `json:"seleniumUrl"`
-	Headless    bool   `json:"headless"`
-	Timeout     int    `json:"timeout"`
+	BaseURL                  string   `json:"baseUrl"`
+	UiURL                    string   `json:"uiUrl"`
+	SeleniumURL              string   `json:"seleniumUrl"`
+	Headless                 bool     `json:"headless"`
+	Timeout                  int      `json:"timeout"`
+	AdminLoginButtonTestID  string   `json:"adminLoginButtonTestID"`
+	MemberLoginButtonTestID string   `json:"memberLoginButtonTestID"`
+	AdminLoginTestIDs       []string `json:"adminLoginTestIDs"`
+	MemberLoginTestIDs      []string `json:"memberLoginTestIDs"`
 }
 
 // LoadConfig reads the configuration file from path and applies environment overrides.
