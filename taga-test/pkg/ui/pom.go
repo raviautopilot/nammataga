@@ -23,6 +23,18 @@ func NewPage(driver selenium.WebDriver, screenshotDir string) *Page {
 	return &Page{Driver: driver, ScreenshotDir: screenshotDir}
 }
 
+// GoToHomePage navigates the browser to the root application URL specified in targetURL.
+func (p *Page) GoToHomePage(targetURL string) error {
+	if targetURL == "" {
+		return fmt.Errorf("target URL is empty")
+	}
+	if err := p.Driver.Get(targetURL); err != nil {
+		p.LastError = err
+		return fmt.Errorf("failed to navigate to home page (%s): %w", targetURL, err)
+	}
+	return nil
+}
+
 // parseLocator routes selectors by prefix (e.g. xpath://... or css:#...) or defaults to CSS.
 func parseLocator(locator string) (string, string) {
 	if strings.HasPrefix(locator, "xpath:") {
