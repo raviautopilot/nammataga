@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/tebeka/selenium"
@@ -214,6 +215,39 @@ func (p *Page) VerifyElementsPresentByTestIDs(testIDs []string, timeout time.Dur
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("missing expected elements on page: %v", missing)
+	}
+	return nil
+}
+
+// VerifyElementsPresentConcurrently validates that all specified data-testid elements exist on page in parallel.
+func (p *Page) VerifyElementsPresentConcurrently(testIDs []string, timeout time.Duration) error {
+	if len(testIDs) == 0 {
+		return nil
+	}
+
+	errChan := make(chan string, len(testIDs))
+	var wg sync.WaitGroup
+
+	for _, id := range testIDs {
+		wg.Add(1)
+		go func(testID string) {
+			defer wg.Done()
+			if _, err := p.FindElementByTestID(testID, timeout); err != nil {
+				errChan <- testID
+			}
+		}(id)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	var missing []string
+	for id := range errChan {
+		missing = append(missing, id)
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("concurrent element verification failed, missing: %v", missing)
 	}
 	return nil
 }
