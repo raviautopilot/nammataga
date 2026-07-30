@@ -36,6 +36,26 @@ func (p *Page) GoToHomePage(targetURL string) error {
 	return nil
 }
 
+// GoToHome navigates to the configured UiURL.
+func (p *Page) GoToHome(targetURL string) error {
+	return p.GoToHomePage(targetURL)
+}
+
+// OpenAdminLogin clicks the admin login button.
+func (p *Page) OpenAdminLogin(btnTestID string, timeout time.Duration) error {
+	return p.ClickByTestID(btnTestID, timeout)
+}
+
+// OpenMemberLogin clicks the member login button.
+func (p *Page) OpenMemberLogin(btnTestID string, timeout time.Duration) error {
+	return p.ClickByTestID(btnTestID, timeout)
+}
+
+// VerifyFormElements verifies present testID elements.
+func (p *Page) VerifyFormElements(testIDs []string, timeout time.Duration) error {
+	return p.VerifyElementsPresentByTestIDs(testIDs, timeout)
+}
+
 // parseLocator routes selectors by prefix (e.g. xpath://... or css:#...) or defaults to CSS.
 func parseLocator(locator string) (string, string) {
 	if strings.HasPrefix(locator, "xpath:") {
