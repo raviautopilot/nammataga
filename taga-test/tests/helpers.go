@@ -320,7 +320,12 @@ func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) 
 		}
 		defer driver.Quit()
 
-		page := ui.NewPage(driver, ExecutionScreenshotDir)
+		// Create a separate subdirectory for this specific test's screenshots
+		sanitizedTestDir := strings.ReplaceAll(name, "/", "_")
+		sanitizedTestDir = strings.ReplaceAll(sanitizedTestDir, " ", "_")
+		testScreenshotDir := filepath.Join(ExecutionScreenshotDir, sanitizedTestDir)
+
+		page := ui.NewPage(driver, testScreenshotDir)
 
 		defer func() {
 			duration := time.Since(startTime)
@@ -335,18 +340,18 @@ func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) 
 					errStr = page.LastError.Error()
 				}
 				if path, sErr := page.CaptureScreenshot(name); sErr == nil {
-					screenshotPath = "../screenshots/" + filepath.Base(path)
+					screenshotPath = "../screenshots/" + sanitizedTestDir + "/" + filepath.Base(path)
 				} else {
 					logger.Error("Failed to write failure screenshot: %v", sErr)
 				}
 			}
 
-			// Collect all screenshots from this test run (sorted by filename = step order)
+			// Collect all screenshots from this test's specific directory (sorted by step order)
 			var screenshots []string
-			if entries, err := os.ReadDir(ExecutionScreenshotDir); err == nil {
+			if entries, err := os.ReadDir(testScreenshotDir); err == nil {
 				for _, entry := range entries {
 					if !entry.IsDir() {
-						screenshots = append(screenshots, "../screenshots/"+entry.Name())
+						screenshots = append(screenshots, "../screenshots/"+sanitizedTestDir+"/"+entry.Name())
 					}
 				}
 			}
