@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Ensure script executes in taga-test directory where go.mod resides
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
+
 # Configuration
 PORT=9515
 

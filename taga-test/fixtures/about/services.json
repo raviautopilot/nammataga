@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "title": "Professional Development",
+    "description": "Training programs, workshops, and skill enhancement opportunities for career growth.",
+    "icon_name": "Users",
+    "category": "member-support"
+  },
+  {
+    "id": 2,
+    "title": "Legal & Career Guidance",
+    "description": "Advisory support on career advancement, promotional avenues, and administrative grievances.",
+    "icon_name": "Briefcase",
+    "category": "advocacy"
+  }
+]
