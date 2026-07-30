@@ -3,8 +3,9 @@
 # Script Name: prod-docker-publish.sh
 # Description: Smart production build & deployment script.
 #              1. Detects git changes in taga-api and taga-web.
-#              2. Builds, exports, and uploads ONLY the changed service(s).
-#              3. Use '--force' flag to force building and shipping both services.
+#              2. Builds only changed services (or both if --force).
+#              3. ALWAYS uploads ALL built/available images (taga-web-prd.tar.gz & taga-api-prd.tar.gz)
+#                 so the VPS prd-deploy-docker.sh script never fails missing image checks.
 # ==============================================================================
 
 set -euo pipefail
@@ -69,7 +70,7 @@ else
         BUILD_WEB=true
     fi
 
-    # If neither directory registered changes (e.g. first run or initial commit), build both as safety default
+    # If neither directory registered changes (or missing archives), default to building both
     if [ "$BUILD_API" = false ] && [ "$BUILD_WEB" = false ]; then
         echo "ℹ️ No recent single-folder changes detected in git. Defaulting to building both..."
         BUILD_API=true
@@ -77,44 +78,49 @@ else
     fi
 fi
 
-FILES_TO_UPLOAD=()
+# Ensure archives exist if skipped from build
+if [ "$BUILD_API" = false ] && [ ! -f "$API_TAR" ]; then
+    echo "⚠️ $API_TAR missing! Forcing backend build..."
+    BUILD_API=true
+fi
+
+if [ "$BUILD_WEB" = false ] && [ ! -f "$WEB_TAR" ]; then
+    echo "⚠️ $WEB_TAR missing! Forcing frontend build..."
+    BUILD_WEB=true
+fi
 
 # 1. Build & Export Backend (taga-api) Image if changed
 if [ "$BUILD_API" = true ]; then
     if [ -d "$PROJECT_ROOT/taga-api" ]; then
-        echo "⚙️ Building backend Docker image (taga-api:latest) without cache..."
-        docker build --no-cache --progress=plain -t taga-api:latest "$PROJECT_ROOT/taga-api"
+        echo "⚙️ Building backend Docker image (taga-api:prd & taga-api:latest) without cache..."
+        docker build --no-cache --progress=plain -t taga-api:prd -t taga-api:latest "$PROJECT_ROOT/taga-api"
         echo "📦 Exporting backend image to $API_TAR..."
-        docker save taga-api:latest | gzip > "$API_TAR"
-        FILES_TO_UPLOAD+=("$API_TAR")
+        docker save taga-api:prd taga-api:latest | gzip > "$API_TAR"
     else
         echo "❌ Error: $PROJECT_ROOT/taga-api directory not found."
         exit 1
     fi
 else
-    echo "⏭️ Skipping backend (taga-api) - no changes detected."
+    echo "⏭️ Skipping backend (taga-api) build - no changes detected. Using existing $API_TAR."
 fi
 
 # 2. Build & Export Frontend (taga-web) Image if changed
 if [ "$BUILD_WEB" = true ]; then
     if [ -d "$PROJECT_ROOT/taga-web" ]; then
-        echo "⚙️ Building frontend Docker image (taga-web:latest) without cache..."
-        docker build --no-cache --progress=plain -t taga-web:latest "$PROJECT_ROOT/taga-web"
+        echo "⚙️ Building frontend Docker image (taga-web:prd & taga-web:latest) without cache..."
+        docker build --no-cache --progress=plain -t taga-web:prd -t taga-web:latest "$PROJECT_ROOT/taga-web"
         echo "📦 Exporting frontend image to $WEB_TAR..."
-        docker save taga-web:latest | gzip > "$WEB_TAR"
-        FILES_TO_UPLOAD+=("$WEB_TAR")
+        docker save taga-web:prd taga-web:latest | gzip > "$WEB_TAR"
     else
         echo "❌ Error: $PROJECT_ROOT/taga-web directory not found."
         exit 1
     fi
 else
-    echo "⏭️ Skipping frontend (taga-web) - no changes detected."
+    echo "⏭️ Skipping frontend (taga-web) build - no changes detected. Using existing $WEB_TAR."
 fi
 
-if [ ${#FILES_TO_UPLOAD[@]} -eq 0 ]; then
-    echo "ℹ️ No images were built or queued for upload."
-    exit 0
-fi
+# Always upload BOTH image archives to VPS to satisfy VPS deployment requirements
+FILES_TO_UPLOAD=("$WEB_TAR" "$API_TAR")
 
 # Gather git and user deployment log details
 DEPLOY_TIME=$(date "+%Y-%m-%d %H:%M:%S")
@@ -125,7 +131,7 @@ COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "no-commit")
 LOG_ENTRY="[$DEPLOY_TIME] User: $DEPLOY_USER | Branch: $BRANCH_NAME | Commit: $COMMIT_HASH | Status: SHIPPED | Built: (API:$BUILD_API WEB:$BUILD_WEB)"
 
 # 3. Upload archives to VPS
-echo "🚚 Shipping production image archive(s) to VPS ($REMOTE_HOST)..."
+echo "🚚 Shipping production image archives to VPS ($REMOTE_HOST)..."
 ssh "$REMOTE_USER@$REMOTE_HOST" "mkdir -p $REMOTE_PATH/dist"
 scp "${FILES_TO_UPLOAD[@]}" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/dist/"
 
@@ -133,7 +139,7 @@ scp "${FILES_TO_UPLOAD[@]}" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/dist/"
 ssh "$REMOTE_USER@$REMOTE_HOST" "echo \"$LOG_ENTRY\" >> $REMOTE_PATH/deploy.log"
 
 echo "=================================================="
-echo "✅ Production docker image archive(s) shipped to VPS ($REMOTE_HOST)!"
+echo "✅ Production docker image archives shipped to VPS ($REMOTE_HOST)!"
 echo "👉 SSH into your VPS and run: sudo bash $REMOTE_PATH/prd-deploy-docker.sh"
 echo "=================================================="
 
@@ -142,7 +148,8 @@ echo "=================================================="
 # ==============================================================================
 #
 # 1. Standard Smart Publish (Default):
-#    Detects git changes in taga-api and taga-web, then builds & ships ONLY changed services.
+#    Detects git changes in taga-api and taga-web, builds ONLY changed services,
+#    and ALWAYS uploads BOTH frontend & backend archives to VPS.
 #    $ ./scripts/prod-docker-publish.sh
 #
 # 2. Force Rebuild & Publish All:
