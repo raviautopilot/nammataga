@@ -6,17 +6,32 @@ import (
 	"strconv"
 )
 
+// Credentials holds a username/password pair.
+type Credentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 // Config holds the configuration values for the testing framework.
 type Config struct {
-	BaseURL                  string   `json:"baseUrl"`
-	UiURL                    string   `json:"uiUrl"`
-	SeleniumURL              string   `json:"seleniumUrl"`
-	Headless                 bool     `json:"headless"`
-	Timeout                  int      `json:"timeout"`
-	AdminLoginButtonTestID  string   `json:"adminLoginButtonTestID"`
-	MemberLoginButtonTestID string   `json:"memberLoginButtonTestID"`
-	AdminLoginTestIDs       []string `json:"adminLoginTestIDs"`
-	MemberLoginTestIDs      []string `json:"memberLoginTestIDs"`
+	BaseURL                        string      `json:"baseUrl"`
+	UiURL                          string      `json:"uiUrl"`
+	SeleniumURL                    string      `json:"seleniumUrl"`
+	Headless                       bool        `json:"headless"`
+	Timeout                        int         `json:"timeout"`
+	AdminLoginButtonTestID         string      `json:"adminLoginButtonTestID"`
+	MemberLoginButtonTestID        string      `json:"memberLoginButtonTestID"`
+	AdminLoginTestIDs              []string    `json:"adminLoginTestIDs"`
+	MemberLoginTestIDs             []string    `json:"memberLoginTestIDs"`
+	AdminCredentials               Credentials `json:"adminCredentials"`
+	MemberCredentials              Credentials `json:"memberCredentials"`
+	AdminLoginUsernameInputTestID  string      `json:"adminLoginUsernameInputTestID"`
+	AdminLoginPasswordInputTestID  string      `json:"adminLoginPasswordInputTestID"`
+	AdminLoginSubmitButtonTestID   string      `json:"adminLoginSubmitButtonTestID"`
+	MemberLoginUsernameInputTestID string      `json:"memberLoginUsernameInputTestID"`
+	MemberLoginPasswordInputTestID string      `json:"memberLoginPasswordInputTestID"`
+	MemberLoginSubmitButtonTestID  string      `json:"memberLoginSubmitButtonTestID"`
+	LogoutButtonTestID             string      `json:"logoutButtonTestID"`
 }
 
 // LoadConfig reads the configuration file from path and applies environment overrides.

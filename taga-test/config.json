@@ -17,5 +17,20 @@
     "testid-login-submit-button",
     "testid-forgot-password-button",
     "testid-change-password-button"
-  ]
+  ],
+  "adminCredentials": {
+    "username": "nammataga@gmail.com",
+    "password": "admin123"
+  },
+  "memberCredentials": {
+    "username": "testuser@gmail.com",
+    "password": "test123"
+  },
+  "adminLoginUsernameInputTestID": "testid-admin-login-username-input",
+  "adminLoginPasswordInputTestID": "testid-admin-login-password-input",
+  "adminLoginSubmitButtonTestID": "testid-admin-login-submit-button",
+  "memberLoginUsernameInputTestID": "testid-login-identifier-input",
+  "memberLoginPasswordInputTestID": "testid-login-password-input",
+  "memberLoginSubmitButtonTestID": "testid-login-submit-button",
+  "logoutButtonTestID": "testid-logout-button"
 }

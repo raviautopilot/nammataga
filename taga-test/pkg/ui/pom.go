@@ -56,6 +56,37 @@ func (p *Page) VerifyFormElements(testIDs []string, timeout time.Duration) error
 	return p.VerifyElementsPresentByTestIDs(testIDs, timeout)
 }
 
+// EnterUsername types the username into the specified input testID field.
+func (p *Page) EnterUsername(inputTestID, username string, timeout time.Duration) error {
+	return p.SendKeysByTestID(inputTestID, username, timeout)
+}
+
+// EnterPassword types the password into the specified input testID field.
+func (p *Page) EnterPassword(inputTestID, password string, timeout time.Duration) error {
+	return p.SendKeysByTestID(inputTestID, password, timeout)
+}
+
+// SubmitLogin clicks the submit button for the specified testID.
+func (p *Page) SubmitLogin(submitTestID string, timeout time.Duration) error {
+	return p.ClickByTestID(submitTestID, timeout)
+}
+
+// FillAndSubmitLogin enters credentials and clicks submit in one call.
+func (p *Page) FillAndSubmitLogin(usernameTestID, passwordTestID, submitTestID, username, password string, timeout time.Duration) error {
+	if err := p.EnterUsername(usernameTestID, username, timeout); err != nil {
+		return err
+	}
+	if err := p.EnterPassword(passwordTestID, password, timeout); err != nil {
+		return err
+	}
+	return p.SubmitLogin(submitTestID, timeout)
+}
+
+// Logout clicks the logout button to end the current session.
+func (p *Page) Logout(logoutTestID string, timeout time.Duration) error {
+	return p.ClickByTestID(logoutTestID, timeout)
+}
+
 // parseLocator routes selectors by prefix (e.g. xpath://... or css:#...) or defaults to CSS.
 func parseLocator(locator string) (string, string) {
 	if strings.HasPrefix(locator, "xpath:") {
