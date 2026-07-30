@@ -1,11 +1,11 @@
 #!/bin/bash
 # ==============================================================================
 # Script Name: prod-docker-publish.sh
-# Description: Smart production build & deployment script.
+# Description: Smart & efficient production build & deployment script.
 #              1. Detects git changes in taga-api and taga-web.
-#              2. Builds only changed services (or both if --force).
-#              3. ALWAYS uploads ALL built/available images (taga-web-prd.tar.gz & taga-api-prd.tar.gz)
-#                 so the VPS prd-deploy-docker.sh script never fails missing image checks.
+#              2. Leverages Docker layer caching for fast builds.
+#              3. Builds ONLY changed services (or both if --force).
+#              4. Ships existing/built archives to VPS.
 # ==============================================================================
 
 set -euo pipefail
@@ -45,7 +45,6 @@ fi
 # Ensure output dist directory exists
 mkdir -p "$DIST_DIR"
 
-# Determine which directories changed in git (compared to HEAD~1 or uncommitted changes)
 BUILD_API=false
 BUILD_WEB=false
 
@@ -54,13 +53,8 @@ if [ "$FORCE_BUILD" = true ]; then
     BUILD_API=true
     BUILD_WEB=true
 else
-    # Check git status for uncommitted changes or difference with HEAD~1
-    COMPARE_REF="HEAD~1"
-    if ! git rev-parse --verify "$COMPARE_REF" &>/dev/null; then
-        COMPARE_REF="HEAD"
-    fi
-
-    CHANGES=$(git diff --name-only $COMPARE_REF HEAD 2>/dev/null; git status --porcelain 2>/dev/null)
+    # Check git diff against working tree / uncommitted changes / last commit
+    CHANGES=$(git status --porcelain 2>/dev/null; git diff --name-only HEAD 2>/dev/null; git diff --name-only HEAD~1 HEAD 2>/dev/null || true)
 
     if echo "$CHANGES" | grep -q "^taga-api/"; then
         BUILD_API=true
@@ -70,11 +64,16 @@ else
         BUILD_WEB=true
     fi
 
-    # If neither directory registered changes (or missing archives), default to building both
+    # If no specific service changes are found in git diff, but archives are missing, build them.
+    # Otherwise, if archives exist and no code changed, skip building!
     if [ "$BUILD_API" = false ] && [ "$BUILD_WEB" = false ]; then
-        echo "ℹ️ No recent single-folder changes detected in git. Defaulting to building both..."
-        BUILD_API=true
-        BUILD_WEB=true
+        if [ ! -f "$API_TAR" ] || [ ! -f "$WEB_TAR" ]; then
+            echo "ℹ️ Missing image archives detected. Building both..."
+            BUILD_API=true
+            BUILD_WEB=true
+        else
+            echo "✨ No files changed in taga-api/ or taga-web/. Skipping rebuilding!"
+        fi
     fi
 fi
 
@@ -92,8 +91,8 @@ fi
 # 1. Build & Export Backend (taga-api) Image if changed
 if [ "$BUILD_API" = true ]; then
     if [ -d "$PROJECT_ROOT/taga-api" ]; then
-        echo "⚙️ Building backend Docker image (taga-api:prd & taga-api:latest) without cache..."
-        docker build --no-cache --progress=plain -t taga-api:prd -t taga-api:latest "$PROJECT_ROOT/taga-api"
+        echo "⚙️ Building backend Docker image (taga-api:prd & taga-api:latest)..."
+        docker build -t taga-api:prd -t taga-api:latest "$PROJECT_ROOT/taga-api"
         echo "📦 Exporting backend image to $API_TAR..."
         docker save taga-api:prd taga-api:latest | gzip > "$API_TAR"
     else
@@ -107,8 +106,8 @@ fi
 # 2. Build & Export Frontend (taga-web) Image if changed
 if [ "$BUILD_WEB" = true ]; then
     if [ -d "$PROJECT_ROOT/taga-web" ]; then
-        echo "⚙️ Building frontend Docker image (taga-web:prd & taga-web:latest) without cache..."
-        docker build --no-cache --progress=plain -t taga-web:prd -t taga-web:latest "$PROJECT_ROOT/taga-web"
+        echo "⚙️ Building frontend Docker image (taga-web:prd & taga-web:latest)..."
+        docker build -t taga-web:prd -t taga-web:latest "$PROJECT_ROOT/taga-web"
         echo "📦 Exporting frontend image to $WEB_TAR..."
         docker save taga-web:prd taga-web:latest | gzip > "$WEB_TAR"
     else
@@ -119,7 +118,7 @@ else
     echo "⏭️ Skipping frontend (taga-web) build - no changes detected. Using existing $WEB_TAR."
 fi
 
-# Always upload BOTH image archives to VPS to satisfy VPS deployment requirements
+# Always upload BOTH image archives to VPS
 FILES_TO_UPLOAD=("$WEB_TAR" "$API_TAR")
 
 # Gather git and user deployment log details
