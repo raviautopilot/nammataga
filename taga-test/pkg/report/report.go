@@ -31,6 +31,7 @@ type TestResult struct {
 	Error         string        `json:"error,omitempty"`
 	FailureReason string        `json:"failure_reason,omitempty"`
 	Screenshot    string        `json:"screenshot,omitempty"`
+	Screenshots   []string      `json:"screenshots,omitempty"`
 	Timestamp     time.Time     `json:"timestamp"`
 }
 
@@ -77,16 +78,21 @@ func GetGlobalReporter() *Reporter {
 
 // Record saves a single test case result in the reporter.
 func (r *Reporter) Record(name string, testType string, status string, duration time.Duration, err string, screenshot string) {
-	r.RecordDetailed(name, testType, "General", "", "", "", status, duration, err, "", screenshot)
+	r.RecordDetailed(name, testType, "General", "", "", "", status, duration, err, "", screenshot, nil)
 }
 
 // RecordWithCategory saves a single test case result along with its category/file name.
 func (r *Reporter) RecordWithCategory(name string, testType string, category string, status string, duration time.Duration, err string, screenshot string) {
-	r.RecordDetailed(name, testType, category, "", "", "", status, duration, err, "", screenshot)
+	r.RecordDetailed(name, testType, category, "", "", "", status, duration, err, "", screenshot, nil)
+}
+
+// RecordWithCategoryAndScreenshots saves a test result with a list of step screenshots.
+func (r *Reporter) RecordWithCategoryAndScreenshots(name string, testType string, category string, status string, duration time.Duration, err string, screenshot string, screenshots []string) {
+	r.RecordDetailed(name, testType, category, "", "", "", status, duration, err, "", screenshot, screenshots)
 }
 
 // RecordDetailed saves a test result with complete expected, actual, description, and failure reason details.
-func (r *Reporter) RecordDetailed(name, testType, category, description, expected, actual, status string, duration time.Duration, errStr, failureReason, screenshot string) {
+func (r *Reporter) RecordDetailed(name, testType, category, description, expected, actual, status string, duration time.Duration, errStr, failureReason, screenshot string, screenshots []string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -110,6 +116,7 @@ func (r *Reporter) RecordDetailed(name, testType, category, description, expecte
 		Error:         errStr,
 		FailureReason: failureReason,
 		Screenshot:    screenshot,
+		Screenshots:   screenshots,
 		Timestamp:     time.Now(),
 	}
 	r.Results = append(r.Results, result)
@@ -277,7 +284,9 @@ func (r *Reporter) GenerateReports(outputDir string) error {
 
 	// 2. HTML Report
 	htmlPath := filepath.Join(outputDir, "report.html")
-	tmpl, err := template.New("report").Parse(htmlTemplate)
+	tmpl, err := template.New("report").Funcs(template.FuncMap{
+		"basename": func(s string) string { return filepath.Base(s) },
+	}).Parse(htmlTemplate)
 	if err != nil {
 		return err
 	}
