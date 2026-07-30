@@ -3,7 +3,7 @@
   "environment": "development",
   "log_level": "debug",
   "log_file": "logs/app.log",
-  "disable_payment": true,
+  "disable_payment": false,
   "smtp_host": "smtp.gmail.com",
   "smtp_port": 587,
   "smtp_username": "nammataga@gmail.com",
