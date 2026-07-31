@@ -82,7 +82,7 @@ function ConfirmDeleteDialog({ open, memberName, onConfirm, onCancel, isLoading 
           <Button variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={isLoading}>
+          <Button variant="destructive" onClick={onConfirm} disabled={isLoading} data-testid="testid-member-confirm-delete-button">
             {isLoading ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Deleting...</>
             ) : (
@@ -456,6 +456,7 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                 className="pl-10"
+                data-testid="testid-member-search-input"
               />
             </div>
             <div>
@@ -543,6 +544,7 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleViewDetails(member)}
+                        data-testid={`testid-member-${member.id}-view-button`}
                       >
                         <Eye className="w-4 h-4 mr-1" />
                         View
@@ -614,6 +616,7 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
                     size="sm"
                     className="text-destructive border-destructive/30 hover:bg-destructive/10"
                     onClick={() => selectedMember && handleDeleteClick(selectedMember)}
+                    data-testid="testid-member-delete-button"
                   >
                     <Trash2 className="w-3.5 h-3.5 mr-1" />
                     Delete
