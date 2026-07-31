@@ -205,6 +205,10 @@ func GetMemberStats(c *gin.Context) {
 	active := 0
 	unpaid := 0
 
+	now := time.Now()
+	currentYear, currentMonth, _ := now.Date()
+	newThisMonth := 0
+
 	for _, m := range members {
 		email := getString(m, "emailId")
 		paymentStatus := getPaymentStatusFromSubscription(email, subscriptionMap)
@@ -214,6 +218,21 @@ func GetMemberStats(c *gin.Context) {
 		}
 		if paymentStatus == "Unpaid" {
 			unpaid++
+		}
+
+		createdAtStr := getString(m, "created_at")
+		if createdAtStr != "" {
+			if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
+				y, m, _ := t.Date()
+				if y == currentYear && m == currentMonth {
+					newThisMonth++
+				}
+			} else if t, err := time.Parse("2006-01-02", createdAtStr); err == nil {
+				y, m, _ := t.Date()
+				if y == currentYear && m == currentMonth {
+					newThisMonth++
+				}
+			}
 		}
 	}
 
@@ -226,7 +245,7 @@ func GetMemberStats(c *gin.Context) {
 		"totalMembers":  total,
 		"activeMembers": active,
 		"unpaid":        unpaid,
-		"newThisMonth":  0,
+		"newThisMonth":  newThisMonth,
 	})
 }
 
