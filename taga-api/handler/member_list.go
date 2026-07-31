@@ -201,7 +201,7 @@ func GetMemberStats(c *gin.Context) {
 
 	subscriptionMap := loadSubscriptionPaymentMap()
 
-	total := len(members)
+	total := 0
 	active := 0
 	unpaid := 0
 
@@ -210,6 +210,13 @@ func GetMemberStats(c *gin.Context) {
 	newThisMonth := 0
 
 	for _, m := range members {
+		// Skip soft-deleted members
+		if deleted, ok := m["deleted"].(bool); ok && deleted {
+			continue
+		}
+
+		total++
+
 		email := getString(m, "emailId")
 		paymentStatus := getPaymentStatusFromSubscription(email, subscriptionMap)
 
