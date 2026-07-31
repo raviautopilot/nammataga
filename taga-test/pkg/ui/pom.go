@@ -244,6 +244,18 @@ func (p *Page) SendKeysByTestID(testID string, text string, timeout time.Duratio
 	return p.SendKeys(fmt.Sprintf("css:[data-testid=\"%s\"]", testID), text, timeout)
 }
 
+// SelectCustomDropdownByText opens a Radix UI dropdown by trigger testID and clicks the item matching optionText.
+func (p *Page) SelectCustomDropdownByText(triggerTestID, optionText string, timeout time.Duration) error {
+	if err := p.ClickByTestID(triggerTestID, timeout); err != nil {
+		return fmt.Errorf("failed to click dropdown trigger '%s': %w", triggerTestID, err)
+	}
+	time.Sleep(300 * time.Millisecond) // short pause for menu render
+
+	// Find and click item matching exact text or containing text
+	itemXPath := fmt.Sprintf("//*[contains(@role, 'option') and (text()='%s' or .='%s')]", optionText, optionText)
+	return p.Click(itemXPath, timeout)
+}
+
 // GetTextByTestID finds an element by data-testid and retrieves its text.
 func (p *Page) GetTextByTestID(testID string, timeout time.Duration) (string, error) {
 	return p.GetText(fmt.Sprintf("css:[data-testid=\"%s\"]", testID), timeout)
