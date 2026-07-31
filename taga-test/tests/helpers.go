@@ -255,7 +255,7 @@ func RunAPITestWithDetails(t *testing.T, name string, description string, expect
 				}
 			}
 
-			rep.RecordDetailed(name, "API", category, tc.Description, tc.Expected, tc.Actual, status, duration, errStr, tc.FailureReason, "")
+			rep.RecordDetailed(name, "API", category, tc.Description, tc.Expected, tc.Actual, status, duration, errStr, tc.FailureReason, "", nil)
 		}()
 
 		fn(tc)
@@ -293,7 +293,7 @@ func RunAPITest(t *testing.T, name string, fn func(t *testing.T, c *client.Clien
 				actual = errStr
 			}
 
-			rep.RecordDetailed(name, "API", category, name, "Valid 200 OK API Response", actual, status, duration, errStr, "", "")
+			rep.RecordDetailed(name, "API", category, name, "Valid 200 OK API Response", actual, status, duration, errStr, "", "", nil)
 		}()
 
 		fn(subT, c)
@@ -320,7 +320,12 @@ func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) 
 		}
 		defer driver.Quit()
 
-		page := ui.NewPage(driver, ExecutionScreenshotDir)
+		// Create a separate subdirectory for this specific test's screenshots
+		sanitizedTestDir := strings.ReplaceAll(name, "/", "_")
+		sanitizedTestDir = strings.ReplaceAll(sanitizedTestDir, " ", "_")
+		testScreenshotDir := filepath.Join(ExecutionScreenshotDir, sanitizedTestDir)
+
+		page := ui.NewPage(driver, testScreenshotDir)
 
 		defer func() {
 			duration := time.Since(startTime)
@@ -335,14 +340,23 @@ func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) 
 					errStr = page.LastError.Error()
 				}
 				if path, sErr := page.CaptureScreenshot(name); sErr == nil {
-					// Save just the filename to make it relative to the report file
-					screenshotPath = "screenshots/" + filepath.Base(path)
+					screenshotPath = "../screenshots/" + sanitizedTestDir + "/" + filepath.Base(path)
 				} else {
 					logger.Error("Failed to write failure screenshot: %v", sErr)
 				}
 			}
 
-			rep.RecordWithCategory(name, "UI", category, status, duration, errStr, screenshotPath)
+			// Collect all screenshots from this test's specific directory (sorted by step order)
+			var screenshots []string
+			if entries, err := os.ReadDir(testScreenshotDir); err == nil {
+				for _, entry := range entries {
+					if !entry.IsDir() {
+						screenshots = append(screenshots, "../screenshots/"+sanitizedTestDir+"/"+entry.Name())
+					}
+				}
+			}
+
+			rep.RecordWithCategoryAndScreenshots(name, "UI", category, status, duration, errStr, screenshotPath, screenshots)
 		}()
 
 		fn(subT, page)
