@@ -33,7 +33,7 @@
   "memberLoginPasswordInputTestID": "testid-login-password-input",
   "memberLoginSubmitButtonTestID": "testid-login-submit-button",
   "logoutButtonTestID": "testid-logout-button",
-  "newMemberEmail": "sudhanop@yahoo.com",
+  "newMemberEmail": "sudhantest08@gmail.com",
   "newMemberFormData": {
     "tagaId": "TAGA999",
     "name": "Test Member Sudhan",
