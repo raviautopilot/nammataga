@@ -173,7 +173,7 @@ func (p *Page) Click(locator string, timeout time.Duration) error {
 	return nil
 }
 
-// SendKeys waits for the element to be visible, clears it, and types text.
+// SendKeys waits for the element to be visible, clears it thoroughly, and types text.
 func (p *Page) SendKeys(locator string, text string, timeout time.Duration) error {
 	el, err := p.WaitUntilVisible(locator, timeout)
 	if err != nil {
@@ -181,6 +181,8 @@ func (p *Page) SendKeys(locator string, text string, timeout time.Duration) erro
 		return err
 	}
 	_ = el.Clear()
+	// Send Ctrl+A then Backspace to ensure React state registers the empty input
+	_ = el.SendKeys("\x01\b")
 	err = el.SendKeys(text)
 	if err != nil {
 		p.LastError = err

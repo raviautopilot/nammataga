@@ -41,9 +41,9 @@ done
 # 3.5. Export a shared timestamp so all test packages run under the same run folder
 export E2E_RUN_TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 
-# 4. Run the Go E2E tests in headless mode
+# 4. Run the Go E2E tests (respecting config.json headless setting or E2E_HEADLESS env var)
 echo "Running E2E test suite..."
-E2E_HEADLESS=true go test -v ./tests/... "$@"
+go test -v ./tests/ui/... ./tests/api/... "$@"
 TEST_EXIT_CODE=$?
 
 echo "========================================="

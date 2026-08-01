@@ -144,12 +144,23 @@ func (a *AdminDashboardPage) DeleteMemberByEmail(searchInputTestID, email, delet
 	if err := a.SearchMember(searchInputTestID, email, timeout); err != nil {
 		return fmt.Errorf("failed to search email '%s': %w", email, err)
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(1500 * time.Millisecond) // allow React search filter debounce & table re-render
 
-	// 2. Click View button for the row matching this email exactly
+	// 2. Click View button for the row matching this email exactly with retry for DOM re-render stability
 	rowViewBtnXPath := fmt.Sprintf("//table//tbody//tr[contains(., '%s')]//button[contains(@data-testid, '-view-button') or contains(text(), 'View')]", email)
-	if err := a.Click(rowViewBtnXPath, timeout); err != nil {
-		return fmt.Errorf("failed to click View button for email '%s': %w", email, err)
+	
+	var lastClickErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		if err := a.Click(rowViewBtnXPath, timeout); err == nil {
+			lastClickErr = nil
+			break
+		} else {
+			lastClickErr = err
+			time.Sleep(1 * time.Second)
+		}
+	}
+	if lastClickErr != nil {
+		return fmt.Errorf("failed to click View button for email '%s': %w", email, lastClickErr)
 	}
 	time.Sleep(1 * time.Second)
 
