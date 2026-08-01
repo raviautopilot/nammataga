@@ -349,3 +349,79 @@ func LogoutAdmin(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	}
 	r.Advice = append(r.Advice, "Admin logged out successfully.")
 }
+
+// AdminLoginAttempt attempts admin login with the given username, password, and custom timeout/screenshot.
+func AdminLoginAttempt(aai AdminActionsInterface, cfg *config.Config, username, password string, waitTime time.Duration, screenshotName string, r *Result) {
+	actionName := fmt.Sprintf("Admin Login Attempt (User: %q)", username)
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	ap := aai.GetAdminPersona()
+	homePage := pages.NewHomePage(ap.Page)
+	loginPage := pages.NewLoginPage(ap.Page)
+
+	if err := homePage.OpenAdminLogin(cfg.AdminLoginButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'adminLoginButtonTestID' button exists on Home Page")
+		return
+	}
+
+	// Only enter credentials if non-empty
+	if username != "" {
+		if err := loginPage.EnterUsername(cfg.AdminLoginUsernameInputTestID, username, ap.DefaultTimeout); err != nil {
+			r.Status = "failed"
+			r.Error = err
+			return
+		}
+	}
+	if password != "" {
+		if err := loginPage.EnterPassword(cfg.AdminLoginPasswordInputTestID, password, ap.DefaultTimeout); err != nil {
+			r.Status = "failed"
+			r.Error = err
+			return
+		}
+	}
+
+	if err := loginPage.SubmitLogin(cfg.AdminLoginSubmitButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	time.Sleep(waitTime)
+
+	if scr, scrErr := ap.Page.CaptureScreenshot(screenshotName); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+}
+
+// LogoutAdminCustom performs logout with a customized wait time and screenshot name.
+func LogoutAdminCustom(aai AdminActionsInterface, cfg *config.Config, waitTime time.Duration, screenshotName string, r *Result) {
+	actionName := "Logout Admin"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	ap := aai.GetAdminPersona()
+	homePage := pages.NewHomePage(ap.Page)
+
+	if err := homePage.Logout(cfg.LogoutButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'logoutButtonTestID' element exists in header/navbar")
+		return
+	}
+
+	time.Sleep(waitTime)
+	if scr, scrErr := ap.Page.CaptureScreenshot(screenshotName); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+	r.Advice = append(r.Advice, "Admin logged out successfully.")
+}
+
