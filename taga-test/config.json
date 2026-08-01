@@ -79,5 +79,15 @@
   "memberSearchInputTestID": "testid-member-search-input",
   "memberDeleteButtonTestID": "testid-member-delete-button",
   "memberConfirmDeleteButtonTestID": "testid-member-confirm-delete-button",
-  "adminPanelButtonTestID": "testid-members-button"
+  "adminPanelButtonTestID": "testid-members-button",
+  "adminBulkUploadButtonTestID": "testid-bulk-member-upload-button",
+  "adminBulkUploadFileInputTestID": "testid-bulk-upload-file-input",
+  "adminBulkUploadSubmitButtonTestID": "testid-bulk-upload-submit-button",
+  "bulkMemberEmails": [
+    "bulk_user1@test.com",
+    "bulk_user2@test.com",
+    "bulk_user3@test.com",
+    "bulk_user4@test.com",
+    "bulk_user5@test.com"
+  ]
 }

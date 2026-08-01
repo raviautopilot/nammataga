@@ -1,0 +1,6 @@
+Taga ID,Name,Initial,Gender,Father Name,Mother Name,Educational Qualification,Designation,Working District,Native District,Recruitment Batch,Seniority Number,Residential Address,Permanent Address,Date of Birth,Mobile Number,Email ID,TBF Number,CPS/GPF Number
+TAGA801,Bulk Test User One,A,Male,Father One,Mother One,B.Sc Agriculture,Agriculture Officer,Chennai,Madurai,2022,8001,101 Test St Chennai,201 Native St Madurai,1995-01-01,9800000001,bulk_user1@test.com,TBF801,GPF801
+TAGA802,Bulk Test User Two,B,Female,Father Two,Mother Two,M.Sc Agriculture,Agriculture Officer,Coimbatore,Salem,2022,8002,102 Test St Coimbatore,202 Native St Salem,1995-02-02,9800000002,bulk_user2@test.com,TBF802,GPF802
+TAGA803,Bulk Test User Three,C,Male,Father Three,Mother Three,B.Tech Agri,Assistant,Erode,Karur,2021,8003,103 Test St Erode,203 Native St Karur,1994-03-03,9800000003,bulk_user3@test.com,TBF803,GPF803
+TAGA804,Bulk Test User Four,D,Female,Father Four,Mother Four,B.Sc Horticulture,Director,Trichy,Tanjore,2020,8004,104 Test St Trichy,204 Native St Tanjore,1993-04-04,9800000004,bulk_user4@test.com,TBF804,GPF804
+TAGA805,Bulk Test User Five,E,Male,Father Five,Mother Five,Ph.D Agriculture,Agriculture Officer,Madurai,Theni,2019,8005,105 Test St Madurai,205 Native St Theni,1992-05-05,9800000005,bulk_user5@test.com,TBF805,GPF805

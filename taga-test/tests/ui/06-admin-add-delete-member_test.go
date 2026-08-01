@@ -69,36 +69,24 @@ func TestUI_06_AdminAddDeleteMember(t *testing.T) {
 		time.Sleep(afterActionWaitAddMember)
 		_, _ = page.CaptureScreenshot("Step_04_Member_Added_Success")
 
-		// ── Step 6: Search New Member in Management Table by Name ─────────
-		if err := adminDashboard.SearchMember(cfg.MemberSearchInputTestID, cfg.NewMemberFormData.Name, timeout); err != nil {
-			t.Fatalf("Failed to search new member by name: %v", err)
-		}
-		time.Sleep(afterActionWaitAddMember)
-		_, _ = page.CaptureScreenshot("Step_05_Member_Found_In_Table")
-
-		// ── Step 7: Click View Details Button in Table ─────────────────────
-		if err := adminDashboard.ClickFirstTableRowViewButton(timeout); err != nil {
-			t.Fatalf("Failed to click View Details button in table row: %v", err)
-		}
-		time.Sleep(1 * time.Second)
-		_, _ = page.CaptureScreenshot("Step_06_Member_View_Details_Modal_Opened")
-
-		// ── Step 8: Delete Member (Clean Up Test Data) ───────────────────
-		if err := adminDashboard.DeleteMember(
+		// ── Step 6: Search & Delete Created Member by Email ───────────────
+		if err := adminDashboard.DeleteMemberByEmail(
+			cfg.MemberSearchInputTestID,
+			cfg.NewMemberEmail,
 			cfg.MemberDeleteButtonTestID,
 			cfg.MemberConfirmDeleteButtonTestID,
 			timeout,
 		); err != nil {
-			t.Fatalf("Failed to delete test member: %v", err)
+			t.Fatalf("Failed to find and delete test member by email: %v", err)
 		}
 		time.Sleep(afterActionWaitAddMember)
-		_, _ = page.CaptureScreenshot("Step_07_Member_Deleted_Successfully")
+		_, _ = page.CaptureScreenshot("Step_05_Member_Deleted_Successfully")
 
-		// ── Step 9: Logout Admin ─────────────────────────────────────────
+		// ── Step 7: Logout Admin ─────────────────────────────────────────
 		if err := homePage.Logout(cfg.LogoutButtonTestID, timeout); err != nil {
 			t.Fatalf("Failed to logout Admin: %v", err)
 		}
 		time.Sleep(afterActionWaitAddMember)
-		_, _ = page.CaptureScreenshot("Step_08_Admin_After_Logout")
+		_, _ = page.CaptureScreenshot("Step_06_Admin_After_Logout")
 	})
 }

@@ -122,3 +122,56 @@ func (a *AdminDashboardPage) DeleteMember(deleteBtnTestID, confirmDeleteBtnTestI
 	}
 	return nil
 }
+
+// OpenBulkUploadModal clicks the "Bulk Member Upload" button.
+func (a *AdminDashboardPage) OpenBulkUploadModal(btnTestID string, timeout time.Duration) error {
+	return a.ClickByTestID(btnTestID, timeout)
+}
+
+// UploadBulkFile sends the absolute file path to the file input element.
+func (a *AdminDashboardPage) UploadBulkFile(fileInputTestID, filePath string, timeout time.Duration) error {
+	return a.SendKeysByTestID(fileInputTestID, filePath, timeout)
+}
+
+// SubmitBulkUpload clicks the bulk upload submit button.
+func (a *AdminDashboardPage) SubmitBulkUpload(submitTestID string, timeout time.Duration) error {
+	return a.ClickByTestID(submitTestID, timeout)
+}
+
+// DeleteMemberByEmail searches for a specific member by email, clicks its specific table row View button, and confirms deletion.
+func (a *AdminDashboardPage) DeleteMemberByEmail(searchInputTestID, email, deleteBtnTestID, confirmDeleteBtnTestID string, timeout time.Duration) error {
+	// 1. Search email
+	if err := a.SearchMember(searchInputTestID, email, timeout); err != nil {
+		return fmt.Errorf("failed to search email '%s': %w", email, err)
+	}
+	time.Sleep(1 * time.Second)
+
+	// 2. Click View button for the row matching this email exactly
+	rowViewBtnXPath := fmt.Sprintf("//table//tbody//tr[contains(., '%s')]//button[contains(@data-testid, '-view-button') or contains(text(), 'View')]", email)
+	if err := a.Click(rowViewBtnXPath, timeout); err != nil {
+		return fmt.Errorf("failed to click View button for email '%s': %w", email, err)
+	}
+	time.Sleep(1 * time.Second)
+
+	// 3. Delete & Confirm
+	return a.DeleteMember(deleteBtnTestID, confirmDeleteBtnTestID, timeout)
+}
+
+// DeleteMemberByName searches for a specific member by name, clicks its specific table row View button, and confirms deletion.
+func (a *AdminDashboardPage) DeleteMemberByName(searchInputTestID, name, deleteBtnTestID, confirmDeleteBtnTestID string, timeout time.Duration) error {
+	// 1. Search name
+	if err := a.SearchMember(searchInputTestID, name, timeout); err != nil {
+		return fmt.Errorf("failed to search name '%s': %w", name, err)
+	}
+	time.Sleep(1 * time.Second)
+
+	// 2. Click View button for the row matching this name exactly
+	rowViewBtnXPath := fmt.Sprintf("//table//tbody//tr[contains(., '%s')]//button[contains(@data-testid, '-view-button') or contains(text(), 'View')]", name)
+	if err := a.Click(rowViewBtnXPath, timeout); err != nil {
+		return fmt.Errorf("failed to click View button for name '%s': %w", name, err)
+	}
+	time.Sleep(1 * time.Second)
+
+	// 3. Delete & Confirm
+	return a.DeleteMember(deleteBtnTestID, confirmDeleteBtnTestID, timeout)
+}
