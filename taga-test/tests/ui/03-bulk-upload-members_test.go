@@ -16,7 +16,7 @@ func TestUI_07_BulkUploadMembers(t *testing.T) {
 
 		// Initialize Admin Persona and Result collector
 		admin := actions.NewAdminPersona(page, cfg.UiURL, 5*time.Second)
-		result := actions.NewResult("TestUI_07_BulkUploadMembers")
+		result := actions.NewResult("TestUI_03_BulkUploadMembers")
 
 		// Declarative Persona Action Flow
 		actions.GoToHome(admin, result)
