@@ -7,116 +7,273 @@ import (
 	"e2e-template/pkg/ui"
 )
 
-// PublicActions defines actions a general public user can perform on the UI.
-type PublicActions struct {
-	*ui.Page
+// Result captures test journey execution details, actions, evidence, and advice.
+type Result struct {
+	TestName string
+	Actions  []string
+	Evidence []string // File paths of captured screenshots
+	Advice   []string // Suggestive messages or remediation advice
+	Status   string   // "passed" or "failed"
+	Error    error    // The last encountered error, if any
 }
 
-// NewPublicActions initializes a new PublicActions wrapper and validates it.
-func NewPublicActions(page *ui.Page) (*PublicActions, error) {
-	if page == nil {
-		return nil, fmt.Errorf("provided page cannot be nil")
+// NewResult initializes a test journey result.
+func NewResult(testName string) *Result {
+	return &Result{
+		TestName: testName,
+		Status:   "passed",
+		Actions:  make([]string, 0),
+		Evidence: make([]string, 0),
+		Advice:   make([]string, 0),
 	}
-	if page.Driver == nil {
-		return nil, fmt.Errorf("provided page's selenium WebDriver cannot be nil")
+}
+
+// Failed returns true if any action in the journey failed.
+func (r *Result) Failed() bool {
+	return r.Status == "failed"
+}
+
+// PublicActionsInterface allows different personas to share public actions.
+type PublicActionsInterface interface {
+	GetPublicPersona() *PublicPersona
+}
+
+// PublicPersona defines the credentials and capabilities of a general visitor.
+type PublicPersona struct {
+	*ui.Page
+	BaseURL        string
+	DefaultTimeout time.Duration
+}
+
+// NewPublicPersona creates a new PublicPersona.
+func NewPublicPersona(page *ui.Page, baseURL string, defaultTimeout time.Duration) *PublicPersona {
+	return &PublicPersona{
+		Page:           page,
+		BaseURL:        baseURL,
+		DefaultTimeout: defaultTimeout,
 	}
-	return &PublicActions{Page: page}, nil
+}
+
+// GetPublicPersona implements PublicActionsInterface for PublicPersona.
+func (p *PublicPersona) GetPublicPersona() *PublicPersona {
+	return p
 }
 
 // ensurePage verifies the wrapper and its internal fields are not nil.
-func (a *PublicActions) ensurePage() error {
-	if a == nil || a.Page == nil {
-		return fmt.Errorf("PublicActions or Page is not initialized")
+func ensurePage(p *PublicPersona) error {
+	if p == nil || p.Page == nil {
+		return fmt.Errorf("PublicPersona or Page is not initialized")
 	}
-	if a.Page.Driver == nil {
+	if p.Page.Driver == nil {
 		return fmt.Errorf("WebDriver is not initialized")
 	}
 	return nil
 }
 
-// GoToHome navigates to the configured target URL (Home page).
-func (a *PublicActions) GoToHome(targetURL string) error {
-	if err := a.ensurePage(); err != nil {
-		return err
+// GoToHome navigates to the Home page and records the outcome.
+func GoToHome(pai PublicActionsInterface, r *Result) {
+	actionName := "Navigate to Home Page"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
 	}
-	return a.Page.GoToHome(targetURL)
+
+	p := pai.GetPublicPersona()
+	if err := ensurePage(p); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Prerequisite Check: Ensure the Selenium driver is started and passed correctly to the persona")
+		return
+	}
+
+	err := p.Page.GoToHome(p.BaseURL)
+	if err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Check if the application server is running at %s. Ensure the URL is reachable.", p.BaseURL))
+		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToHome_Failure"); scrErr == nil {
+			r.Evidence = append(r.Evidence, scr)
+		}
+		return
+	}
+
+	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToHome_Success"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+	r.Advice = append(r.Advice, "Home page loaded successfully.")
 }
 
-// GoToOfficeBeaers clicks the Office Bearers link in the navigation menu.
-func (a *PublicActions) GoToOfficeBeaers(timeout time.Duration) error {
-	if err := a.ensurePage(); err != nil {
-		return err
+// GoToOfficeBeaers navigates to the Office Bearers page and records the outcome.
+func GoToOfficeBeaers(pai PublicActionsInterface, r *Result) {
+	actionName := "Navigate to Office Bearers Page"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
 	}
-	return a.Page.ClickByTestID("testid-office-bearers-button", timeout)
+
+	p := pai.GetPublicPersona()
+	if err := ensurePage(p); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Prerequisite Check: Ensure the Selenium driver is started and passed correctly to the persona")
+		return
+	}
+
+	err := p.Page.ClickByTestID("testid-office-bearers-button", p.DefaultTimeout)
+	if err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify that the 'testid-office-bearers-button' element exists on the page and is clickable.")
+		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToOfficeBeaers_Failure"); scrErr == nil {
+			r.Evidence = append(r.Evidence, scr)
+		}
+		return
+	}
+
+	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToOfficeBeaers_Success"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+	r.Advice = append(r.Advice, "Office Bearers page loaded successfully.")
 }
 
-// GoToEvents clicks the Events link in the navigation menu.
-func (a *PublicActions) GoToEvents(timeout time.Duration) error {
-	if err := a.ensurePage(); err != nil {
-		return err
+// GoToEvents navigates to the Events page and records the outcome.
+func GoToEvents(pai PublicActionsInterface, r *Result) {
+	actionName := "Navigate to Events Page"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
 	}
-	return a.Page.ClickByTestID("testid-events-button", timeout)
+
+	p := pai.GetPublicPersona()
+	if err := ensurePage(p); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Prerequisite Check: Ensure the Selenium driver is started and passed correctly to the persona")
+		return
+	}
+
+	err := p.Page.ClickByTestID("testid-events-button", p.DefaultTimeout)
+	if err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify that the 'testid-events-button' element exists on the page and is clickable.")
+		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToEvents_Failure"); scrErr == nil {
+			r.Evidence = append(r.Evidence, scr)
+		}
+		return
+	}
+
+	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToEvents_Success"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+	r.Advice = append(r.Advice, "Events page loaded successfully.")
 }
 
-// GoToMemberLogin clicks the Member Login link in the navigation menu.
-func (a *PublicActions) GoToMemberLogin(timeout time.Duration) error {
-	if err := a.ensurePage(); err != nil {
-		return err
+// GoToMemberLogin navigates to the Member Login page and records the outcome.
+func GoToMemberLogin(pai PublicActionsInterface, r *Result) {
+	actionName := "Navigate to Member Login Page"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
 	}
-	return a.Page.ClickByTestID("testid-member-login-button", timeout)
+
+	p := pai.GetPublicPersona()
+	if err := ensurePage(p); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Prerequisite Check: Ensure the Selenium driver is started and passed correctly to the persona")
+		return
+	}
+
+	err := p.Page.ClickByTestID("testid-member-login-button", p.DefaultTimeout)
+	if err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify that the 'testid-member-login-button' element exists on the page and is clickable.")
+		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToMemberLogin_Failure"); scrErr == nil {
+			r.Evidence = append(r.Evidence, scr)
+		}
+		return
+	}
+
+	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToMemberLogin_Success"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+	r.Advice = append(r.Advice, "Member Login page loaded successfully.")
 }
 
-// GoToAdminLogin clicks the Administrative Access link in the footer.
-func (a *PublicActions) GoToAdminLogin(timeout time.Duration) error {
-	if err := a.ensurePage(); err != nil {
-		return err
+// GoToAdminLogin navigates to the Admin Login page and records the outcome.
+func GoToAdminLogin(pai PublicActionsInterface, r *Result) {
+	actionName := "Navigate to Admin Login Page"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
 	}
-	return a.Page.ClickByTestID("testid-admin-login-button", timeout)
+
+	p := pai.GetPublicPersona()
+	if err := ensurePage(p); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Prerequisite Check: Ensure the Selenium driver is started and passed correctly to the persona")
+		return
+	}
+
+	err := p.Page.ClickByTestID("testid-admin-login-button", p.DefaultTimeout)
+	if err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify that the 'testid-admin-login-button' element exists in the footer and is clickable.")
+		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToAdminLogin_Failure"); scrErr == nil {
+			r.Evidence = append(r.Evidence, scr)
+		}
+		return
+	}
+
+	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToAdminLogin_Success"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+	r.Advice = append(r.Advice, "Admin Login page loaded successfully.")
 }
 
 // ==================== PERSONA WRAPPERS ====================
 
-// MemberActions embeds PublicActions to inherit all public navigation,
-// and adds member-specific actions.
-type MemberActions struct {
-	*PublicActions
+// MemberPersona embeds PublicPersona to inherit all public capabilities.
+type MemberPersona struct {
+	*PublicPersona
 }
 
-// NewMemberActions initializes a new MemberActions wrapper.
-func NewMemberActions(page *ui.Page) (*MemberActions, error) {
-	pub, err := NewPublicActions(page)
-	if err != nil {
-		return nil, err
+// NewMemberPersona creates a new MemberPersona.
+func NewMemberPersona(page *ui.Page, baseURL string, defaultTimeout time.Duration) *MemberPersona {
+	return &MemberPersona{
+		PublicPersona: NewPublicPersona(page, baseURL, defaultTimeout),
 	}
-	return &MemberActions{PublicActions: pub}, nil
 }
 
-// SubscriberActions embeds MemberActions to inherit all member and public navigation,
-// and adds subscriber-specific actions.
-type SubscriberActions struct {
-	*MemberActions
+// SubscriberPersona embeds MemberPersona.
+type SubscriberPersona struct {
+	*MemberPersona
 }
 
-// NewSubscriberActions initializes a new SubscriberActions wrapper.
-func NewSubscriberActions(page *ui.Page) (*SubscriberActions, error) {
-	mem, err := NewMemberActions(page)
-	if err != nil {
-		return nil, err
+// NewSubscriberPersona creates a new SubscriberPersona.
+func NewSubscriberPersona(page *ui.Page, baseURL string, defaultTimeout time.Duration) *SubscriberPersona {
+	return &SubscriberPersona{
+		MemberPersona: NewMemberPersona(page, baseURL, defaultTimeout),
 	}
-	return &SubscriberActions{MemberActions: mem}, nil
 }
 
-// AdminActions embeds PublicActions to inherit all public navigation,
-// and adds admin-specific actions.
-type AdminActions struct {
-	*PublicActions
+// AdminPersona embeds PublicPersona.
+type AdminPersona struct {
+	*PublicPersona
 }
 
-// NewAdminActions initializes a new AdminActions wrapper.
-func NewAdminActions(page *ui.Page) (*AdminActions, error) {
-	pub, err := NewPublicActions(page)
-	if err != nil {
-		return nil, err
+// NewAdminPersona creates a new AdminPersona.
+func NewAdminPersona(page *ui.Page, baseURL string, defaultTimeout time.Duration) *AdminPersona {
+	return &AdminPersona{
+		PublicPersona: NewPublicPersona(page, baseURL, defaultTimeout),
 	}
-	return &AdminActions{PublicActions: pub}, nil
 }
