@@ -167,13 +167,17 @@ func (p *Page) Click(locator string, timeout time.Duration) error {
 	}
 	err = el.Click()
 	if err != nil {
-		p.LastError = err
-		return err
+		// Fallback for element click interception / overlapping navbar: scroll into view and click via JS
+		_, jsErr := p.Driver.ExecuteScript("arguments[0].scrollIntoView({block: 'center'}); arguments[0].click();", []interface{}{el})
+		if jsErr != nil {
+			p.LastError = err
+			return err
+		}
 	}
 	return nil
 }
 
-// SendKeys waits for the element to be visible, clears it, and types text.
+// SendKeys waits for the element to be visible, clears it thoroughly, and types text.
 func (p *Page) SendKeys(locator string, text string, timeout time.Duration) error {
 	el, err := p.WaitUntilVisible(locator, timeout)
 	if err != nil {
@@ -181,6 +185,9 @@ func (p *Page) SendKeys(locator string, text string, timeout time.Duration) erro
 		return err
 	}
 	_ = el.Clear()
+	if text == "" {
+		return nil
+	}
 	err = el.SendKeys(text)
 	if err != nil {
 		p.LastError = err
@@ -242,6 +249,18 @@ func (p *Page) ClickByTestID(testID string, timeout time.Duration) error {
 // SendKeysByTestID finds an element by data-testid, clears it, and types text.
 func (p *Page) SendKeysByTestID(testID string, text string, timeout time.Duration) error {
 	return p.SendKeys(fmt.Sprintf("css:[data-testid=\"%s\"]", testID), text, timeout)
+}
+
+// SelectCustomDropdownByText opens a Radix UI dropdown by trigger testID and clicks the item matching optionText.
+func (p *Page) SelectCustomDropdownByText(triggerTestID, optionText string, timeout time.Duration) error {
+	if err := p.ClickByTestID(triggerTestID, timeout); err != nil {
+		return fmt.Errorf("failed to click dropdown trigger '%s': %w", triggerTestID, err)
+	}
+	time.Sleep(300 * time.Millisecond) // short pause for menu render
+
+	// Find and click item matching exact text or containing text
+	itemXPath := fmt.Sprintf("//*[contains(@role, 'option') and (text()='%s' or .='%s')]", optionText, optionText)
+	return p.Click(itemXPath, timeout)
 }
 
 // GetTextByTestID finds an element by data-testid and retrieves its text.

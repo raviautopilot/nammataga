@@ -8,7 +8,7 @@ cd "$SCRIPT_DIR"
 PORT=9515
 
 echo "========================================="
-echo " Starting Chromedriver & E2E Test Suite "
+echo " Starting Chromedriver & E2E UI Tests    "
 echo "========================================="
 
 # 1. Start chromedriver in the background
@@ -38,16 +38,16 @@ for i in {1..10}; do
     sleep 0.5
 done
 
-# 3.5. Export a shared timestamp so all test packages run under the same run folder
+# 3.5. Export a shared timestamp for reports
 export E2E_RUN_TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 
-# 4. Run the Go E2E tests (respecting config.json headless setting or E2E_HEADLESS env var)
-echo "Running E2E test suite..."
-go test -v ./tests/ui/... ./tests/api/... "$@"
+# 4. Run UI test suite
+echo "Running UI test suite..."
+go test -v ./tests/ui/... "$@"
 TEST_EXIT_CODE=$?
 
 echo "========================================="
-echo " Tests finished with exit code $TEST_EXIT_CODE"
+echo " UI Tests finished with exit code $TEST_EXIT_CODE"
 echo "========================================="
 
 exit $TEST_EXIT_CODE

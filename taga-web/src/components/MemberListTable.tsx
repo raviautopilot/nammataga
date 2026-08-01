@@ -282,6 +282,10 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
   };
 
   const handleRefresh = () => {
+    setSearchQuery('');
+    setDistrictFilter('all');
+    setPaymentStatusFilter('all');
+    setCurrentPage(1);
     fetchMembers();
     toast.success('Refreshed');
   };
@@ -439,7 +443,7 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
               )}
               {isExporting ? 'Exporting...' : 'Export Excel'}
             </Button>
-            <Button variant="outline" size="sm" onClick={handleRefresh}>
+            <Button variant="outline" size="sm" onClick={handleRefresh} data-testid="testid-member-refresh-button">
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
@@ -452,7 +456,7 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
             <div className="relative md:col-span-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
-                placeholder="Search by name, email or mobile..."
+                placeholder="Search by name, email, Taga ID, mobile..."
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                 className="pl-10"

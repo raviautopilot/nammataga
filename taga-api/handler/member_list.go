@@ -97,12 +97,18 @@ func GetMembersList(c *gin.Context) {
 		}
 
 		if search != "" {
+			cleanSearch := strings.TrimSpace(strings.ToLower(search))
 			name := strings.ToLower(getString(m, "name"))
-			emailLower := strings.ToLower(email)
-			mobile := getString(m, "mobile_number")
-			if !strings.Contains(name, search) &&
-				!strings.Contains(emailLower, search) &&
-				!strings.Contains(mobile, search) {
+			emailLower := strings.TrimSpace(strings.ToLower(email))
+			mobile := strings.TrimSpace(getString(m, "mobile_number"))
+			tagaID := strings.TrimSpace(strings.ToLower(getString(m, "tagaId")))
+			designation := strings.TrimSpace(strings.ToLower(getString(m, "designation")))
+
+			if !strings.Contains(name, cleanSearch) &&
+				!strings.Contains(emailLower, cleanSearch) &&
+				!strings.Contains(mobile, cleanSearch) &&
+				!strings.Contains(tagaID, cleanSearch) &&
+				!strings.Contains(designation, cleanSearch) {
 				continue
 			}
 		}

@@ -3,42 +3,46 @@ package pages
 import (
 	"time"
 
-	"github.com/tebeka/selenium"
 	"e2e-template/pkg/ui"
 )
 
-// LoginPage implements the Page Object Model pattern for a standard Login page.
+// LoginPage handles interactions with login forms (Admin and Member modals/pages).
 type LoginPage struct {
 	*ui.Page
-	UsernameField string
-	PasswordField string
-	SubmitButton  string
-	ErrorMessage  string
 }
 
-// NewLoginPage creates a page object with pre-defined selectors.
-func NewLoginPage(driver selenium.WebDriver, screenshotDir string) *LoginPage {
-	return &LoginPage{
-		Page:          ui.NewPage(driver, screenshotDir),
-		UsernameField: "css:#username",
-		PasswordField: "css:#password",
-		SubmitButton:  "css:button[type='submit']",
-		ErrorMessage:  "css:.error-message",
-	}
+// NewLoginPage creates a new LoginPage instance wrapping the base Page.
+func NewLoginPage(page *ui.Page) *LoginPage {
+	return &LoginPage{Page: page}
 }
 
-// Login performs typing user credentials and clicking the submit button.
-func (l *LoginPage) Login(username, password string, timeout time.Duration) error {
-	if err := l.SendKeys(l.UsernameField, username, timeout); err != nil {
+// VerifyFormElements verifies that all required data-testid elements exist on the login form.
+func (l *LoginPage) VerifyFormElements(testIDs []string, timeout time.Duration) error {
+	return l.VerifyElementsPresentByTestIDs(testIDs, timeout)
+}
+
+// EnterUsername types the username into the specified input field.
+func (l *LoginPage) EnterUsername(inputTestID, username string, timeout time.Duration) error {
+	return l.SendKeysByTestID(inputTestID, username, timeout)
+}
+
+// EnterPassword types the password into the specified input field.
+func (l *LoginPage) EnterPassword(inputTestID, password string, timeout time.Duration) error {
+	return l.SendKeysByTestID(inputTestID, password, timeout)
+}
+
+// SubmitLogin clicks the submit button for the login form.
+func (l *LoginPage) SubmitLogin(submitTestID string, timeout time.Duration) error {
+	return l.ClickByTestID(submitTestID, timeout)
+}
+
+// FillAndSubmitLogin enters credentials and clicks submit in one step.
+func (l *LoginPage) FillAndSubmitLogin(usernameTestID, passwordTestID, submitTestID, username, password string, timeout time.Duration) error {
+	if err := l.EnterUsername(usernameTestID, username, timeout); err != nil {
 		return err
 	}
-	if err := l.SendKeys(l.PasswordField, password, timeout); err != nil {
+	if err := l.EnterPassword(passwordTestID, password, timeout); err != nil {
 		return err
 	}
-	return l.Click(l.SubmitButton, timeout)
-}
-
-// GetAlertText extracts any login validation error text display.
-func (l *LoginPage) GetAlertText(timeout time.Duration) (string, error) {
-	return l.GetText(l.ErrorMessage, timeout)
+	return l.SubmitLogin(submitTestID, timeout)
 }
