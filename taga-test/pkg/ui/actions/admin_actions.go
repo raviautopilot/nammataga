@@ -152,6 +152,14 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		r.Evidence = append(r.Evidence, scr)
 	}
 
+	// Click OK on the success modal to close it
+	if err := ap.Page.ClickByTestID("testid-add-success-ok-button", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click add success OK button: %w", err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
 	// Refresh table so new member appears
 	_ = adminDashboard.RefreshMemberTable(cfg.MemberRefreshButtonTestID, ap.DefaultTimeout)
 	time.Sleep(2 * time.Second)

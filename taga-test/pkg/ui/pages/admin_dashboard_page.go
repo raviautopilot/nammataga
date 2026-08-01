@@ -144,6 +144,10 @@ func (a *AdminDashboardPage) DeleteMember(deleteBtnTestID, confirmDeleteBtnTestI
 	if err := a.ClickByTestID(confirmDeleteBtnTestID, timeout); err != nil {
 		return fmt.Errorf("failed to click confirm delete button: %w", err)
 	}
+	time.Sleep(1 * time.Second)
+	if err := a.ClickByTestID("testid-delete-success-ok-button", timeout); err != nil {
+		return fmt.Errorf("failed to click delete success OK button: %w", err)
+	}
 	return nil
 }
 
