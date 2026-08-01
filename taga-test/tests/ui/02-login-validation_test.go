@@ -26,7 +26,8 @@ func TestUI_02_LoginValidation(t *testing.T) {
 		if err := page.VerifyFormElements(cfg.AdminLoginTestIDs, timeout); err != nil {
 			t.Fatalf("Failed to verify Admin Form Elements: %v", err)
 		}
-		_, _ = page.CaptureScreenshot("Admin_Login_Page")
+		time.Sleep(2 * time.Second)
+		_, _ = page.CaptureScreenshot("Step_01_Admin_Login_Modal")
 
 		// 3. Return to Home Page
 		if err := page.GoToHome(url); err != nil {
@@ -40,7 +41,8 @@ func TestUI_02_LoginValidation(t *testing.T) {
 		if err := page.VerifyFormElements(cfg.MemberLoginTestIDs, timeout); err != nil {
 			t.Fatalf("Failed to verify Member Form Elements: %v", err)
 		}
-		_, _ = page.CaptureScreenshot("Member_Login_Page")
+		time.Sleep(2 * time.Second)
+		_, _ = page.CaptureScreenshot("Step_02_Member_Login_Modal")
 
 		// 5. Return to Home Page
 		if err := page.GoToHome(url); err != nil {

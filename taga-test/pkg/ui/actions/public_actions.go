@@ -92,13 +92,15 @@ func GoToHome(pai PublicActionsInterface, r *Result) {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Check if the application server is running at %s. Ensure the URL is reachable.", p.BaseURL))
-		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToHome_Failure"); scrErr == nil {
+		time.Sleep(1 * time.Second)
+		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_Step01_GoToHome_Failure"); scrErr == nil {
 			r.Evidence = append(r.Evidence, scr)
 		}
 		return
 	}
 
-	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToHome_Success"); scrErr == nil {
+	time.Sleep(2 * time.Second)
+	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_Step01_GoToHome_Success"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, "Home page loaded successfully.")
@@ -126,13 +128,15 @@ func GoToOfficeBeaers(pai PublicActionsInterface, r *Result) {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify that the 'testid-office-bearers-button' element exists on the page and is clickable.")
-		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToOfficeBeaers_Failure"); scrErr == nil {
+		time.Sleep(1 * time.Second)
+		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_Step02_OfficeBearers_Failure"); scrErr == nil {
 			r.Evidence = append(r.Evidence, scr)
 		}
 		return
 	}
 
-	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToOfficeBeaers_Success"); scrErr == nil {
+	time.Sleep(2 * time.Second)
+	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_Step02_OfficeBearers_Success"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, "Office Bearers page loaded successfully.")
@@ -160,13 +164,15 @@ func GoToEvents(pai PublicActionsInterface, r *Result) {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify that the 'testid-events-button' element exists on the page and is clickable.")
-		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToEvents_Failure"); scrErr == nil {
+		time.Sleep(1 * time.Second)
+		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_Step04_Events_Failure"); scrErr == nil {
 			r.Evidence = append(r.Evidence, scr)
 		}
 		return
 	}
 
-	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToEvents_Success"); scrErr == nil {
+	time.Sleep(2 * time.Second)
+	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_Step04_Events_Success"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, "Events page loaded successfully.")
@@ -194,13 +200,15 @@ func GoToMemberLogin(pai PublicActionsInterface, r *Result) {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify that the 'testid-member-login-button' element exists on the page and is clickable.")
-		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToMemberLogin_Failure"); scrErr == nil {
+		time.Sleep(1 * time.Second)
+		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_Step06_MemberLogin_Failure"); scrErr == nil {
 			r.Evidence = append(r.Evidence, scr)
 		}
 		return
 	}
 
-	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToMemberLogin_Success"); scrErr == nil {
+	time.Sleep(2 * time.Second)
+	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_Step06_MemberLogin_Success"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, "Member Login page loaded successfully.")
@@ -228,13 +236,15 @@ func GoToAdminLogin(pai PublicActionsInterface, r *Result) {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify that the 'testid-admin-login-button' element exists in the footer and is clickable.")
-		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToAdminLogin_Failure"); scrErr == nil {
+		time.Sleep(1 * time.Second)
+		if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_Step08_AdminLogin_Failure"); scrErr == nil {
 			r.Evidence = append(r.Evidence, scr)
 		}
 		return
 	}
 
-	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_GoToAdminLogin_Success"); scrErr == nil {
+	time.Sleep(2 * time.Second)
+	if scr, scrErr := p.Page.CaptureScreenshot(r.TestName + "_Step08_AdminLogin_Success"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, "Admin Login page loaded successfully.")

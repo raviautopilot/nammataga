@@ -60,14 +60,16 @@ func LoginAsAdmin(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify Admin credentials and submit button testIDs in config.json")
-		if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_LoginAsAdmin_Failure"); scrErr == nil {
+		time.Sleep(1 * time.Second)
+		if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_Step01_AdminLogin_Failure"); scrErr == nil {
 			r.Evidence = append(r.Evidence, scr)
 		}
 		return
 	}
 
-	time.Sleep(2 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_LoginAsAdmin_Success"); scrErr == nil {
+	// Wait for home page to fully render after login redirect
+	time.Sleep(3 * time.Second)
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_01_AdminLogin_HomePage"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, "Admin logged in successfully.")
@@ -89,14 +91,16 @@ func OpenAdminPanel(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Check if navbar 'adminPanelButtonTestID' is visible after Admin login")
-		if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_OpenAdminPanel_Failure"); scrErr == nil {
+		time.Sleep(1 * time.Second)
+		if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_AdminPanel_Failure"); scrErr == nil {
 			r.Evidence = append(r.Evidence, scr)
 		}
 		return
 	}
 
-	time.Sleep(2 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_OpenAdminPanel_Success"); scrErr == nil {
+	// Wait for admin panel table to fully render
+	time.Sleep(3 * time.Second)
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_AdminPanel_Loaded"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, "Admin Panel opened successfully.")
@@ -128,8 +132,10 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		r.Advice = append(r.Advice, "Advice: Verify all 19 form input testIDs in config.json match the UI elements")
 		return
 	}
+
+	// Screenshot: form fully filled, before submitting
 	time.Sleep(1 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_Form_Filled_Before_Submit"); scrErr == nil {
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_AddMember_FormFilled"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 
@@ -140,11 +146,17 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		return
 	}
 
-	time.Sleep(2 * time.Second) // allow modal to close
-	_ = adminDashboard.RefreshMemberTable(cfg.MemberRefreshButtonTestID, ap.DefaultTimeout)
-	time.Sleep(1 * time.Second)
+	// Screenshot: success toast visible immediately after submit
+	time.Sleep(2 * time.Second)
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_AddMember_SuccessToast"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
 
-	if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_AddSingleMember_Success"); scrErr == nil {
+	// Refresh table so new member appears
+	_ = adminDashboard.RefreshMemberTable(cfg.MemberRefreshButtonTestID, ap.DefaultTimeout)
+	time.Sleep(2 * time.Second)
+
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_05_AdminPanel_AfterAddMember"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, "Member added successfully with all 19 fields populated.")
@@ -186,14 +198,16 @@ func DeleteMemberByEmail(aai AdminActionsInterface, cfg *config.Config, email st
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Check if member email '%s' exists in table and search input testID is correct", cleanEmail))
-		if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_DeleteMember_Failure"); scrErr == nil {
+		time.Sleep(1 * time.Second)
+		if scr, scrErr := ap.Page.CaptureScreenshot("Step_06_SearchMember_Failure"); scrErr == nil {
 			r.Evidence = append(r.Evidence, scr)
 		}
 		return
 	}
 
+	// Screenshot: delete toast confirmation visible
 	time.Sleep(2 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_DeleteMember_Success"); scrErr == nil {
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_07_DeleteMember_SuccessToast"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, fmt.Sprintf("Member '%s' deleted successfully.", cleanEmail))
@@ -234,14 +248,16 @@ func DeleteMemberByMobile(aai AdminActionsInterface, cfg *config.Config, mobile 
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Check if member mobile '%s' exists in table and search input testID is correct", cleanMobile))
-		if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_DeleteMember_Failure"); scrErr == nil {
+		time.Sleep(1 * time.Second)
+		if scr, scrErr := ap.Page.CaptureScreenshot("Step_06_SearchByMobile_" + cleanMobile + "_Failure"); scrErr == nil {
 			r.Evidence = append(r.Evidence, scr)
 		}
 		return
 	}
 
+	// Screenshot: delete toast visible right after deletion
 	time.Sleep(2 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_DeleteMember_Success"); scrErr == nil {
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_06_DeleteMobile_" + cleanMobile + "_SuccessToast"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, fmt.Sprintf("Member with mobile '%s' deleted successfully.", cleanMobile))
@@ -278,7 +294,12 @@ func BulkUploadMembers(aai AdminActionsInterface, cfg *config.Config, fixtureRel
 		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Ensure file '%s' exists and file input testID is correct", absPath))
 		return
 	}
+
+	// Screenshot: CSV file selected in upload dialog
 	time.Sleep(1 * time.Second)
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_BulkUpload_FileSelected"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
 
 	if err := adminDashboard.SubmitBulkUpload(cfg.AdminBulkUploadSubmitButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
@@ -287,11 +308,16 @@ func BulkUploadMembers(aai AdminActionsInterface, cfg *config.Config, fixtureRel
 		return
 	}
 
-	time.Sleep(3 * time.Second) // allow server time to process upload
-	_ = adminDashboard.RefreshMemberTable(cfg.MemberRefreshButtonTestID, ap.DefaultTimeout)
-	time.Sleep(1 * time.Second)
+	// Screenshot: upload success toast / result visible
+	time.Sleep(3 * time.Second)
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_BulkUpload_SuccessToast"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
 
-	if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_BulkUpload_Success"); scrErr == nil {
+	_ = adminDashboard.RefreshMemberTable(cfg.MemberRefreshButtonTestID, ap.DefaultTimeout)
+	time.Sleep(2 * time.Second)
+
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_05_AdminPanel_AfterBulkUpload"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, "Bulk CSV uploaded successfully.")
@@ -316,8 +342,9 @@ func LogoutAdmin(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		return
 	}
 
-	time.Sleep(2 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_Logout_Success"); scrErr == nil {
+	// Wait for redirect back to home / login page to fully complete
+	time.Sleep(3 * time.Second)
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_07_AdminLogout_HomePage"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, "Admin logged out successfully.")

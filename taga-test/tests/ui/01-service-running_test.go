@@ -20,7 +20,7 @@ func TestUI_01_ServiceRunning(t *testing.T) {
 		}
 
 		// Take a manual screenshot
-		screenshotPath, err := page.CaptureScreenshot("01-service-running")
+		screenshotPath, err := page.CaptureScreenshot("Step_01_Service_Running_HomePage")
 		if err != nil {
 			t.Logf("Warning: failed to capture screenshot: %v", err)
 		} else {

@@ -167,8 +167,12 @@ func (p *Page) Click(locator string, timeout time.Duration) error {
 	}
 	err = el.Click()
 	if err != nil {
-		p.LastError = err
-		return err
+		// Fallback for element click interception / overlapping navbar: scroll into view and click via JS
+		_, jsErr := p.Driver.ExecuteScript("arguments[0].scrollIntoView({block: 'center'}); arguments[0].click();", []interface{}{el})
+		if jsErr != nil {
+			p.LastError = err
+			return err
+		}
 	}
 	return nil
 }

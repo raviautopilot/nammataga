@@ -16,7 +16,7 @@ func TestUI_06_AdminAddDeleteMember(t *testing.T) {
 
 		// Initialize Admin Persona and Result collector
 		admin := actions.NewAdminPersona(page, cfg.UiURL, 5*time.Second)
-		result := actions.NewResult("Admin Add and Delete Member Test")
+		result := actions.NewResult("TestUI_06_AdminAddDeleteMember")
 
 		// Declarative Persona Action Flow
 		actions.GoToHome(admin, result)

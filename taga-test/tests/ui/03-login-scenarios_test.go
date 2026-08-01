@@ -32,7 +32,7 @@ func TestUI_03_LoginScenarios(t *testing.T) {
 			t.Fatalf("Failed to click Admin submit: %v", err)
 		}
 		time.Sleep(afterActionWait)
-		_, _ = page.CaptureScreenshot("Admin__01_Empty_Credentials_Result")
+		_, _ = page.CaptureScreenshot("Step_01_Admin_Empty_Credentials_Result")
 
 		if err := page.GoToHome(url); err != nil {
 			t.Fatalf("Failed to return Home after empty attempt: %v", err)
@@ -53,7 +53,7 @@ func TestUI_03_LoginScenarios(t *testing.T) {
 			t.Fatalf("Failed to submit Admin login: %v", err)
 		}
 		time.Sleep(afterActionWait)
-		_, _ = page.CaptureScreenshot("Admin__02_Wrong_Credentials_Result")
+		_, _ = page.CaptureScreenshot("Step_02_Admin_Wrong_Credentials_Result")
 
 		if err := page.GoToHome(url); err != nil {
 			t.Fatalf("Failed to return Home after wrong attempt: %v", err)
@@ -73,15 +73,15 @@ func TestUI_03_LoginScenarios(t *testing.T) {
 		if err := page.SubmitLogin(cfg.AdminLoginSubmitButtonTestID, timeout); err != nil {
 			t.Fatalf("Failed to submit Admin login: %v", err)
 		}
-		time.Sleep(afterActionWait)
-		_, _ = page.CaptureScreenshot("Admin__03_Correct_LoggedIn_Home")
+		time.Sleep(3 * time.Second) // wait for home page to fully render after login
+		_, _ = page.CaptureScreenshot("Step_03_Admin_Correct_LoggedIn_Home")
 
 		// Logout before Member flow
 		if err := page.Logout(cfg.LogoutButtonTestID, timeout); err != nil {
 			t.Fatalf("Failed to logout Admin: %v", err)
 		}
-		time.Sleep(afterActionWait)
-		_, _ = page.CaptureScreenshot("Admin__04_After_Logout")
+		time.Sleep(3 * time.Second) // wait for redirect back to home to fully complete
+		_, _ = page.CaptureScreenshot("Step_04_Admin_After_Logout")
 
 		// ══════════════════════════════════════════════════════════════════
 		// MEMBER LOGIN FLOW
@@ -99,7 +99,7 @@ func TestUI_03_LoginScenarios(t *testing.T) {
 			t.Fatalf("Failed to click Member submit: %v", err)
 		}
 		time.Sleep(afterActionWait)
-		_, _ = page.CaptureScreenshot("Member__01_Empty_Credentials_Result")
+		_, _ = page.CaptureScreenshot("Step_05_Member_Empty_Credentials_Result")
 
 		if err := page.GoToHome(url); err != nil {
 			t.Fatalf("Failed to return Home after empty attempt: %v", err)
@@ -120,7 +120,7 @@ func TestUI_03_LoginScenarios(t *testing.T) {
 			t.Fatalf("Failed to submit Member login: %v", err)
 		}
 		time.Sleep(afterActionWait)
-		_, _ = page.CaptureScreenshot("Member__02_Wrong_Credentials_Result")
+		_, _ = page.CaptureScreenshot("Step_06_Member_Wrong_Credentials_Result")
 
 		if err := page.GoToHome(url); err != nil {
 			t.Fatalf("Failed to return Home after wrong attempt: %v", err)
@@ -140,14 +140,16 @@ func TestUI_03_LoginScenarios(t *testing.T) {
 		if err := page.SubmitLogin(cfg.MemberLoginSubmitButtonTestID, timeout); err != nil {
 			t.Fatalf("Failed to submit Member login: %v", err)
 		}
-		time.Sleep(afterActionWait)
-		_, _ = page.CaptureScreenshot("Member__03_Correct_LoggedIn_Result")
+		time.Sleep(3 * time.Second) // wait for member dashboard to fully render after login
+		_, _ = page.CaptureScreenshot("Step_07_Member_Correct_LoggedIn_Dashboard")
 
 		// Logout after Member login
 		if err := page.Logout(cfg.LogoutButtonTestID, timeout); err != nil {
 			t.Fatalf("Failed to logout Member: %v", err)
 		}
-		time.Sleep(afterActionWait)
-		_, _ = page.CaptureScreenshot("Member__04_After_Logout")
+		time.Sleep(2 * time.Second)
+		_ = page.GoToHome(url)
+		time.Sleep(2 * time.Second) // wait for home page to settle
+		_, _ = page.CaptureScreenshot("Step_08_Member_After_Logout")
 	})
 }
