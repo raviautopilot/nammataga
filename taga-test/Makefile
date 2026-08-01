@@ -7,10 +7,10 @@ deps:
 	go mod tidy
 
 test-api:
-	./run-tests.sh -run=TestAPI
+	./run-api-tests.sh
 
 test-ui:
-	./run-tests.sh -run=TestUI
+	./run-ui-tests.sh
 
 test-all:
 	./run-tests.sh

@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Ensure script executes in taga-test directory where go.mod resides
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
+
+# Configuration
+PORT=9515
+
+echo "========================================="
+echo " Starting Chromedriver & E2E UI Tests    "
+echo "========================================="
+
+# 1. Start chromedriver in the background
+chromedriver --port=$PORT > /dev/null 2>&1 &
+CHROMEDRIVER_PID=$!
+
+# 2. Setup automatic cleanup on exit (trap)
+cleanup() {
+    echo "Cleaning up: stopping chromedriver (PID: $CHROMEDRIVER_PID)..."
+    kill $CHROMEDRIVER_PID 2>/dev/null
+    wait $CHROMEDRIVER_PID 2>/dev/null
+    echo "Cleanup complete."
+}
+trap cleanup EXIT
+
+# 3. Wait for Chromedriver to become responsive
+echo "Waiting for Chromedriver to start on port $PORT..."
+for i in {1..10}; do
+    if curl -s http://localhost:$PORT/status | grep -q '"ready":true'; then
+        echo "Chromedriver is ready!"
+        break
+    fi
+    if [ $i -eq 10 ]; then
+        echo "Error: Chromedriver failed to start on port $PORT."
+        exit 1
+    fi
+    sleep 0.5
+done
+
+# 3.5. Export a shared timestamp for reports
+export E2E_RUN_TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+
+# 4. Run UI test suite
+echo "Running UI test suite..."
+go test -v ./tests/ui/... "$@"
+TEST_EXIT_CODE=$?
+
+echo "========================================="
+echo " UI Tests finished with exit code $TEST_EXIT_CODE"
+echo "========================================="
+
+exit $TEST_EXIT_CODE

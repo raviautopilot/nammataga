@@ -97,13 +97,37 @@ func (a *AdminDashboardPage) SubmitAddMemberForm(submitTestID string, timeout ti
 
 // SearchMember types the email into the member search input field.
 func (a *AdminDashboardPage) SearchMember(searchInputTestID, email string, timeout time.Duration) error {
-	return a.SendKeysByTestID(searchInputTestID, email, timeout)
+	if err := a.SendKeysByTestID(searchInputTestID, email, timeout); err != nil {
+		return err
+	}
+	// Dispatch native JavaScript input event to ensure React updates searchQuery state
+	if el, err := a.FindElementByTestID(searchInputTestID, timeout); err == nil {
+		_, _ = a.Driver.ExecuteScript("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", []interface{}{el})
+	}
+	return nil
 }
 
-// ClickFirstTableRowViewButton clicks the "View" button in the first row of the member management table.
+// ClickFirstTableRowViewButton clicks the "View" button in the member management table for the filtered search.
 func (a *AdminDashboardPage) ClickFirstTableRowViewButton(timeout time.Duration) error {
-	viewBtnXPath := "//table//tbody//tr[1]//button[contains(@data-testid, '-view-button') or contains(text(), 'View')]"
-	return a.Click(viewBtnXPath, timeout)
+	// Try multiple XPath expressions for the View button in the table row
+	xpaths := []string{
+		"//table//tbody//tr[1]//button[contains(@data-testid, '-view-button')]",
+		"//table//tbody//tr[1]//button[contains(., 'View')]",
+		"//table//tbody//tr//button[contains(@data-testid, '-view-button')]",
+		"//button[contains(@data-testid, '-view-button')]",
+	}
+
+	var lastErr error
+	for _, xpath := range xpaths {
+		el, err := a.WaitUntilVisible(xpath, 2*time.Second)
+		if err == nil {
+			// Scroll into view and click via JS to bypass any overlay blocking
+			_, _ = a.Driver.ExecuteScript("arguments[0].scrollIntoView({block: 'center'}); arguments[0].click();", []interface{}{el})
+			return nil
+		}
+		lastErr = err
+	}
+	return fmt.Errorf("view button not visible in table row: %w", lastErr)
 }
 
 // OpenMemberViewDetails clicks the "View" button for a given member in the management table.
@@ -138,20 +162,33 @@ func (a *AdminDashboardPage) SubmitBulkUpload(submitTestID string, timeout time.
 	return a.ClickByTestID(submitTestID, timeout)
 }
 
+// RefreshMemberTable clicks the table refresh button to reload the latest member records.
+func (a *AdminDashboardPage) RefreshMemberTable(refreshBtnTestID string, timeout time.Duration) error {
+	return a.ClickByTestID(refreshBtnTestID, timeout)
+}
+
 // DeleteMemberByEmail searches for a specific member by email, clicks its specific table row View button, and confirms deletion.
 func (a *AdminDashboardPage) DeleteMemberByEmail(searchInputTestID, email, deleteBtnTestID, confirmDeleteBtnTestID string, timeout time.Duration) error {
-	// 1. Search email
-	if err := a.SearchMember(searchInputTestID, email, timeout); err != nil {
-		return fmt.Errorf("failed to search email '%s': %w", email, err)
-	}
-	time.Sleep(1500 * time.Millisecond) // allow React search filter debounce & table re-render
+	// Sanitize email by removing leading, trailing, and internal whitespace
+	cleanEmail := strings.TrimSpace(email)
+	cleanEmail = strings.ReplaceAll(cleanEmail, " ", "")
 
-	// 2. Click View button for the row matching this email exactly with retry for DOM re-render stability
-	rowViewBtnXPath := fmt.Sprintf("//table//tbody//tr[contains(., '%s')]//button[contains(@data-testid, '-view-button') or contains(text(), 'View')]", email)
+	// 1. Clear search input box cleanly
+	_ = a.SendKeysByTestID(searchInputTestID, "", timeout)
+	time.Sleep(500 * time.Millisecond)
+
+	// 2. Type search email
+	if err := a.SearchMember(searchInputTestID, cleanEmail, timeout); err != nil {
+		return fmt.Errorf("failed to search email '%s': %w", cleanEmail, err)
+	}
 	
+	// 3. Wait for debounced search filter & React table re-render
+	time.Sleep(2 * time.Second)
+
+	// 4. Click View button on the filtered row with retries
 	var lastClickErr error
 	for attempt := 1; attempt <= 3; attempt++ {
-		if err := a.Click(rowViewBtnXPath, timeout); err == nil {
+		if err := a.ClickFirstTableRowViewButton(timeout); err == nil {
 			lastClickErr = nil
 			break
 		} else {
@@ -164,8 +201,62 @@ func (a *AdminDashboardPage) DeleteMemberByEmail(searchInputTestID, email, delet
 	}
 	time.Sleep(1 * time.Second)
 
-	// 3. Delete & Confirm
-	return a.DeleteMember(deleteBtnTestID, confirmDeleteBtnTestID, timeout)
+	// 5. Delete & Confirm
+	if err := a.DeleteMember(deleteBtnTestID, confirmDeleteBtnTestID, timeout); err != nil {
+		return err
+	}
+
+	// 6. Wait for deletion API to resolve and refresh table filters
+	time.Sleep(2 * time.Second)
+	_ = a.RefreshMemberTable("testid-member-refresh-button", timeout)
+	time.Sleep(1 * time.Second)
+	return nil
+}
+
+// DeleteMemberByMobile searches for a specific member by mobile number, clicks its specific table row View button, and confirms deletion.
+func (a *AdminDashboardPage) DeleteMemberByMobile(searchInputTestID string, mobile string, deleteBtnTestID string, confirmDeleteBtnTestID string, timeout time.Duration) error {
+	// Sanitize mobile by removing leading, trailing, and internal whitespace
+	cleanMobile := strings.TrimSpace(mobile)
+	cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
+
+	// 1. Clear search input box cleanly
+	_ = a.SendKeysByTestID(searchInputTestID, "", timeout)
+	time.Sleep(500 * time.Millisecond)
+
+	// 2. Type search mobile number
+	if err := a.SearchMember(searchInputTestID, cleanMobile, timeout); err != nil {
+		return fmt.Errorf("failed to search mobile '%s': %w", cleanMobile, err)
+	}
+	
+	// 3. Wait for debounced search filter & React table re-render
+	time.Sleep(2 * time.Second)
+
+	// 4. Click View button on the filtered row with retries
+	var lastClickErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		if err := a.ClickFirstTableRowViewButton(timeout); err == nil {
+			lastClickErr = nil
+			break
+		} else {
+			lastClickErr = err
+			time.Sleep(1 * time.Second)
+		}
+	}
+	if lastClickErr != nil {
+		return fmt.Errorf("failed to click View button for mobile '%s': %w", cleanMobile, lastClickErr)
+	}
+	time.Sleep(1 * time.Second)
+
+	// 5. Delete & Confirm
+	if err := a.DeleteMember(deleteBtnTestID, confirmDeleteBtnTestID, timeout); err != nil {
+		return err
+	}
+
+	// 6. Wait for deletion API to resolve and refresh table filters
+	time.Sleep(2 * time.Second)
+	_ = a.RefreshMemberTable("testid-member-refresh-button", timeout)
+	time.Sleep(1 * time.Second)
+	return nil
 }
 
 // DeleteMemberByName searches for a specific member by name, clicks its specific table row View button, and confirms deletion.

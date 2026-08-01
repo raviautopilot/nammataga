@@ -1,102 +1,44 @@
 package ui_tests
 
 import (
-	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"e2e-template/pkg/ui"
-	"e2e-template/pkg/ui/pages"
+	"e2e-template/pkg/ui/actions"
 	"e2e-template/tests"
 )
 
-const afterActionWaitBulkUpload = 2 * time.Second
-const testName07 = "Admin Bulk Member Upload and Automated Cleanup Workflow"
-
 func TestUI_07_BulkUploadMembers(t *testing.T) {
-	tests.RunUITest(t, testName07, func(t *testing.T, page *ui.Page) {
+	tests.RunUITest(t, "Admin Bulk Member Upload and Automated Cleanup Workflow", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
-		url := cfg.UiURL
-		timeout := 5 * time.Second
 
-		homePage := pages.NewHomePage(page)
-		loginPage := pages.NewLoginPage(page)
-		adminDashboard := pages.NewAdminDashboardPage(page)
+		// Initialize Admin Persona and Result collector
+		admin := actions.NewAdminPersona(page, cfg.UiURL, 5*time.Second)
+		result := actions.NewResult("Admin Bulk Member Upload Test")
 
-		// ── Step 1: Login as Admin ────────────────────────────────────────
-		if err := homePage.GoToHome(url); err != nil {
-			t.Fatalf("Failed to open Home Page: %v", err)
-		}
-		if err := homePage.OpenAdminLogin(cfg.AdminLoginButtonTestID, timeout); err != nil {
-			t.Fatalf("Failed to open Admin Login: %v", err)
-		}
-		if err := loginPage.FillAndSubmitLogin(
-			cfg.AdminLoginUsernameInputTestID,
-			cfg.AdminLoginPasswordInputTestID,
-			cfg.AdminLoginSubmitButtonTestID,
-			cfg.AdminCredentials.Username,
-			cfg.AdminCredentials.Password,
-			timeout,
-		); err != nil {
-			t.Fatalf("Failed to login as Admin: %v", err)
-		}
-		time.Sleep(afterActionWaitBulkUpload)
-		_, _ = page.CaptureScreenshot("Step_01_Admin_Login_Submitted")
+		// Declarative Persona Action Flow
+		actions.GoToHome(admin, result)
+		actions.LoginAsAdmin(admin, cfg, result)
+		actions.OpenAdminPanel(admin, cfg, result)
+		actions.BulkUploadMembers(admin, cfg, "../../fixtures/bulk_members_sample.csv", result)
 
-		// ── Step 2: Navigate to Admin Panel ──────────────────────────────
-		if err := adminDashboard.OpenAdminPanel(cfg.AdminPanelButtonTestID, timeout); err != nil {
-			t.Fatalf("Failed to open Admin Panel: %v", err)
-		}
-		time.Sleep(afterActionWaitBulkUpload)
-		_, _ = page.CaptureScreenshot("Step_02_Admin_Panel_Opened")
-
-		// ── Step 3: Open Bulk Upload Modal ────────────────────────────────
-		if err := adminDashboard.OpenBulkUploadModal(cfg.AdminBulkUploadButtonTestID, timeout); err != nil {
-			t.Fatalf("Failed to open Bulk Upload modal: %v", err)
-		}
-		time.Sleep(1 * time.Second)
-		_, _ = page.CaptureScreenshot("Step_03_Bulk_Upload_Modal_Opened")
-
-		// ── Step 4: Attach CSV File from Fixtures ─────────────────────────
-		sampleCSVPath, err := filepath.Abs("../../fixtures/bulk_members_sample.csv")
-		if err != nil {
-			sampleCSVPath = "fixtures/bulk_members_sample.csv"
+		// Delete all 5 bulk-uploaded members by mobile number
+		for _, mobile := range cfg.BulkMemberMobiles {
+			cleanMobile := strings.TrimSpace(mobile)
+			cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
+			actions.DeleteMemberByMobile(admin, cfg, cleanMobile, result)
 		}
 
-		if err := adminDashboard.UploadBulkFile(cfg.AdminBulkUploadFileInputTestID, sampleCSVPath, timeout); err != nil {
-			t.Fatalf("Failed to attach bulk CSV file (%s): %v", sampleCSVPath, err)
-		}
-		time.Sleep(1 * time.Second)
-		_, _ = page.CaptureScreenshot("Step_04_Bulk_Upload_File_Selected")
+		actions.LogoutAdmin(admin, cfg, result)
 
-		// ── Step 5: Submit Bulk Upload ────────────────────────────────────
-		if err := adminDashboard.SubmitBulkUpload(cfg.AdminBulkUploadSubmitButtonTestID, timeout); err != nil {
-			t.Fatalf("Failed to click Submit Bulk Upload button: %v", err)
+		// Assert Result
+		if result.Failed() {
+			t.Errorf("Test Journey Failed: %v", result.Error)
+			t.Errorf("Actions Attempted: %v", result.Actions)
+			t.Errorf("Evidence Captured: %v", result.Evidence)
+			t.Fatalf("Advice / Remediation: %v", result.Advice)
 		}
-		time.Sleep(4 * time.Second) // allow server time to process upload & modal to close
-		_, _ = page.CaptureScreenshot("Step_05_Bulk_Upload_Submitted_Successfully")
-
-		// ── Step 6: Verify and Delete All 5 Uploaded Test Members ──────────
-		for i, email := range cfg.BulkMemberEmails {
-			if err := adminDashboard.DeleteMemberByEmail(
-				cfg.MemberSearchInputTestID,
-				email,
-				cfg.MemberDeleteButtonTestID,
-				cfg.MemberConfirmDeleteButtonTestID,
-				timeout,
-			); err != nil {
-				t.Fatalf("Failed to verify and delete bulk uploaded member %d (%s): %v", i+1, email, err)
-			}
-			time.Sleep(1 * time.Second)
-		}
-		time.Sleep(afterActionWaitBulkUpload)
-		_, _ = page.CaptureScreenshot("Step_06_All_5_Bulk_Members_Cleaned_Up")
-
-		// ── Step 7: Logout Admin ─────────────────────────────────────────
-		if err := homePage.Logout(cfg.LogoutButtonTestID, timeout); err != nil {
-			t.Fatalf("Failed to logout Admin: %v", err)
-		}
-		time.Sleep(afterActionWaitBulkUpload)
-		_, _ = page.CaptureScreenshot("Step_07_Admin_After_Logout")
 	})
 }

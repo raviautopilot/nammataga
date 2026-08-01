@@ -79,6 +79,7 @@ type Config struct {
 	AdminAddMemberPermAddressInputTestID      string         `json:"adminAddMemberPermAddressInputTestID"`
 	AdminAddMemberSubmitButtonTestID          string         `json:"adminAddMemberSubmitButtonTestID"`
 	MemberSearchInputTestID                    string         `json:"memberSearchInputTestID"`
+	MemberRefreshButtonTestID                 string         `json:"memberRefreshButtonTestID"`
 	MemberDeleteButtonTestID                  string         `json:"memberDeleteButtonTestID"`
 	MemberConfirmDeleteButtonTestID           string         `json:"memberConfirmDeleteButtonTestID"`
 	AdminPanelButtonTestID                    string         `json:"adminPanelButtonTestID"`
@@ -86,6 +87,7 @@ type Config struct {
 	AdminBulkUploadFileInputTestID            string         `json:"adminBulkUploadFileInputTestID"`
 	AdminBulkUploadSubmitButtonTestID         string         `json:"adminBulkUploadSubmitButtonTestID"`
 	BulkMemberEmails                          []string       `json:"bulkMemberEmails"`
+	BulkMemberMobiles                         []string       `json:"bulkMemberMobiles"`
 }
 
 // LoadConfig reads the configuration file from path and applies environment overrides.

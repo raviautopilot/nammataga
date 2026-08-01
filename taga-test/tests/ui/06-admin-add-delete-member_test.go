@@ -1,92 +1,39 @@
 package ui_tests
 
 import (
+	"strings"
 	"testing"
 	"time"
 
 	"e2e-template/pkg/ui"
-	"e2e-template/pkg/ui/pages"
+	"e2e-template/pkg/ui/actions"
 	"e2e-template/tests"
 )
 
-const afterActionWaitAddMember = 2 * time.Second
-const testName06 = "Admin Add and Delete Member Workflow"
-
 func TestUI_06_AdminAddDeleteMember(t *testing.T) {
-	tests.RunUITest(t, testName06, func(t *testing.T, page *ui.Page) {
+	tests.RunUITest(t, "Admin Add and Delete Member Workflow", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
-		url := cfg.UiURL
-		timeout := 5 * time.Second
 
-		homePage := pages.NewHomePage(page)
-		loginPage := pages.NewLoginPage(page)
-		adminDashboard := pages.NewAdminDashboardPage(page)
+		// Initialize Admin Persona and Result collector
+		admin := actions.NewAdminPersona(page, cfg.UiURL, 5*time.Second)
+		result := actions.NewResult("Admin Add and Delete Member Test")
 
-		// ── Step 1: Login as Admin ────────────────────────────────────────
-		if err := homePage.GoToHome(url); err != nil {
-			t.Fatalf("Failed to open Home Page: %v", err)
-		}
-		if err := homePage.OpenAdminLogin(cfg.AdminLoginButtonTestID, timeout); err != nil {
-			t.Fatalf("Failed to open Admin Login: %v", err)
-		}
-		if err := loginPage.FillAndSubmitLogin(
-			cfg.AdminLoginUsernameInputTestID,
-			cfg.AdminLoginPasswordInputTestID,
-			cfg.AdminLoginSubmitButtonTestID,
-			cfg.AdminCredentials.Username,
-			cfg.AdminCredentials.Password,
-			timeout,
-		); err != nil {
-			t.Fatalf("Failed to login as Admin: %v", err)
-		}
-		time.Sleep(afterActionWaitAddMember)
-		_, _ = page.CaptureScreenshot("Step_01_Admin_Login_Submitted")
+		// Declarative Persona Action Flow
+		actions.GoToHome(admin, result)
+		actions.LoginAsAdmin(admin, cfg, result)
+		actions.OpenAdminPanel(admin, cfg, result)
+		actions.AddSingleMember(admin, cfg, result)
+		cleanMobile := strings.TrimSpace(cfg.NewMemberFormData.MobileNumber)
+		cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
+		actions.DeleteMemberByMobile(admin, cfg, cleanMobile, result)
+		actions.LogoutAdmin(admin, cfg, result)
 
-		// ── Step 2: Navigate to Admin Panel ──────────────────────────────
-		if err := adminDashboard.OpenAdminPanel(cfg.AdminPanelButtonTestID, timeout); err != nil {
-			t.Fatalf("Failed to open Admin Panel: %v", err)
+		// Assert Result
+		if result.Failed() {
+			t.Errorf("Test Journey Failed: %v", result.Error)
+			t.Errorf("Actions Attempted: %v", result.Actions)
+			t.Errorf("Evidence Captured: %v", result.Evidence)
+			t.Fatalf("Advice / Remediation: %v", result.Advice)
 		}
-		time.Sleep(afterActionWaitAddMember)
-		_, _ = page.CaptureScreenshot("Step_02_Admin_Panel_Opened")
-
-		// ── Step 3: Open Add Member Form ──────────────────────────────────
-		if err := adminDashboard.OpenAddMemberModal(cfg.AdminAddMemberButtonTestID, timeout); err != nil {
-			t.Fatalf("Failed to open Add Member modal: %v", err)
-		}
-		time.Sleep(1 * time.Second)
-
-		// ── Step 4: Fill ALL Fields in Add Member Form ────────────────────
-		if err := adminDashboard.FillAddMemberForm(cfg, timeout); err != nil {
-			t.Fatalf("Failed to fill Add Member form: %v", err)
-		}
-		time.Sleep(1 * time.Second)
-		_, _ = page.CaptureScreenshot("Step_03_Add_Member_Form_Filled")
-
-		// ── Step 5: Submit Add Member Form ────────────────────────────────
-		if err := adminDashboard.SubmitAddMemberForm(cfg.AdminAddMemberSubmitButtonTestID, timeout); err != nil {
-			t.Fatalf("Failed to click submit Add Member button: %v", err)
-		}
-		time.Sleep(afterActionWaitAddMember)
-		_, _ = page.CaptureScreenshot("Step_04_Member_Added_Success")
-
-		// ── Step 6: Search & Delete Created Member by Email ───────────────
-		if err := adminDashboard.DeleteMemberByEmail(
-			cfg.MemberSearchInputTestID,
-			cfg.NewMemberEmail,
-			cfg.MemberDeleteButtonTestID,
-			cfg.MemberConfirmDeleteButtonTestID,
-			timeout,
-		); err != nil {
-			t.Fatalf("Failed to find and delete test member by email: %v", err)
-		}
-		time.Sleep(afterActionWaitAddMember)
-		_, _ = page.CaptureScreenshot("Step_05_Member_Deleted_Successfully")
-
-		// ── Step 7: Logout Admin ─────────────────────────────────────────
-		if err := homePage.Logout(cfg.LogoutButtonTestID, timeout); err != nil {
-			t.Fatalf("Failed to logout Admin: %v", err)
-		}
-		time.Sleep(afterActionWaitAddMember)
-		_, _ = page.CaptureScreenshot("Step_06_Admin_After_Logout")
 	})
 }

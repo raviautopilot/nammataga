@@ -181,8 +181,9 @@ func (p *Page) SendKeys(locator string, text string, timeout time.Duration) erro
 		return err
 	}
 	_ = el.Clear()
-	// Send Ctrl+A then Backspace to ensure React state registers the empty input
-	_ = el.SendKeys("\x01\b")
+	if text == "" {
+		return nil
+	}
 	err = el.SendKeys(text)
 	if err != nil {
 		p.LastError = err
