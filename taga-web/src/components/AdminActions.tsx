@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { UserPlus, FileText, MessageSquare, Download, Send, Plus, Upload, Calendar, Image as ImageIcon, Link as LinkIcon, Trash2, Pencil, ChevronDown, ChevronRight, Loader2, AlertTriangle, Users } from 'lucide-react';
+import { UserPlus, FileText, MessageSquare, Download, Send, Plus, Upload, Calendar, Image as ImageIcon, Link as LinkIcon, Trash2, Pencil, ChevronDown, ChevronRight, Loader2, AlertTriangle, Users, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   createEvent,
@@ -104,6 +104,9 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
   const [isPublishingEvent, setIsPublishingEvent] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isAddingMember, setIsAddingMember] = useState(false);
+  const [addSuccessOpen, setAddSuccessOpen] = useState(false);
+  const [addSuccessMessage, setAddSuccessMessage] = useState('');
+  const [tempPassword, setTempPassword] = useState('');
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
@@ -410,8 +413,9 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
         tbfNumber: memberForm.tbfNumber,
         cpsGpfNumber: memberForm.cpsGpfNumber,
       });
-      toast.success(response.message);
-      toast.info(`Temporary password: ${response.temp_password} - Please share with the member`);
+      setAddSuccessMessage(`Member "${memberForm.name}" added successfully.`);
+      setTempPassword(response.temp_password);
+      setAddSuccessOpen(true);
       setMemberForm({
         tagaId: '', name: '', initial: '', gender: '', fatherName: '', motherName: '',
         educationalQualification: '', designation: '', workingDistrict: '', nativeDistrict: '',
@@ -1082,6 +1086,33 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
                 <Button variant="outline" onClick={() => setAddMemberOpen(false)} data-testid="testid-cancel-button">Cancel</Button>
                 <Button onClick={handleAddMember} disabled={!memberForm.name || !memberForm.email || !memberForm.mobileNumber || isAddingMember} data-testid="testid-add-member-submit-button">
                   {isAddingMember ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding...</> : <><Plus className="w-4 h-4 mr-2" />Add Member</>}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={addSuccessOpen} onOpenChange={setAddSuccessOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-center text-green-600 flex flex-col items-center gap-2">
+                  <CheckCircle className="w-12 h-12 text-green-500" />
+                  Success
+                </DialogTitle>
+                <DialogDescription className="text-center text-foreground font-medium pt-2">
+                  {addSuccessMessage}
+                </DialogDescription>
+                {tempPassword && (
+                  <div className="mt-4 p-3 bg-muted/50 rounded text-center border font-mono text-sm">
+                    Temporary password: <strong>{tempPassword}</strong>
+                    <div className="text-xs text-muted-foreground mt-1 font-sans">
+                      Please share with the member.
+                    </div>
+                  </div>
+                )}
+              </DialogHeader>
+              <DialogFooter className="justify-center sm:justify-center">
+                <Button onClick={() => setAddSuccessOpen(false)} data-testid="testid-add-success-ok-button" className="w-24">
+                  OK
                 </Button>
               </DialogFooter>
             </DialogContent>

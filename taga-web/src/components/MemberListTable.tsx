@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Textarea } from './ui/textarea';
-import { Search, Eye, RefreshCw, Pencil, Trash2, AlertTriangle, Loader2, Save, X, Download } from 'lucide-react';
+import { Search, Eye, RefreshCw, Pencil, Trash2, AlertTriangle, Loader2, Save, X, Download, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getMembersList,
@@ -118,6 +118,8 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<MemberListItem | null>(null);
+  const [deleteSuccessOpen, setDeleteSuccessOpen] = useState(false);
+  const [deleteSuccessMessage, setDeleteSuccessMessage] = useState('');
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -270,7 +272,8 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
         throw new Error(data.error || 'Failed to delete member');
       }
 
-      toast.success(`Member "${memberToDelete.name}" deleted successfully`);
+      setDeleteSuccessMessage(`Member "${memberToDelete.name}" deleted successfully`);
+      setDeleteSuccessOpen(true);
       setDeleteConfirmOpen(false);
       setMemberToDelete(null);
       await fetchMembers();
@@ -876,6 +879,25 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
         onCancel={() => { setDeleteConfirmOpen(false); setMemberToDelete(null); }}
         isLoading={isDeleting}
       />
+
+      <Dialog open={deleteSuccessOpen} onOpenChange={setDeleteSuccessOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-green-600 flex flex-col items-center gap-2">
+              <CheckCircle className="w-12 h-12 text-green-500" />
+              Success
+            </DialogTitle>
+            <DialogDescription className="text-center text-foreground font-medium pt-2">
+              {deleteSuccessMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="justify-center sm:justify-center">
+            <Button onClick={() => setDeleteSuccessOpen(false)} data-testid="testid-delete-success-ok-button" className="w-24">
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
