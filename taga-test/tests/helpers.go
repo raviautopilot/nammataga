@@ -339,6 +339,14 @@ func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) 
 				if page.LastError != nil {
 					errStr = page.LastError.Error()
 				}
+				if netErrors := page.RetrieveNetworkErrors(); netErrors != "" {
+					formatted := ui.FormatNetworkErrors(netErrors)
+					if formatted != "" {
+						errStr = fmt.Sprintf("%s\n%s", errStr, formatted)
+						logger.Error("Test failed with network errors:\n%s", formatted)
+						subT.Logf("Intercepted Network Errors:\n%s", formatted)
+					}
+				}
 				if path, sErr := page.CaptureScreenshot(name); sErr == nil {
 					screenshotPath = "../screenshots/" + sanitizedTestDir + "/" + filepath.Base(path)
 				} else {

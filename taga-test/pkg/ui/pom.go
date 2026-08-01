@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -33,6 +35,7 @@ func (p *Page) GoToHomePage(targetURL string) error {
 		p.LastError = err
 		return fmt.Errorf("failed to navigate to home page (%s): %w", targetURL, err)
 	}
+	p.InjectNetworkInterceptor()
 	return nil
 }
 
@@ -321,3 +324,119 @@ func (p *Page) VerifyElementsPresentConcurrently(testIDs []string, timeout time.
 	}
 	return nil
 }
+
+const NetworkInterceptorScript = `
+(function() {
+    if (window.__network_monkey_patched) return;
+    window.__network_monkey_patched = true;
+
+    function logError(url, method, status, requestBody, responseBody) {
+        var errors = [];
+        try {
+            errors = JSON.parse(sessionStorage.getItem('__networkErrors') || '[]');
+        } catch(e) {}
+        errors.push({
+            timestamp: new Date().toISOString(),
+            url: url,
+            method: method,
+            status: status,
+            requestBody: typeof requestBody === 'string' ? requestBody : JSON.stringify(requestBody),
+            responseBody: typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody)
+        });
+        try {
+            sessionStorage.setItem('__networkErrors', JSON.stringify(errors));
+        } catch(e) {}
+    }
+
+    var originalFetch = window.fetch;
+    window.fetch = function(input, init) {
+        var url = typeof input === 'string' ? input : (input && input.url) || '';
+        var method = (init && init.method) || 'GET';
+        var reqBody = (init && init.body) || '';
+        return originalFetch.apply(this, arguments).then(function(response) {
+            if (!response.ok) {
+                response.clone().text().then(function(text) {
+                    logError(url, method, response.status, reqBody, text);
+                }).catch(function() {
+                    logError(url, method, response.status, reqBody, '[failed to parse response]');
+                });
+            }
+            return response;
+        }).catch(function(error) {
+            logError(url, method, 0, reqBody, error.message || error.toString());
+            throw error;
+        });
+    };
+
+    var originalOpen = XMLHttpRequest.prototype.open;
+    var originalSend = XMLHttpRequest.prototype.send;
+
+    XMLHttpRequest.prototype.open = function(method, url) {
+        this.__method = method;
+        this.__url = url;
+        return originalOpen.apply(this, arguments);
+    };
+
+    XMLHttpRequest.prototype.send = function(body) {
+        var xhr = this;
+        xhr.addEventListener('load', function() {
+            if (xhr.status >= 400 || xhr.status === 0) {
+                logError(xhr.__url, xhr.__method, xhr.status, body || '', xhr.responseText || '');
+            }
+        });
+        xhr.addEventListener('error', function() {
+            logError(xhr.__url, xhr.__method, xhr.status, body || '', '[network error]');
+        });
+        return originalSend.apply(this, arguments);
+    };
+})();
+`
+
+// InjectNetworkInterceptor injects the fetch/XHR interceptor script into the browser page.
+func (p *Page) InjectNetworkInterceptor() {
+	_, _ = p.Driver.ExecuteScript(NetworkInterceptorScript, nil)
+}
+
+// RetrieveNetworkErrors retrieves the captured network errors from the browser sessionStorage.
+func (p *Page) RetrieveNetworkErrors() string {
+	res, err := p.Driver.ExecuteScript("return sessionStorage.getItem('__networkErrors');", nil)
+	if err != nil || res == nil {
+		return ""
+	}
+	val, ok := res.(string)
+	if !ok {
+		return ""
+	}
+	return val
+}
+
+// FormatNetworkErrors parses the JSON error string and formats it into a human-readable summary.
+func FormatNetworkErrors(jsonStr string) string {
+	if jsonStr == "" {
+		return ""
+	}
+	var errors []map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &errors); err != nil {
+		return fmt.Sprintf("[Error parsing network logs: %v]\nRaw Log: %s", err, jsonStr)
+	}
+	if len(errors) == 0 {
+		return ""
+	}
+
+	var buf bytes.Buffer
+	buf.WriteString("==================================================\n")
+	buf.WriteString("🚨 INTERCEPTED BACKEND NETWORK ERRORS / FAILURES:\n")
+	buf.WriteString("==================================================\n")
+	for i, e := range errors {
+		buf.WriteString(fmt.Sprintf("[%d] Timestamp: %v\n", i+1, e["timestamp"]))
+		buf.WriteString(fmt.Sprintf("    Request  : %v %v\n", e["method"], e["url"]))
+		if reqBody := e["requestBody"]; reqBody != "" {
+			buf.WriteString(fmt.Sprintf("    Payload  : %v\n", reqBody))
+		}
+		buf.WriteString(fmt.Sprintf("    Status   : %v\n", e["status"]))
+		buf.WriteString(fmt.Sprintf("    Response : %v\n", e["responseBody"]))
+		buf.WriteString("--------------------------------------------------\n")
+	}
+	return buf.String()
+}
+
