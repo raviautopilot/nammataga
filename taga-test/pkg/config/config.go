@@ -94,6 +94,9 @@ type Config struct {
 	AdminAnnouncementPrioritySelectTestID     string         `json:"adminAnnouncementPrioritySelectTestID"`
 	AdminAnnouncementSendToSelectTestID       string         `json:"adminAnnouncementSendToSelectTestID"`
 	AdminAnnouncementSubmitButtonTestID       string         `json:"adminAnnouncementSubmitButtonTestID"`
+	AdminManageOfficeBearersButtonTestID     string         `json:"adminManageOfficeBearersButtonTestID"`
+	OfficeBearersDistrictSelectTestID         string         `json:"officeBearersDistrictSelectTestID"`
+	OfficeBearersButtonTestID                 string         `json:"officeBearersButtonTestID"`
 }
 
 // LoadConfig reads the configuration file from path and applies environment overrides.

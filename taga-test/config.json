@@ -95,5 +95,8 @@
   "adminAnnouncementMessageInputTestID": "testid-announcement-message-input",
   "adminAnnouncementPrioritySelectTestID": "testid-announcement-priority-select",
   "adminAnnouncementSendToSelectTestID": "testid-announcement-send-to-select",
-  "adminAnnouncementSubmitButtonTestID": "testid-announcement-submit-button"
+  "adminAnnouncementSubmitButtonTestID": "testid-announcement-submit-button",
+  "adminManageOfficeBearersButtonTestID": "testid-manage-office-bearers-button",
+  "officeBearersDistrictSelectTestID": "testid-office-bearers-district-select",
+  "officeBearersButtonTestID": "testid-office-bearers-button"
 }
