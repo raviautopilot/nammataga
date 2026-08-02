@@ -85,17 +85,9 @@
   "adminBulkUploadFileInputTestID": "testid-bulk-upload-file-input",
   "adminBulkUploadSubmitButtonTestID": "testid-bulk-upload-submit-button",
   "bulkMemberEmails": [
-    "bulk_user1@test.com",
-    "bulk_user2@test.com",
-    "bulk_user3@test.com",
-    "bulk_user4@test.com",
-    "bulk_user5@test.com"
+    "raviautopilot@gmail.com"
   ],
   "bulkMemberMobiles": [
-    "9800000001",
-    "9800000002",
-    "9800000003",
-    "9800000004",
-    "9800000005"
+    "9800000001"
   ]
 }
