@@ -114,5 +114,11 @@
   "adminEventDescriptionInputTestID": "testid-event-description-input",
   "adminPublishEventButtonTestID": "testid-publish-event-button",
   "eventsNavButtonTestID": "testid-events-button",
-  "upcomingEventsTabButtonTestID": "testid-upcoming-events-button"
+  "upcomingEventsTabButtonTestID": "testid-upcoming-events-button",
+  "adminGalleryTabButtonTestID": "testid-gallery-button",
+  "adminGalleryDescriptionInputTestID": "testid-gallery-description-input",
+  "adminGalleryDateInputTestID": "testid-gallery-date-input",
+  "adminGalleryPhotoInputTestID": "testid-gallery-photo-input",
+  "adminUploadPhotoButtonTestID": "testid-upload-photo-button",
+  "galleryTabButtonTestID": "testid-gallery-button"
 }

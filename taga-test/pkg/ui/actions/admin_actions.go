@@ -976,6 +976,181 @@ func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eve
 	r.Advice = append(r.Advice, "Event created, verified on Upcoming Events tab, and cleaned up successfully.")
 }
 
+// ManageGalleryAction handles uploading a photo to gallery, verifying on public gallery page, deleting it, and taking screenshots.
+func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relativeImagePath, description, photoDate string, r *Result) {
+	actionName := fmt.Sprintf("Manage Gallery Photo (%s)", description)
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	ap := aai.GetAdminPersona()
+
+	// Resolve absolute path for fixture image
+	absImagePath, err := filepath.Abs(relativeImagePath)
+	if err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to resolve gallery image path: %w", err)
+		return
+	}
+
+	// 1. Click Manage Content button
+	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click manage content button: %w", err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// 2. Click Gallery Tab inside Content Management Modal
+	galleryTabXPath := "//div[@data-testid='testid-content-management-modal']//button[@data-testid='testid-gallery-button' or text()='Gallery']"
+	if err := ap.Page.Click(galleryTabXPath, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.ClickByTestID(cfg.AdminGalleryTabButtonTestID, ap.DefaultTimeout)
+	}
+	time.Sleep(500 * time.Millisecond)
+
+	// 3. Fill Description
+	if err := ap.Page.SendKeysByTestID(cfg.AdminGalleryDescriptionInputTestID, description, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to fill gallery photo description: %w", err)
+		return
+	}
+
+	// 4. Fill Date via JS event to ensure proper HTML5 date input format YYYY-MM-DD
+	_ = ap.Page.SendKeysByTestID(cfg.AdminGalleryDateInputTestID, photoDate, ap.DefaultTimeout)
+	jsDateScript := fmt.Sprintf(`
+		const dateEl = document.querySelector('[data-testid="%s"]');
+		if (dateEl) {
+			const prototype = Object.getPrototypeOf(dateEl);
+			const setter = Object.getOwnPropertyDescriptor(prototype, 'value').set;
+			setter.call(dateEl, %q);
+			dateEl.dispatchEvent(new Event('input', { bubbles: true }));
+			dateEl.dispatchEvent(new Event('change', { bubbles: true }));
+		}
+	`, cfg.AdminGalleryDateInputTestID, photoDate)
+	_, _ = ap.Page.Driver.ExecuteScript(jsDateScript, nil)
+
+	// 5. Upload Photo file
+	photoElem, err := ap.Page.FindElementByTestID(cfg.AdminGalleryPhotoInputTestID, ap.DefaultTimeout)
+	if err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to find gallery photo file input: %w", err)
+		return
+	}
+	if err := photoElem.SendKeys(absImagePath); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to upload gallery photo file: %w", err)
+		return
+	}
+
+	// Screenshot Step 01: Gallery Upload Form Filled
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_01_GalleryUpload_FormFilled"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 6. Click Upload Photo Button
+	if err := ap.Page.ClickByTestID(cfg.AdminUploadPhotoButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click upload photo button: %w", err)
+		return
+	}
+	time.Sleep(2 * time.Second)
+
+	// Screenshot Step 02: Gallery Photo Uploaded
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_GalleryPhoto_Uploaded"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Close Content Management Modal
+	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
+
+	// 7. Go to Events/Gallery Page as Admin via navbar button
+	if err := ap.Page.ClickByTestID(cfg.EventsNavButtonTestID, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.Driver.Get(cfg.UiURL + "/#/events")
+	}
+	time.Sleep(2 * time.Second)
+
+	// Ensure Gallery tab is selected
+	_ = ap.Page.ClickByTestID(cfg.GalleryTabButtonTestID, ap.DefaultTimeout)
+	time.Sleep(1 * time.Second)
+
+	// Extract current year from photoDate (e.g. "2026")
+	currentYear := "2026"
+	if len(photoDate) >= 4 {
+		currentYear = photoDate[:4]
+	}
+
+	// Select uploaded year button on gallery page (e.g. 2026)
+	currentYearXPath := fmt.Sprintf("//button[contains(@data-testid, 'testid-gallery-year-%s') or text()=%q]", currentYear, currentYear)
+	if err := ap.Page.Click(currentYearXPath, ap.DefaultTimeout); err != nil {
+		jsClickYear := fmt.Sprintf(`
+			const btns = Array.from(document.querySelectorAll('button'));
+			const btn = btns.find(b => b.textContent.trim() === %q || (b.getAttribute('data-testid') && b.getAttribute('data-testid').includes(%q)));
+			if (btn) btn.click();
+		`, currentYear, currentYear)
+		_, _ = ap.Page.Driver.ExecuteScript(jsClickYear, nil)
+	}
+	time.Sleep(1500 * time.Millisecond)
+
+	// Scroll down so gallery grid and photo cards are clearly visible in viewport
+	_, _ = ap.Page.Driver.ExecuteScript("window.scrollBy(0, 550);", nil)
+	time.Sleep(1 * time.Second)
+
+	// Screenshot Step 03: Public Photo Gallery Verification
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_EventsPage_Gallery_Result"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 8. Return to Admin Panel
+	if err := ap.Page.ClickByTestID(cfg.AdminPanelButtonTestID, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.Driver.Get(cfg.UiURL + "/#/admin")
+	}
+	time.Sleep(2 * time.Second)
+
+	// 9. Click Manage Content -> Gallery tab to clean up test photo
+	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to re-open manage content modal: %w", err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+	// Filter by uploaded year in Existing Gallery Photos list using year filter dropdown
+	_ = ap.Page.SelectCustomDropdownByText("testid-gallery-year-filter-select", currentYear, 2*time.Second)
+	time.Sleep(1 * time.Second)
+
+	// Click delete trash icon specifically for the uploaded test gallery photo matching title/description
+	deletePhotoXPath := fmt.Sprintf("//p[contains(text(), %q)]/ancestor::div[contains(@class, 'flex items-start')]//button[contains(@class, 'text-destructive')]", description)
+	if err := ap.Page.Click(deletePhotoXPath, ap.DefaultTimeout); err != nil {
+		// Specific fallback targeting the row containing description text
+		specificXPath := fmt.Sprintf("//div[contains(., %q)]//button[contains(@class, 'text-destructive')]", description)
+		if err2 := ap.Page.Click(specificXPath, ap.DefaultTimeout); err2 != nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("failed to find delete button for uploaded gallery photo '%s': %w", description, err2)
+			return
+		}
+	}
+	time.Sleep(1 * time.Second)
+
+	// Confirm delete in ConfirmDeleteDialog
+	confirmDelXPath := "//div[contains(@role, 'alertdialog') or contains(@class, 'max-w-md')]//button[contains(text(), 'Delete') or contains(., 'Delete')]"
+	if err := ap.Page.Click(confirmDelXPath, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.Click("//button[contains(text(), 'Confirm') or contains(text(), 'Delete')]", ap.DefaultTimeout)
+	}
+	time.Sleep(2 * time.Second)
+
+	// Screenshot Step 04: Gallery Photo Deleted
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_GalleryPhoto_Deleted"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Close Modal
+	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
+
+	r.Advice = append(r.Advice, "Gallery photo uploaded, verified on Photo Gallery page, and cleaned up successfully.")
+}
+
+
 
 
 
