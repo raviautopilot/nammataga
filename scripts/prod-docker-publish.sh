@@ -18,7 +18,7 @@ REMOTE_PATH="/apps/taga-api/prd"
 # Determine SSH target depending on local hostname
 SSH_TARGET="${REMOTE_USER}@${REMOTE_HOST}"
 if [[ "$(hostname)" == "ravi-linux" ]]; then
-    SSH_TARGET="sys-taga"
+    SSH_TARGET="dev-taga"
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
