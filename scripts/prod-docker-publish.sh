@@ -15,6 +15,12 @@ REMOTE_HOST="31.97.62.187"
 REMOTE_USER="dev-taga"
 REMOTE_PATH="/apps/taga-api/prd"
 
+# Determine SSH target depending on local hostname
+SSH_TARGET="${REMOTE_USER}@${REMOTE_HOST}"
+if [[ "$(hostname)" == "ravi-linux" ]]; then
+    SSH_TARGET="sys-taga"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
@@ -130,15 +136,15 @@ COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "no-commit")
 LOG_ENTRY="[$DEPLOY_TIME] User: $DEPLOY_USER | Branch: $BRANCH_NAME | Commit: $COMMIT_HASH | Status: SHIPPED | Built: (API:$BUILD_API WEB:$BUILD_WEB)"
 
 # 3. Upload archives to VPS
-echo "🚚 Shipping production image archives to VPS ($REMOTE_HOST)..."
-ssh "$REMOTE_USER@$REMOTE_HOST" "mkdir -p $REMOTE_PATH/dist"
-scp "${FILES_TO_UPLOAD[@]}" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/dist/"
+echo "🚚 Shipping production image archives to VPS ($SSH_TARGET)..."
+ssh "$SSH_TARGET" "mkdir -p $REMOTE_PATH/dist"
+scp "${FILES_TO_UPLOAD[@]}" "$SSH_TARGET:$REMOTE_PATH/dist/"
 
 # Log execution on VPS
-ssh "$REMOTE_USER@$REMOTE_HOST" "echo \"$LOG_ENTRY\" >> $REMOTE_PATH/deploy.log"
+ssh "$SSH_TARGET" "echo \"$LOG_ENTRY\" >> $REMOTE_PATH/deploy.log"
 
 echo "=================================================="
-echo "✅ Production docker image archives shipped to VPS ($REMOTE_HOST)!"
+echo "✅ Production docker image archives shipped to VPS ($SSH_TARGET)!"
 echo "👉 SSH into your VPS and run: sudo bash $REMOTE_PATH/prd-deploy-docker.sh"
 echo "=================================================="
 
