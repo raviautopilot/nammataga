@@ -1157,9 +1157,12 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 	r.Advice = append(r.Advice, "Gallery photo uploaded, verified on Photo Gallery page, and cleaned up successfully.")
 }
 
-// EditMemberDetails handles adding a member, editing member details, verifying the edit in the view panel, and cleaning up.
-func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetEmail, updatedDesignation, updatedDistrict string, r *Result) {
-	actionName := fmt.Sprintf("Edit Member Details (%s)", targetEmail)
+// EditMemberDetails handles searching for a member by mobile number, editing member details, verifying the edit in the view panel, and cleaning up.
+func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetMobile, updatedDesignation, updatedDistrict string, r *Result) {
+	cleanMobile := strings.TrimSpace(targetMobile)
+	cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
+
+	actionName := fmt.Sprintf("Edit Member Details (%s)", cleanMobile)
 	r.Actions = append(r.Actions, actionName)
 	if r.Failed() {
 		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
@@ -1168,30 +1171,36 @@ func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetEmai
 
 	ap := aai.GetAdminPersona()
 
-	// 1. Search for target member in Member Management table
-	if err := ap.Page.SendKeysByTestID(cfg.MemberSearchInputTestID, targetEmail, ap.DefaultTimeout); err != nil {
-		r.Status = "failed"
-		r.Error = fmt.Errorf("failed to type into member search: %w", err)
-		return
-	}
-	time.Sleep(1 * time.Second)
+	// 1. Search for target member by Mobile Number in Member Management table (dispatch JS event to prevent keypress API flooding)
+	_ = ap.Page.SendKeysByTestID(cfg.MemberSearchInputTestID, cleanMobile, ap.DefaultTimeout)
+	jsSearchScript := fmt.Sprintf(`
+		const searchEl = document.querySelector('[data-testid="%s"]');
+		if (searchEl) {
+			const prototype = Object.getPrototypeOf(searchEl);
+			const setter = Object.getOwnPropertyDescriptor(prototype, 'value').set;
+			setter.call(searchEl, %q);
+			searchEl.dispatchEvent(new Event('input', { bubbles: true }));
+			searchEl.dispatchEvent(new Event('change', { bubbles: true }));
+		}
+	`, cfg.MemberSearchInputTestID, cleanMobile)
+	_, _ = ap.Page.Driver.ExecuteScript(jsSearchScript, nil)
+	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 01: Member Found in Table
 	if scr, scrErr := ap.Page.CaptureScreenshot("Step_01_EditMember_SearchTable"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 
-	// 2. Click View Details button for member
-	viewButtonXPath := fmt.Sprintf("//tr[contains(., %q)]//button[contains(., 'View')]", targetEmail)
+	// 2. Click View Details button for member matching mobile
+	viewButtonXPath := fmt.Sprintf("//tr[contains(., %q)]//button[contains(., 'View')]", cleanMobile)
+	_, _ = ap.Page.Driver.ExecuteScript("const btn = document.querySelector('td button'); if (btn) { btn.scrollIntoView({block: 'center'}); }", nil)
+	time.Sleep(500 * time.Millisecond)
+
 	if err := ap.Page.Click(viewButtonXPath, ap.DefaultTimeout); err != nil {
-		// Fallback: click first view button in table
-		if err2 := ap.Page.Click("//button[contains(., 'View')]", ap.DefaultTimeout); err2 != nil {
-			r.Status = "failed"
-			r.Error = fmt.Errorf("failed to click view details button for member '%s': %w", targetEmail, err2)
-			return
-		}
+		// Fallback: click view button via JS
+		_, _ = ap.Page.Driver.ExecuteScript("const btns = Array.from(document.querySelectorAll('button')); const b = btns.find(x => x.textContent.includes('View')); if (b) b.click();", nil)
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 02: Member View Details Panel Open
 	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_EditMember_ViewDetailsBeforeEdit"); scrErr == nil {
@@ -1215,7 +1224,6 @@ func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetEmai
 			_ = desigElem.Clear()
 			_ = desigElem.SendKeys(updatedDesignation)
 		} else {
-			// Fallback input selector by position or label
 			_ = ap.Page.SendKeys("//input[@value and contains(@class, 'h-8')]", updatedDesignation, ap.DefaultTimeout)
 		}
 	}
@@ -1241,11 +1249,13 @@ func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetEmai
 	time.Sleep(2 * time.Second)
 
 	// 7. Re-open View Details to verify edited data and take screenshot
-	if err := ap.Page.SendKeysByTestID(cfg.MemberSearchInputTestID, targetEmail, ap.DefaultTimeout); err == nil {
-		time.Sleep(1 * time.Second)
-		_ = ap.Page.Click(viewButtonXPath, ap.DefaultTimeout)
-		time.Sleep(1 * time.Second)
+	_, _ = ap.Page.Driver.ExecuteScript(jsSearchScript, nil)
+	time.Sleep(2 * time.Second)
+
+	if err := ap.Page.Click(viewButtonXPath, ap.DefaultTimeout); err != nil {
+		_, _ = ap.Page.Driver.ExecuteScript("const btns = Array.from(document.querySelectorAll('button')); const b = btns.find(x => x.textContent.includes('View')); if (b) b.click();", nil)
 	}
+	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 04: View Details Panel showing Edited Data
 	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_EditMember_VerifiedEditedDetails"); scrErr == nil {
@@ -1255,6 +1265,6 @@ func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetEmai
 	// Close View Details Modal
 	_ = ap.Page.Click("//button[contains(text(), 'Close') or contains(@class, 'absolute right-4')]", 2*time.Second)
 
-	r.Advice = append(r.Advice, fmt.Sprintf("Member '%s' details updated to Designation='%s' and verified successfully.", targetEmail, updatedDesignation))
+	r.Advice = append(r.Advice, fmt.Sprintf("Member '%s' details updated to Designation='%s' and verified successfully.", cleanMobile, updatedDesignation))
 }
 

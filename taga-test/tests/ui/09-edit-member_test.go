@@ -17,7 +17,6 @@ func TestUI_13_EditMemberDetails(t *testing.T) {
 		admin := actions.NewAdminPersona(page, cfg.UiURL, 5*time.Second)
 		result := actions.NewResult("TestUI_09_EditMemberDetails")
 
-		targetEmail := "sudhantest08@gmail.com"
 		updatedDesignation := "Senior Agriculture Officer"
 		updatedDistrict := "Coimbatore"
 
@@ -27,13 +26,13 @@ func TestUI_13_EditMemberDetails(t *testing.T) {
 		actions.OpenAdminPanel(admin, cfg, result)
 
 		// 1. Add Member (using sudhantest08@gmail.com config data)
-		actions.AddMember(admin, cfg, result)
+		actions.AddSingleMember(admin, cfg, result)
 
-		// 2. Edit Member Details & Verify in View panel
-		actions.EditMemberDetails(admin, cfg, targetEmail, updatedDesignation, updatedDistrict, result)
+		// 2. Edit Member Details & Verify in View panel (search by mobile number)
+		actions.EditMemberDetails(admin, cfg, cfg.NewMemberFormData.MobileNumber, updatedDesignation, updatedDistrict, result)
 
 		// 3. Delete Member Cleanup
-		actions.DeleteMember(admin, cfg, targetEmail, result)
+		actions.DeleteMemberByMobile(admin, cfg, cfg.NewMemberFormData.MobileNumber, result)
 
 		// 4. Logout Admin
 		actions.LogoutAdmin(admin, cfg, result)
