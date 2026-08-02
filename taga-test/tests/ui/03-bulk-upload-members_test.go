@@ -26,7 +26,7 @@ func TestUI_07_BulkUploadMembers(t *testing.T) {
 		actions.GoToHome(admin, result)
 		actions.OpenAdminPanel(admin, cfg, result)
 
-		// Delete all 5 bulk-uploaded members by mobile number
+		// Delete bulk-uploaded member by mobile number
 		for _, mobile := range cfg.BulkMemberMobiles {
 			cleanMobile := strings.TrimSpace(mobile)
 			cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
