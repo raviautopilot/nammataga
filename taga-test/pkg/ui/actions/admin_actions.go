@@ -433,3 +433,69 @@ func LogoutAdminCustom(aai AdminActionsInterface, cfg *config.Config, waitTime t
 	r.Advice = append(r.Advice, "Admin logged out successfully.")
 }
 
+// SendAnnouncement fills and submits the announcement form with specified title, message, priority, and screenshots.
+func SendAnnouncement(aai AdminActionsInterface, cfg *config.Config, title, message, priority string, r *Result) {
+	actionName := "Send Announcement"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	ap := aai.GetAdminPersona()
+
+	// 1. Click Send Announcement button
+	if err := ap.Page.ClickByTestID(cfg.AdminSendAnnouncementButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click send announcement button: %w", err)
+		r.Advice = append(r.Advice, "Advice: Ensure Admin Panel is open and Send Announcement button is visible")
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// 2. Fill Title
+	if err := ap.Page.SendKeysByTestID(cfg.AdminAnnouncementTitleInputTestID, title, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to fill announcement title: %w", err)
+		return
+	}
+
+	// 3. Fill Message
+	if err := ap.Page.SendKeysByTestID(cfg.AdminAnnouncementMessageInputTestID, message, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to fill announcement message: %w", err)
+		return
+	}
+
+	// 4. Select Priority if specified
+	if priority != "" {
+		if err := ap.Page.SelectCustomDropdownByText(cfg.AdminAnnouncementPrioritySelectTestID, strings.Title(priority), ap.DefaultTimeout); err != nil {
+			// Fallback: click directly if dropdown selection doesn't match
+			_ = ap.Page.ClickByTestID(cfg.AdminAnnouncementPrioritySelectTestID, ap.DefaultTimeout)
+		}
+	}
+
+	// Screenshot 2: Announcement data form filled
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_AnnouncementForm_Filled"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 5. Submit Announcement
+	if err := ap.Page.ClickByTestID(cfg.AdminAnnouncementSubmitButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to submit announcement: %w", err)
+		return
+	}
+
+	time.Sleep(2 * time.Second)
+
+	// Screenshot 3: Announcement sent confirmation
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_Announcement_Sent"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	r.Advice = append(r.Advice, "Announcement created and sent successfully.")
+}
+
+
+

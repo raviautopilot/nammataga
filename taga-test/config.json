@@ -89,5 +89,11 @@
   ],
   "bulkMemberMobiles": [
     "9800000001"
-  ]
+  ],
+  "adminSendAnnouncementButtonTestID": "testid-send-announcement-button",
+  "adminAnnouncementTitleInputTestID": "testid-announcement-title-input",
+  "adminAnnouncementMessageInputTestID": "testid-announcement-message-input",
+  "adminAnnouncementPrioritySelectTestID": "testid-announcement-priority-select",
+  "adminAnnouncementSendToSelectTestID": "testid-announcement-send-to-select",
+  "adminAnnouncementSubmitButtonTestID": "testid-announcement-submit-button"
 }
