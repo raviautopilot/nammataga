@@ -1093,8 +1093,8 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 	}
 	time.Sleep(1500 * time.Millisecond)
 
-	// Scroll down so gallery grid and photo cards are clearly visible in viewport
-	_, _ = ap.Page.Driver.ExecuteScript("window.scrollBy(0, 550);", nil)
+	// Scroll down further so the newly uploaded gallery photo lower on the page is fully in view
+	_, _ = ap.Page.Driver.ExecuteScript("window.scrollBy(0, 950);", nil)
 	time.Sleep(1 * time.Second)
 
 	// Screenshot Step 03: Public Photo Gallery Verification
@@ -1115,6 +1115,13 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 		return
 	}
 	time.Sleep(1 * time.Second)
+
+	// Ensure Gallery tab inside Content Management Modal is clicked
+	if err := ap.Page.Click(galleryTabXPath, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.ClickByTestID(cfg.AdminGalleryTabButtonTestID, ap.DefaultTimeout)
+	}
+	time.Sleep(1 * time.Second)
+
 	// Filter by uploaded year in Existing Gallery Photos list using year filter dropdown
 	_ = ap.Page.SelectCustomDropdownByText("testid-gallery-year-filter-select", currentYear, 2*time.Second)
 	time.Sleep(1 * time.Second)
