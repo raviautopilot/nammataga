@@ -82,6 +82,8 @@ type Config struct {
 	MemberRefreshButtonTestID                 string         `json:"memberRefreshButtonTestID"`
 	MemberDeleteButtonTestID                  string         `json:"memberDeleteButtonTestID"`
 	MemberConfirmDeleteButtonTestID           string         `json:"memberConfirmDeleteButtonTestID"`
+	MemberEditButtonTestID                    string         `json:"memberEditButtonTestID"`
+	MemberSaveEditButtonTestID                string         `json:"memberSaveEditButtonTestID"`
 	AdminPanelButtonTestID                    string         `json:"adminPanelButtonTestID"`
 	AdminBulkUploadButtonTestID               string         `json:"adminBulkUploadButtonTestID"`
 	AdminBulkUploadFileInputTestID            string         `json:"adminBulkUploadFileInputTestID"`

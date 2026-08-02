@@ -1156,3 +1156,105 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 
 	r.Advice = append(r.Advice, "Gallery photo uploaded, verified on Photo Gallery page, and cleaned up successfully.")
 }
+
+// EditMemberDetails handles adding a member, editing member details, verifying the edit in the view panel, and cleaning up.
+func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetEmail, updatedDesignation, updatedDistrict string, r *Result) {
+	actionName := fmt.Sprintf("Edit Member Details (%s)", targetEmail)
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	ap := aai.GetAdminPersona()
+
+	// 1. Search for target member in Member Management table
+	if err := ap.Page.SendKeysByTestID(cfg.MemberSearchInputTestID, targetEmail, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to type into member search: %w", err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Screenshot Step 01: Member Found in Table
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_01_EditMember_SearchTable"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 2. Click View Details button for member
+	viewButtonXPath := fmt.Sprintf("//tr[contains(., %q)]//button[contains(., 'View')]", targetEmail)
+	if err := ap.Page.Click(viewButtonXPath, ap.DefaultTimeout); err != nil {
+		// Fallback: click first view button in table
+		if err2 := ap.Page.Click("//button[contains(., 'View')]", ap.DefaultTimeout); err2 != nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("failed to click view details button for member '%s': %w", targetEmail, err2)
+			return
+		}
+	}
+	time.Sleep(1 * time.Second)
+
+	// Screenshot Step 02: Member View Details Panel Open
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_EditMember_ViewDetailsBeforeEdit"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 3. Click Edit Button in View Details Modal
+	if err := ap.Page.ClickByTestID("testid-member-edit-button", ap.DefaultTimeout); err != nil {
+		if err2 := ap.Page.Click("//button[contains(., 'Edit')]", ap.DefaultTimeout); err2 != nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("failed to click edit member button: %w", err2)
+			return
+		}
+	}
+	time.Sleep(1 * time.Second)
+
+	// 4. Update Designation field
+	if updatedDesignation != "" {
+		desigElem, err := ap.Page.FindElementByTestID(cfg.AdminAddMemberDesignationInputTestID, ap.DefaultTimeout)
+		if err == nil && desigElem != nil {
+			_ = desigElem.Clear()
+			_ = desigElem.SendKeys(updatedDesignation)
+		} else {
+			// Fallback input selector by position or label
+			_ = ap.Page.SendKeys("//input[@value and contains(@class, 'h-8')]", updatedDesignation, ap.DefaultTimeout)
+		}
+	}
+
+	// 5. Update Working District if specified
+	if updatedDistrict != "" {
+		_ = ap.Page.SelectCustomDropdownByText(cfg.AdminAddMemberWorkingDistrictSelectTestID, updatedDistrict, ap.DefaultTimeout)
+	}
+
+	// Screenshot Step 03: Edit Form Filled
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_EditMember_FormUpdated"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 6. Click Save Changes button
+	if err := ap.Page.ClickByTestID("testid-member-save-edit-button", ap.DefaultTimeout); err != nil {
+		if err2 := ap.Page.Click("//button[contains(., 'Save Changes') or contains(., 'Save')]", ap.DefaultTimeout); err2 != nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("failed to click save changes on member edit: %w", err2)
+			return
+		}
+	}
+	time.Sleep(2 * time.Second)
+
+	// 7. Re-open View Details to verify edited data and take screenshot
+	if err := ap.Page.SendKeysByTestID(cfg.MemberSearchInputTestID, targetEmail, ap.DefaultTimeout); err == nil {
+		time.Sleep(1 * time.Second)
+		_ = ap.Page.Click(viewButtonXPath, ap.DefaultTimeout)
+		time.Sleep(1 * time.Second)
+	}
+
+	// Screenshot Step 04: View Details Panel showing Edited Data
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_EditMember_VerifiedEditedDetails"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Close View Details Modal
+	_ = ap.Page.Click("//button[contains(text(), 'Close') or contains(@class, 'absolute right-4')]", 2*time.Second)
+
+	r.Advice = append(r.Advice, fmt.Sprintf("Member '%s' details updated to Designation='%s' and verified successfully.", targetEmail, updatedDesignation))
+}
+

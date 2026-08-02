@@ -80,6 +80,8 @@
   "memberRefreshButtonTestID": "testid-member-refresh-button",
   "memberDeleteButtonTestID": "testid-member-delete-button",
   "memberConfirmDeleteButtonTestID": "testid-member-confirm-delete-button",
+  "memberEditButtonTestID": "testid-member-edit-button",
+  "memberSaveEditButtonTestID": "testid-member-save-edit-button",
   "adminPanelButtonTestID": "testid-members-button",
   "adminBulkUploadButtonTestID": "testid-bulk-member-upload-button",
   "adminBulkUploadFileInputTestID": "testid-bulk-upload-file-input",
