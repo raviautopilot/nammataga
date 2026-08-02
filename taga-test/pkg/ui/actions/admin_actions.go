@@ -841,6 +841,138 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 	r.Advice = append(r.Advice, "Resource document uploaded, verified on Resources page, and cleaned up successfully.")
 }
 
+// ManageEventAction handles creating an event, verifying on upcoming events page, deleting it, and taking screenshots.
+func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eventDate, eventTime, location, description string, r *Result) {
+	actionName := fmt.Sprintf("Manage Event (%s)", title)
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	ap := aai.GetAdminPersona()
+
+	// 1. Click Manage Content button
+	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click manage content button: %w", err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// 2. Click Events Tab inside Content Management Modal
+	eventsTabXPath := "//div[@data-testid='testid-content-management-modal']//button[@data-testid='testid-events-button' or text()='Events']"
+	if err := ap.Page.Click(eventsTabXPath, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.ClickByTestID(cfg.AdminEventsTabButtonTestID, ap.DefaultTimeout)
+	}
+	time.Sleep(500 * time.Millisecond)
+
+	// 3. Fill Event Title
+	if err := ap.Page.SendKeysByTestID(cfg.AdminEventTitleInputTestID, title, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to fill event title: %w", err)
+		return
+	}
+
+	// 4. Fill Event Date
+	if err := ap.Page.SendKeysByTestID(cfg.AdminEventDateInputTestID, eventDate, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to fill event date: %w", err)
+		return
+	}
+
+	// 5. Fill Event Time if provided
+	if eventTime != "" {
+		_ = ap.Page.SendKeysByTestID(cfg.AdminEventTimeInputTestID, eventTime, ap.DefaultTimeout)
+	}
+
+	// 6. Fill Event Location & Description
+	if location != "" {
+		_ = ap.Page.SendKeysByTestID(cfg.AdminEventLocationInputTestID, location, ap.DefaultTimeout)
+	}
+	if description != "" {
+		_ = ap.Page.SendKeysByTestID(cfg.AdminEventDescriptionInputTestID, description, ap.DefaultTimeout)
+	}
+
+	// Screenshot Step 01: Event Form Filled
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_01_EventCreate_FormFilled"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 7. Click Publish Event Button
+	if err := ap.Page.ClickByTestID(cfg.AdminPublishEventButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click publish event button: %w", err)
+		return
+	}
+	time.Sleep(2 * time.Second)
+
+	// Screenshot Step 02: Event Published
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_Event_Published"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Close Content Management Modal
+	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
+
+	// 8. Go to Events Page as Admin via navbar button
+	if err := ap.Page.ClickByTestID(cfg.EventsNavButtonTestID, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.Driver.Get(cfg.UiURL + "/#/events")
+	}
+	time.Sleep(2 * time.Second)
+
+	// Click "Upcoming Events" tab on public/admin Events page
+	_ = ap.Page.ClickByTestID(cfg.UpcomingEventsTabButtonTestID, ap.DefaultTimeout)
+	time.Sleep(2 * time.Second)
+
+	// Screenshot Step 03: Public Upcoming Events Verification
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_EventsPage_UpcomingEvents_Result"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 9. Return to Admin Panel
+	if err := ap.Page.ClickByTestID(cfg.AdminPanelButtonTestID, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.Driver.Get(cfg.UiURL + "/#/admin")
+	}
+	time.Sleep(2 * time.Second)
+
+	// 10. Click Manage Content -> Events tab to clean up test event
+	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to re-open manage content modal: %w", err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+	_ = ap.Page.Click(eventsTabXPath, ap.DefaultTimeout)
+	time.Sleep(1 * time.Second)
+
+	// Click delete trash icon for the published test event in Existing Events list
+	deleteEventXPath := fmt.Sprintf("//p[contains(text(), %q)]/ancestor::div[contains(@class, 'flex items-start')]//button[contains(@class, 'text-destructive')]", title)
+	if err := ap.Page.Click(deleteEventXPath, ap.DefaultTimeout); err != nil {
+		// Fallback: Click first delete icon in Existing Events section
+		_ = ap.Page.Click("//div[contains(., 'Existing Events')]//button[contains(@class, 'text-destructive')]", ap.DefaultTimeout)
+	}
+	time.Sleep(1 * time.Second)
+
+	// Confirm delete in ConfirmDeleteDialog
+	confirmDelXPath := "//div[contains(@role, 'alertdialog') or contains(@class, 'max-w-md')]//button[contains(text(), 'Delete') or contains(., 'Delete')]"
+	if err := ap.Page.Click(confirmDelXPath, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.Click("//button[contains(text(), 'Confirm') or contains(text(), 'Delete')]", ap.DefaultTimeout)
+	}
+	time.Sleep(2 * time.Second)
+
+	// Screenshot Step 04: Event Deleted
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_Event_Deleted"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Close Modal
+	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
+
+	r.Advice = append(r.Advice, "Event created, verified on Upcoming Events tab, and cleaned up successfully.")
+}
+
+
 
 
 

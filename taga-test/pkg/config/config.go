@@ -104,6 +104,15 @@ type Config struct {
 	AdminResourceFileInputTestID              string         `json:"adminResourceFileInputTestID"`
 	AdminUploadResourceButtonTestID           string         `json:"adminUploadResourceButtonTestID"`
 	ResourcesNavButtonTestID                  string         `json:"resourcesNavButtonTestID"`
+	AdminEventsTabButtonTestID                string         `json:"adminEventsTabButtonTestID"`
+	AdminEventTitleInputTestID                string         `json:"adminEventTitleInputTestID"`
+	AdminEventDateInputTestID                 string         `json:"adminEventDateInputTestID"`
+	AdminEventTimeInputTestID                 string         `json:"adminEventTimeInputTestID"`
+	AdminEventLocationInputTestID             string         `json:"adminEventLocationInputTestID"`
+	AdminEventDescriptionInputTestID          string         `json:"adminEventDescriptionInputTestID"`
+	AdminPublishEventButtonTestID             string         `json:"adminPublishEventButtonTestID"`
+	EventsNavButtonTestID                     string         `json:"eventsNavButtonTestID"`
+	UpcomingEventsTabButtonTestID             string         `json:"upcomingEventsTabButtonTestID"`
 }
 
 // LoadConfig reads the configuration file from path and applies environment overrides.

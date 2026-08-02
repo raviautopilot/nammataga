@@ -105,5 +105,14 @@
   "adminResourceYearInputTestID": "testid-resource-year-input",
   "adminResourceFileInputTestID": "testid-resource-file-input",
   "adminUploadResourceButtonTestID": "testid-upload-resource-button",
-  "resourcesNavButtonTestID": "testid-resources-button"
+  "resourcesNavButtonTestID": "testid-resources-button",
+  "adminEventsTabButtonTestID": "testid-events-button",
+  "adminEventTitleInputTestID": "testid-event-title-input",
+  "adminEventDateInputTestID": "testid-event-date-input",
+  "adminEventTimeInputTestID": "testid-event-time-input",
+  "adminEventLocationInputTestID": "testid-event-location-input",
+  "adminEventDescriptionInputTestID": "testid-event-description-input",
+  "adminPublishEventButtonTestID": "testid-publish-event-button",
+  "eventsNavButtonTestID": "testid-events-button",
+  "upcomingEventsTabButtonTestID": "testid-upcoming-events-button"
 }
