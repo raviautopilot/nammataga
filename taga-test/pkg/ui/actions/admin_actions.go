@@ -1149,11 +1149,3 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 
 	r.Advice = append(r.Advice, "Gallery photo uploaded, verified on Photo Gallery page, and cleaned up successfully.")
 }
-
-
-
-
-
-
-
-

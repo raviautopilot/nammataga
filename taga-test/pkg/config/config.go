@@ -14,25 +14,25 @@ type Credentials struct {
 
 // MemberFormData holds all input field data for creating a new member.
 type MemberFormData struct {
-	TagaID                    string `json:"tagaId"`
-	Name                      string `json:"name"`
-	Initial                   string `json:"initial"`
-	Gender                    string `json:"gender"`
-	FatherName                string `json:"fatherName"`
-	MotherName                string `json:"motherName"`
+	TagaID                   string `json:"tagaId"`
+	Name                     string `json:"name"`
+	Initial                  string `json:"initial"`
+	Gender                   string `json:"gender"`
+	FatherName               string `json:"fatherName"`
+	MotherName               string `json:"motherName"`
 	EducationalQualification string `json:"educationalQualification"`
-	Designation               string `json:"designation"`
-	WorkingDistrict           string `json:"workingDistrict"`
-	NativeDistrict            string `json:"nativeDistrict"`
-	RecruitmentBatch          string `json:"recruitmentBatch"`
-	SeniorityNumber           string `json:"seniorityNumber"`
-	DateOfBirth               string `json:"dateOfBirth"`
-	MobileNumber              string `json:"mobileNumber"`
-	Email                     string `json:"email"`
-	TbfNumber                 string `json:"tbfNumber"`
-	CpsGpfNumber              string `json:"cpsGpfNumber"`
-	ResidentialAddress        string `json:"residentialAddress"`
-	PermanentAddress          string `json:"permanentAddress"`
+	Designation              string `json:"designation"`
+	WorkingDistrict          string `json:"workingDistrict"`
+	NativeDistrict           string `json:"nativeDistrict"`
+	RecruitmentBatch         string `json:"recruitmentBatch"`
+	SeniorityNumber          string `json:"seniorityNumber"`
+	DateOfBirth              string `json:"dateOfBirth"`
+	MobileNumber             string `json:"mobileNumber"`
+	Email                    string `json:"email"`
+	TbfNumber                string `json:"tbfNumber"`
+	CpsGpfNumber             string `json:"cpsGpfNumber"`
+	ResidentialAddress       string `json:"residentialAddress"`
+	PermanentAddress         string `json:"permanentAddress"`
 }
 
 // Config holds the configuration values for the testing framework.
@@ -57,7 +57,7 @@ type Config struct {
 	LogoutButtonTestID                        string         `json:"logoutButtonTestID"`
 	NewMemberEmail                            string         `json:"newMemberEmail"`
 	NewMemberFormData                         MemberFormData `json:"newMemberFormData"`
-	AdminAddMemberButtonTestID                 string         `json:"adminAddMemberButtonTestID"`
+	AdminAddMemberButtonTestID                string         `json:"adminAddMemberButtonTestID"`
 	AdminAddMemberTagaIdInputTestID           string         `json:"adminAddMemberTagaIdInputTestID"`
 	AdminAddMemberNameInputTestID             string         `json:"adminAddMemberNameInputTestID"`
 	AdminAddMemberInitialInputTestID          string         `json:"adminAddMemberInitialInputTestID"`
@@ -78,7 +78,7 @@ type Config struct {
 	AdminAddMemberResAddressInputTestID       string         `json:"adminAddMemberResAddressInputTestID"`
 	AdminAddMemberPermAddressInputTestID      string         `json:"adminAddMemberPermAddressInputTestID"`
 	AdminAddMemberSubmitButtonTestID          string         `json:"adminAddMemberSubmitButtonTestID"`
-	MemberSearchInputTestID                    string         `json:"memberSearchInputTestID"`
+	MemberSearchInputTestID                   string         `json:"memberSearchInputTestID"`
 	MemberRefreshButtonTestID                 string         `json:"memberRefreshButtonTestID"`
 	MemberDeleteButtonTestID                  string         `json:"memberDeleteButtonTestID"`
 	MemberConfirmDeleteButtonTestID           string         `json:"memberConfirmDeleteButtonTestID"`
@@ -94,7 +94,7 @@ type Config struct {
 	AdminAnnouncementPrioritySelectTestID     string         `json:"adminAnnouncementPrioritySelectTestID"`
 	AdminAnnouncementSendToSelectTestID       string         `json:"adminAnnouncementSendToSelectTestID"`
 	AdminAnnouncementSubmitButtonTestID       string         `json:"adminAnnouncementSubmitButtonTestID"`
-	AdminManageOfficeBearersButtonTestID     string         `json:"adminManageOfficeBearersButtonTestID"`
+	AdminManageOfficeBearersButtonTestID      string         `json:"adminManageOfficeBearersButtonTestID"`
 	OfficeBearersDistrictSelectTestID         string         `json:"officeBearersDistrictSelectTestID"`
 	OfficeBearersButtonTestID                 string         `json:"officeBearersButtonTestID"`
 	AdminManageContentButtonTestID            string         `json:"adminManageContentButtonTestID"`
@@ -114,9 +114,9 @@ type Config struct {
 	EventsNavButtonTestID                     string         `json:"eventsNavButtonTestID"`
 	UpcomingEventsTabButtonTestID             string         `json:"upcomingEventsTabButtonTestID"`
 	AdminGalleryTabButtonTestID               string         `json:"adminGalleryTabButtonTestID"`
-	AdminGalleryDescriptionInputTestID       string         `json:"adminGalleryDescriptionInputTestID"`
-	AdminGalleryDateInputTestID              string         `json:"adminGalleryDateInputTestID"`
-	AdminGalleryPhotoInputTestID             string         `json:"adminGalleryPhotoInputTestID"`
+	AdminGalleryDescriptionInputTestID        string         `json:"adminGalleryDescriptionInputTestID"`
+	AdminGalleryDateInputTestID               string         `json:"adminGalleryDateInputTestID"`
+	AdminGalleryPhotoInputTestID              string         `json:"adminGalleryPhotoInputTestID"`
 	AdminUploadPhotoButtonTestID              string         `json:"adminUploadPhotoButtonTestID"`
 	GalleryTabButtonTestID                    string         `json:"galleryTabButtonTestID"`
 }
