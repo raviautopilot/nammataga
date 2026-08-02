@@ -66,7 +66,18 @@ func hasMemberPaidOneTime(subscriptionID, email string) bool {
 	return false
 }
 
-// CreateSubscriptionOrder creates a Razorpay order for subscription payment
+// CreateSubscriptionOrder godoc
+// @Summary Create subscription order
+// @Description Create a Razorpay order for subscription payment
+// @Tags Subscriptions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param order body CreateSubscriptionOrderRequest true "Order Details"
+// @Success 200 {object} CreateSubscriptionOrderResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/subscriptions/create-order [post]
 func CreateSubscriptionOrder(c *gin.Context) {
 	var req CreateSubscriptionOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -194,7 +205,18 @@ func CreateSubscriptionOrder(c *gin.Context) {
 	})
 }
 
-// VerifySubscriptionPayment verifies Razorpay payment
+// VerifySubscriptionPayment godoc
+// @Summary Verify subscription payment
+// @Description Verify Razorpay signature and update subscription status
+// @Tags Subscriptions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param verification body object true "Razorpay verification data"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/subscriptions/verify-payment [post]
 func VerifySubscriptionPayment(c *gin.Context) {
 	var req struct {
 		SubscriptionID string `json:"subscriptionId"`
@@ -468,7 +490,16 @@ func expireExistingAnnualSubscriptions(email string) {
 	}
 }
 
-// GetMemberSubscriptionStatus returns member's subscription status
+// GetMemberSubscriptionStatus godoc
+// @Summary Get member subscription status
+// @Description Returns the active subscription details and status of a member by email
+// @Tags Subscriptions
+// @Produce json
+// @Security BearerAuth
+// @Param email query string true "Member Email"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Router /api/subscriptions/status [get]
 func GetMemberSubscriptionStatus(c *gin.Context) {
 	email := c.Query("email")
 	if email == "" {
@@ -630,11 +661,16 @@ func getSubscriptionName(subscriptionID string) string {
 	return subscriptionID
 }
 
-// GetMemberPaidSubscriptions returns list of subscription IDs the member has paid for
-// Rules:
-//   - Annual subscription: included if active OR during global waiver (2026‑2027) OR grace period (Apr‑May)
-//   - One‑time subscriptions: included if ANY payment record exists (regardless of status)
-//   - Need‑based subscriptions: NEVER included (they are not considered "paid" in the subscription sense)
+// GetMemberPaidSubscriptions godoc
+// @Summary Get member paid subscriptions
+// @Description Returns list of subscription IDs that the member has paid for
+// @Tags Subscriptions
+// @Produce json
+// @Security BearerAuth
+// @Param email query string true "Member Email"
+// @Success 200 {array} string
+// @Failure 400 {object} map[string]string
+// @Router /api/subscriptions/member-paid [get]
 func GetMemberPaidSubscriptions(c *gin.Context) {
 	email := c.Query("email")
 	if email == "" {

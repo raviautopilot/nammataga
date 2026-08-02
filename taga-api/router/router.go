@@ -9,7 +9,6 @@ import (
 	"taga-api/config"
 	"taga-api/handler"
 	"taga-api/middleware"
-	"taga-api/service"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -153,7 +152,6 @@ func SetupRouter() *gin.Engine {
 	r.POST("/api/member/change-password", handler.ChangeMemberPasswordHandler)
 
 	// Member Profile & Notifications (JWT Required)
-	// @Security BearerAuth
 	memberRoutes := r.Group("/api/member")
 	memberRoutes.Use(middleware.MemberAuthMiddleware())
 	{
@@ -187,7 +185,6 @@ func SetupRouter() *gin.Engine {
 	}
 
 	// Payment (Protected with Member Auth)
-	// @Security BearerAuth
 	payment := r.Group("/api/payments")
 	payment.Use(middleware.MemberAuthMiddleware())
 	{
@@ -196,7 +193,6 @@ func SetupRouter() *gin.Engine {
 	}
 
 	// Subscription Payment (Protected with Member Auth)
-	// @Security BearerAuth
 	subscriptionPaymentProtected := r.Group("/api/subscriptions")
 	subscriptionPaymentProtected.Use(middleware.MemberAuthMiddleware())
 	{
@@ -212,7 +208,6 @@ func SetupRouter() *gin.Engine {
 	r.POST("/api/admin/login", handler.AdminLoginHandler)
 
 	// Admin Routes (JWT Required)
-	// @Security BearerAuth
 	admin := r.Group("/api/admin")
 	admin.Use(middleware.AdminAuthMiddleware())
 	{
@@ -253,7 +248,7 @@ func SetupRouter() *gin.Engine {
 		admin.POST("/announcements/send", handler.SendAnnouncement)
 
 		// Renewal Reminders (Manual Trigger - for testing)
-		admin.POST("/send-renewal-reminders", handleSendRenewalReminders)
+		admin.POST("/send-renewal-reminders", handler.HandleSendRenewalReminders)
 
 		// ==================== OFFICE BEARERS MANAGEMENT ====================
 		// District Office Bearers CRUD Operations
@@ -298,22 +293,4 @@ func SetupRouter() *gin.Engine {
 	r.GET("/api/data/docs/*filepath", docsHandler)
 
 	return r
-}
-
-// handleSendRenewalReminders godoc
-// @Summary Manually trigger renewal reminders (for testing)
-// @Description Sends renewal emails to all unpaid members if today is a reminder date
-// @Tags Admin
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /api/admin/send-renewal-reminders [post]
-func handleSendRenewalReminders(c *gin.Context) {
-	if err := service.SendRemindersIfDue(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "Reminders processed"})
 }

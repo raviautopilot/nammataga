@@ -15,6 +15,17 @@ import (
 
 const filePath = "data/edit_requests.json"
 
+// CreateEditRequest godoc
+// @Summary Create an edit request
+// @Description Submit a request to edit member profile details
+// @Tags Member Profile
+// @Accept json
+// @Produce json
+// @Param request body model.EditRequest true "Edit Request Details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /api/member/edit-request [post]
 func CreateEditRequest(c *gin.Context) {
 	var (
 		req      model.EditRequest
