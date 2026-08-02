@@ -1,7 +1,6 @@
 package ui_tests
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -10,29 +9,19 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_07_BulkUploadMembers(t *testing.T) {
-	tests.RunUITest(t, "Admin Bulk Member Upload and Automated Cleanup Workflow", func(t *testing.T, page *ui.Page) {
+func TestUI_08_SendAnnouncement(t *testing.T) {
+	tests.RunUITest(t, "Admin Send Announcement Workflow", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 
 		// Initialize Admin Persona and Result collector
 		admin := actions.NewAdminPersona(page, cfg.UiURL, 5*time.Second)
-		result := actions.NewResult("TestUI_03_BulkUploadMembers")
+		result := actions.NewResult("TestUI_04_SendAnnouncement")
 
 		// Declarative Persona Action Flow
 		actions.GoToHome(admin, result)
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
-		actions.BulkUploadMembers(admin, cfg, "../../fixtures/bulk_members_sample.csv", result)
-		actions.GoToHome(admin, result)
-		actions.OpenAdminPanel(admin, cfg, result)
-
-		// Delete bulk-uploaded member by mobile number
-		for _, mobile := range cfg.BulkMemberMobiles {
-			cleanMobile := strings.TrimSpace(mobile)
-			cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
-			actions.DeleteMemberByMobile(admin, cfg, cleanMobile, result)
-		}
-
+		actions.SendAnnouncement(admin, cfg, "Urgent System Maintenance Notice", "All members please note: Scheduled maintenance tonight at 11:00 PM IST.", "urgent", result)
 		actions.LogoutAdmin(admin, cfg, result)
 
 		// Assert Result
@@ -44,3 +33,4 @@ func TestUI_07_BulkUploadMembers(t *testing.T) {
 		}
 	})
 }
+
