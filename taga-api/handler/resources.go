@@ -39,7 +39,14 @@ func GetResourceCategories(c *gin.Context) {
 	c.JSON(http.StatusOK, categories)
 }
 
-// GetAllResources returns all resource categories WITH their documents
+// GetAllResources godoc
+// @Summary Get all resources
+// @Description Returns all resource categories along with their documents
+// @Tags Resources
+// @Produce json
+// @Success 200 {array} service.ResourceCategory
+// @Failure 500 {object} map[string]string
+// @Router /api/resources/all [get]
 func GetAllResources(c *gin.Context) {
 	data, err := service.LoadResources()
 	if err != nil {
@@ -94,6 +101,13 @@ func GetDocumentsByCategory(c *gin.Context) {
 	c.JSON(http.StatusNotFound, gin.H{"error": "Category not found"})
 }
 
+// GetResourcesBanner godoc
+// @Summary Get resources banner image info
+// @Description Get the relative path/url of the resources banner image
+// @Tags Resources
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router /api/resources-banner [get]
 func GetResourcesBanner(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"image": "/api/images/resources-banner.jpg",

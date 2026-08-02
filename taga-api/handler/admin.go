@@ -15,6 +15,7 @@ import (
 	"strings"
 	"taga-api/config"
 	"taga-api/model"
+	"taga-api/service"
 	"taga-api/service/auth"
 	"time"
 
@@ -58,6 +59,7 @@ type RegistrationError struct {
 // @Tags         Admin
 // @Accept       multipart/form-data
 // @Produce      json
+// @Security     BearerAuth
 // @Param        file  formData  file  true  "Registration file (JSON/CSV format)"
 // @Success      200  {object}  map[string]interface{}  "Registration successful"
 // @Failure      400  {object}  map[string]interface{}  "Invalid file or validation errors"
@@ -402,6 +404,7 @@ func sendErrorEmailToAdmin(errors []map[string]interface{}) error {
 // @Tags         Admin
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        memberId  query  string  false  "Member ID or keyword: all | none (default)"
 // @Success      200  {string}  string  "Password initialization result"
 // @Failure      400  {string}  string  "Invalid or missing parameter"
@@ -471,6 +474,17 @@ func genRandomPassword(n int) string {
 	return string(b)
 }
 
+// UploadMemberRegistration godoc
+// @Summary Bulk upload registrations (legacy)
+// @Description Bulk upload registration members from Excel file (Legacy endpoint)
+// @Tags Admin Members
+// @Accept mpfd
+// @Produce json
+// @Param file formData file true "Excel file"
+// @Success 200 {object} model.RegistrationResult
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /admin/upload-registration [post]
 func UploadMemberRegistration(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -489,4 +503,22 @@ func UploadMemberRegistration(c *gin.Context) {
 	result := auth.ProcessRegistrationFile(tempPath)
 
 	c.JSON(200, result)
+}
+
+// HandleSendRenewalReminders godoc
+// @Summary Manually trigger renewal reminders (for testing)
+// @Description Sends renewal emails to all unpaid members if today is a reminder date
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/admin/send-renewal-reminders [post]
+func HandleSendRenewalReminders(c *gin.Context) {
+	if err := service.SendRemindersIfDue(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Reminders processed"})
 }
