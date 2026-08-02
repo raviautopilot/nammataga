@@ -925,6 +925,10 @@ func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eve
 	_ = ap.Page.ClickByTestID(cfg.UpcomingEventsTabButtonTestID, ap.DefaultTimeout)
 	time.Sleep(2 * time.Second)
 
+	// Scroll down slightly so the upcoming events cards are clearly visible in the view
+	_, _ = ap.Page.Driver.ExecuteScript("window.scrollBy(0, 350);", nil)
+	time.Sleep(1 * time.Second)
+
 	// Screenshot Step 03: Public Upcoming Events Verification
 	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_EventsPage_UpcomingEvents_Result"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
