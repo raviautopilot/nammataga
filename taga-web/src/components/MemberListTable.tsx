@@ -614,6 +614,7 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
                     size="sm"
                     className="text-blue-600 border-blue-300 hover:bg-blue-50"
                     onClick={handleStartEdit}
+                    data-testid="testid-member-edit-button"
                   >
                     <Pencil className="w-3.5 h-3.5 mr-1" />
                     Edit
@@ -858,7 +859,7 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
                   <X className="w-4 h-4 mr-1" />
                   Cancel
                 </Button>
-                <Button onClick={handleSaveEdit} disabled={isSaving}>
+                <Button onClick={handleSaveEdit} disabled={isSaving} data-testid="testid-member-save-edit-button">
                   {isSaving ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
                   ) : (
