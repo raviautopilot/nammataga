@@ -193,6 +193,7 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
     event: '',
     photo: null as File | null
   });
+  const [galleryFilterYear, setGalleryFilterYear] = useState<string>('all');
 
   // Announcement Form
   const [announcementForm, setAnnouncementForm] = useState({
@@ -272,11 +273,58 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
     }
   };
 
+  const [galleryYears, setGalleryYears] = useState<number[]>([]);
+
   const loadGallery = async () => {
     setIsLoadingGallery(true);
     try {
-      const data = await getGallery();
-      setGalleryList(Array.isArray(data) ? data : []);
+      // 1. Fetch available gallery years
+      let years: number[] = [];
+      try {
+        const res = await fetch(`${API_BASE_URL}/gallery/years`);
+        if (res.ok) {
+          const apiYears = await res.json();
+          years = Array.isArray(apiYears) ? apiYears : [];
+        }
+      } catch (err) {
+        console.error('Failed to load gallery years:', err);
+      }
+
+      if (!years.includes(new Date().getFullYear())) {
+        years.push(new Date().getFullYear());
+      }
+      setGalleryYears(years);
+
+      // 2. Fetch gallery photos across ALL years concurrently
+      const allPhotosByYear = await Promise.all(
+        years.map(async (yr) => {
+          try {
+            const res = await fetch(`${API_BASE_URL}/gallery?year=${yr}`);
+            if (res.ok) {
+              const list = await res.json();
+              return (Array.isArray(list) ? list : []).map(img => ({
+                ...img,
+                year: img.year || yr
+              }));
+            }
+          } catch {
+            return [];
+          }
+          return [];
+        })
+      );
+
+      // Flatten and remove duplicates by id/title
+      const combinedList = allPhotosByYear.flat();
+      const uniqueMap = new Map();
+      combinedList.forEach(img => {
+        const key = img.id || `${img.title}-${img.year}`;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, img);
+        }
+      });
+
+      setGalleryList(Array.from(uniqueMap.values()));
     } catch (error) {
       toast.error('Failed to load gallery');
       console.error(error);
@@ -918,34 +966,58 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
 
                   {/* Existing Gallery List */}
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-sm">Existing Gallery Photos</h3>
-                      <Button variant="ghost" size="sm" onClick={loadGallery} disabled={isLoadingGallery}>
-                        {isLoadingGallery ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Refresh'}
-                      </Button>
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-semibold text-sm shrink-0">Existing Gallery Photos</h3>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={galleryFilterYear}
+                          onValueChange={setGalleryFilterYear}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-[110px]" data-testid="testid-gallery-year-filter-select">
+                            <SelectValue placeholder="All Years" />
+                          </SelectTrigger>
+                          <SelectContent data-testid="testid-gallery-year-filter-content">
+                            <SelectItem value="all">All Years</SelectItem>
+                            {Array.from(new Set([
+                              ...galleryYears,
+                              ...galleryList.map(img => img.year).filter((yr): yr is number => Boolean(yr))
+                            ])).sort((a, b) => b - a).map(yr => (
+                              <SelectItem key={yr} value={yr.toString()}>{yr}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button variant="ghost" size="sm" onClick={loadGallery} disabled={isLoadingGallery} className="h-7 px-2 text-xs">
+                          {isLoadingGallery ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Refresh'}
+                        </Button>
+                      </div>
                     </div>
                     {isLoadingGallery ? (
                       <div className="flex items-center justify-center py-6 text-muted-foreground">
                         <Loader2 className="w-4 h-4 animate-spin mr-2" />
                         <span className="text-sm">Loading gallery...</span>
                       </div>
-                    ) : galleryList.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-3">No gallery photos found.</p>
+                    ) : galleryList.filter(img => galleryFilterYear === 'all' || img.year?.toString() === galleryFilterYear).length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-3">No gallery photos found for selected year.</p>
                     ) : (
                       <div className="space-y-1.5">
-                        {galleryList.map((img) => (
-                          <div key={img.id} className="border rounded-lg px-3 py-2 flex items-start justify-between gap-2 hover:bg-muted/20 transition-colors">
-                            <p className="text-sm flex-1 min-w-0 break-words leading-snug">{img.title}</p>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 h-7 w-7 p-0 mt-0.5"
-                              onClick={() => setDeleteGalleryConfirm({ open: true, id: img.id, title: img.title })}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        ))}
+                        {galleryList
+                          .filter(img => galleryFilterYear === 'all' || img.year?.toString() === galleryFilterYear)
+                          .map((img) => (
+                            <div key={img.id} className="border rounded-lg px-3 py-2 flex items-start justify-between gap-2 hover:bg-muted/20 transition-colors">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium break-words leading-snug">{img.title}</p>
+                                {img.year && <span className="text-xs text-muted-foreground">Year: {img.year}</span>}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 h-7 w-7 p-0 mt-0.5"
+                                onClick={() => setDeleteGalleryConfirm({ open: true, id: img.id, title: img.title })}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          ))}
                       </div>
                     )}
                   </div>
