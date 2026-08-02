@@ -23,6 +23,8 @@ func TestUI_07_BulkUploadMembers(t *testing.T) {
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
 		actions.BulkUploadMembers(admin, cfg, "../../fixtures/bulk_members_sample.csv", result)
+		actions.GoToHome(admin, result)
+		actions.OpenAdminPanel(admin, cfg, result)
 
 		// Delete all 5 bulk-uploaded members by mobile number
 		for _, mobile := range cfg.BulkMemberMobiles {
