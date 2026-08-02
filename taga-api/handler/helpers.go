@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"html"
 	"math/big"
 	"net/smtp"
 	"os"
@@ -45,7 +46,7 @@ func getString(m map[string]interface{}, key string) string {
 
 // generateTempPassword generates a random temporary password
 func generateTempPassword() string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	const length = 12
 
 	password := make([]byte, length)
@@ -73,8 +74,8 @@ func sendSuccessEmail(memberEmail, tempPassword string) error {
 	body.WriteString("<h2>Welcome to TAGA!</h2>")
 	body.WriteString("<p>Your registration has been successfully completed.</p>")
 	body.WriteString("<h3>Login Credentials</h3>")
-	body.WriteString(fmt.Sprintf("<p><strong>Email:</strong> %s</p>", memberEmail))
-	body.WriteString(fmt.Sprintf("<p><strong>Temporary Password:</strong> %s</p>", tempPassword))
+	body.WriteString(fmt.Sprintf("<p><strong>Email:</strong> %s</p>", html.EscapeString(memberEmail)))
+	body.WriteString(fmt.Sprintf("<p><strong>Temporary Password:</strong> %s</p>", html.EscapeString(tempPassword)))
 	body.WriteString("<p><strong>Important:</strong> You must change this password on your first login.</p>")
 	body.WriteString(fmt.Sprintf("<p><a href='%s'>Click here to login</a></p>", loginURL))
 	body.WriteString("<p>If you did not register for this account, please contact our support team.</p>")
