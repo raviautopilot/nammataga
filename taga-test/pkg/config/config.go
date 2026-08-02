@@ -94,6 +94,25 @@ type Config struct {
 	AdminAnnouncementPrioritySelectTestID     string         `json:"adminAnnouncementPrioritySelectTestID"`
 	AdminAnnouncementSendToSelectTestID       string         `json:"adminAnnouncementSendToSelectTestID"`
 	AdminAnnouncementSubmitButtonTestID       string         `json:"adminAnnouncementSubmitButtonTestID"`
+	AdminManageOfficeBearersButtonTestID     string         `json:"adminManageOfficeBearersButtonTestID"`
+	OfficeBearersDistrictSelectTestID         string         `json:"officeBearersDistrictSelectTestID"`
+	OfficeBearersButtonTestID                 string         `json:"officeBearersButtonTestID"`
+	AdminManageContentButtonTestID            string         `json:"adminManageContentButtonTestID"`
+	AdminResourcesTabButtonTestID             string         `json:"adminResourcesTabButtonTestID"`
+	AdminResourceCategorySelectTestID         string         `json:"adminResourceCategorySelectTestID"`
+	AdminResourceYearInputTestID              string         `json:"adminResourceYearInputTestID"`
+	AdminResourceFileInputTestID              string         `json:"adminResourceFileInputTestID"`
+	AdminUploadResourceButtonTestID           string         `json:"adminUploadResourceButtonTestID"`
+	ResourcesNavButtonTestID                  string         `json:"resourcesNavButtonTestID"`
+	AdminEventsTabButtonTestID                string         `json:"adminEventsTabButtonTestID"`
+	AdminEventTitleInputTestID                string         `json:"adminEventTitleInputTestID"`
+	AdminEventDateInputTestID                 string         `json:"adminEventDateInputTestID"`
+	AdminEventTimeInputTestID                 string         `json:"adminEventTimeInputTestID"`
+	AdminEventLocationInputTestID             string         `json:"adminEventLocationInputTestID"`
+	AdminEventDescriptionInputTestID          string         `json:"adminEventDescriptionInputTestID"`
+	AdminPublishEventButtonTestID             string         `json:"adminPublishEventButtonTestID"`
+	EventsNavButtonTestID                     string         `json:"eventsNavButtonTestID"`
+	UpcomingEventsTabButtonTestID             string         `json:"upcomingEventsTabButtonTestID"`
 }
 
 // LoadConfig reads the configuration file from path and applies environment overrides.
