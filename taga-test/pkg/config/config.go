@@ -97,6 +97,13 @@ type Config struct {
 	AdminManageOfficeBearersButtonTestID     string         `json:"adminManageOfficeBearersButtonTestID"`
 	OfficeBearersDistrictSelectTestID         string         `json:"officeBearersDistrictSelectTestID"`
 	OfficeBearersButtonTestID                 string         `json:"officeBearersButtonTestID"`
+	AdminManageContentButtonTestID            string         `json:"adminManageContentButtonTestID"`
+	AdminResourcesTabButtonTestID             string         `json:"adminResourcesTabButtonTestID"`
+	AdminResourceCategorySelectTestID         string         `json:"adminResourceCategorySelectTestID"`
+	AdminResourceYearInputTestID              string         `json:"adminResourceYearInputTestID"`
+	AdminResourceFileInputTestID              string         `json:"adminResourceFileInputTestID"`
+	AdminUploadResourceButtonTestID           string         `json:"adminUploadResourceButtonTestID"`
+	ResourcesNavButtonTestID                  string         `json:"resourcesNavButtonTestID"`
 }
 
 // LoadConfig reads the configuration file from path and applies environment overrides.

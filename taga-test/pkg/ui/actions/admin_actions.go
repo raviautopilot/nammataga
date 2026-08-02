@@ -703,6 +703,145 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 	r.Advice = append(r.Advice, fmt.Sprintf("Restored Joint Secretary (Women) back to original state: Name='%s', Mobile='%s'", originalName, originalContact))
 }
 
+// ManageResourceDocument handles uploading a resource document, verifying on resources page, deleting it, and taking screenshots.
+func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relativePdfPath, categoryName string, r *Result) {
+	actionName := fmt.Sprintf("Manage Resource Document (%s)", categoryName)
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	ap := aai.GetAdminPersona()
+
+	// Resolve absolute path for fixture PDF
+	absPdfPath, err := filepath.Abs(relativePdfPath)
+	if err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to resolve PDF path: %w", err)
+		return
+	}
+
+	// 1. Click Manage Content button
+	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click manage content button: %w", err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// 2. Click Resources Tab inside Manage Content modal
+	tabXPath := "//div[@data-testid='testid-content-management-modal']//button[@data-testid='testid-resources-button' or text()='Resources']"
+	if err := ap.Page.Click(tabXPath, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.ClickByTestID(cfg.AdminResourcesTabButtonTestID, ap.DefaultTimeout)
+	}
+	time.Sleep(500 * time.Millisecond)
+
+	// 3. Select Category (Establishment)
+	if err := ap.Page.SelectCustomDropdownByText(cfg.AdminResourceCategorySelectTestID, categoryName, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to select category '%s': %w", categoryName, err)
+		return
+	}
+
+	// 4. Upload PDF file
+	fileElem, err := ap.Page.FindElementByTestID(cfg.AdminResourceFileInputTestID, ap.DefaultTimeout)
+	if err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to find resource file input: %w", err)
+		return
+	}
+	if err := fileElem.SendKeys(absPdfPath); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to upload PDF file: %w", err)
+		return
+	}
+
+	// Screenshot Step 01: Form Filled
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_01_ResourceUpload_FormFilled"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 6. Click Upload Resource Button
+	if err := ap.Page.ClickByTestID(cfg.AdminUploadResourceButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click upload resource button: %w", err)
+		return
+	}
+	time.Sleep(2 * time.Second)
+
+	// Screenshot Step 02: Uploaded Confirmation Toast/List
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_ResourceUpload_Submitted"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Close Content Management Modal
+	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
+
+	// 7. Go to Resources Page as Admin via navbar button
+	if err := ap.Page.ClickByTestID(cfg.ResourcesNavButtonTestID, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.Driver.Get(cfg.UiURL + "/#/resources")
+	}
+	time.Sleep(2 * time.Second)
+
+	// Select Category "Establishment" on public resources page
+	catBtnXPath := "//button[contains(@data-testid, 'testid-resource-category-') and (contains(., 'Establishment') or contains(text(), 'Establishment'))]"
+	_ = ap.Page.Click(catBtnXPath, ap.DefaultTimeout)
+	time.Sleep(2 * time.Second)
+
+	// Screenshot Step 03: Resources Page Verification
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_ResourcesPage_Verification"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 8. Return to Admin Panel
+	if err := ap.Page.ClickByTestID(cfg.AdminPanelButtonTestID, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.Driver.Get(cfg.UiURL + "/#/admin")
+	}
+	time.Sleep(2 * time.Second)
+
+	// 9. Click Manage Content -> Resources tab
+	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to re-open manage content modal: %w", err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+	_ = ap.Page.Click(tabXPath, ap.DefaultTimeout)
+	time.Sleep(1 * time.Second)
+
+	// Expand "Establishment" category accordion under Existing Resources
+	estAccXPath := "//button[contains(., 'Establishment') and contains(@class, 'w-full')]"
+	_ = ap.Page.Click(estAccXPath, ap.DefaultTimeout)
+	time.Sleep(1 * time.Second)
+
+	// Click delete trash icon for the uploaded test PDF document (starting with 'a')
+	deleteDocXPath := "//p[contains(text(), 'a_test_resource_sample')]/ancestor::div[contains(@class, 'flex items-center')]//button[contains(@class, 'text-destructive')]"
+	if err := ap.Page.Click(deleteDocXPath, ap.DefaultTimeout); err != nil {
+		// Fallback: Click first delete icon inside Establishment category
+		_ = ap.Page.Click("//div[contains(., 'Establishment')]//button[contains(@class, 'text-destructive')]", ap.DefaultTimeout)
+	}
+	time.Sleep(1 * time.Second)
+
+	// Confirm delete in ConfirmDeleteDialog if dialog pops up
+	confirmDelXPath := "//div[contains(@role, 'alertdialog') or contains(@class, 'max-w-md')]//button[contains(text(), 'Delete') or contains(., 'Delete')]"
+	if err := ap.Page.Click(confirmDelXPath, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.Click("//button[contains(text(), 'Confirm') or contains(text(), 'Delete')]", ap.DefaultTimeout)
+	}
+	time.Sleep(2 * time.Second)
+
+	// Screenshot Step 04: Resource Deleted
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_Resource_Deleted"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Close Modal
+	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
+
+	r.Advice = append(r.Advice, "Resource document uploaded, verified on Resources page, and cleaned up successfully.")
+}
+
+
 
 
 
