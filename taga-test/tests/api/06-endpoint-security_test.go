@@ -1,12 +1,9 @@
 package api_tests
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -21,7 +18,7 @@ type EndpointDefinition struct {
 	ExpectedProtected bool   `json:"expected_protected"`
 }
 
-// SwaggerEndpoints lists all endpoints from the API Swagger specification.
+// SwaggerEndpoints lists all 70 endpoints from the API Swagger specification.
 var SwaggerEndpoints = []EndpointDefinition{
 	// Health & Root (Public)
 	{Method: "GET", Path: "/", Category: "Health & Root", ExpectedProtected: false},
@@ -54,20 +51,20 @@ var SwaggerEndpoints = []EndpointDefinition{
 	{Method: "GET", Path: "/api/office", Category: "Office", ExpectedProtected: false},
 
 	// Grievances (Public)
-	{Method: "GET", Path: "/api/grievances", Category: "Grievances", ExpectedProtected: false},
-	{Method: "GET", Path: "/api/categories", Category: "Grievances", ExpectedProtected: false},
-	{Method: "GET", Path: "/api/priorities", Category: "Grievances", ExpectedProtected: false},
+	{Method: "GET", Path: "/api/grievances", Category: "Grievances", ExpectedProtected: true},
+	{Method: "GET", Path: "/api/categories", Category: "Grievances", ExpectedProtected: true},
+	{Method: "GET", Path: "/api/priorities", Category: "Grievances", ExpectedProtected: true},
 
 	// TAGA Towers Public
-	{Method: "GET", Path: "/api/towers/rooms", Category: "TAGA Towers", ExpectedProtected: false},
-	{Method: "GET", Path: "/api/towers/availability", Category: "TAGA Towers", ExpectedProtected: false},
+	{Method: "GET", Path: "/api/towers/rooms", Category: "TAGA Towers", ExpectedProtected: true},
+	{Method: "GET", Path: "/api/towers/availability", Category: "TAGA Towers", ExpectedProtected: true},
 
 	// Member Auth Entry Points (Public)
 	{Method: "POST", Path: "/api/auth/forgot-password", Category: "Member Auth", ExpectedProtected: false},
-	{Method: "POST", Path: "/api/auth/reset-password", Category: "Member Auth", ExpectedProtected: false},
+	{Method: "POST", Path: "/api/auth/reset-password", Category: "Member Auth", ExpectedProtected: true},
 	{Method: "POST", Path: "/api/auth/member-forgot-password", Category: "Member Auth", ExpectedProtected: false},
 	{Method: "POST", Path: "/api/member/login", Category: "Member Auth", ExpectedProtected: false},
-	{Method: "POST", Path: "/api/member/logout", Category: "Member Auth", ExpectedProtected: false},
+	{Method: "POST", Path: "/api/member/logout", Category: "Member Auth", ExpectedProtected: true},
 	{Method: "POST", Path: "/api/admin/login", Category: "Admin Login", ExpectedProtected: false},
 
 	// Member Protected Routes (Auth Required)
@@ -116,55 +113,43 @@ var SwaggerEndpoints = []EndpointDefinition{
 	{Method: "POST", Path: "/admin/upload-registration", Category: "Legacy Admin Protected", ExpectedProtected: true},
 }
 
-type SecurityAuditResult struct {
-	Method            string `json:"method"`
-	Path              string `json:"path"`
-	Category          string `json:"category"`
-	StatusCode        int    `json:"status_code"`
-	ExpectedProtected bool   `json:"expected_protected"`
-	IsSecured         bool   `json:"is_secured"`
-	Flag              string `json:"flag"`
-	SecurityStatus    string `json:"security_status"`
-}
-
-// TestAPI_06_EndpointSecurity audits all swagger endpoints for unauthenticated access & security controls.
+// TestAPI_06_EndpointSecurity audits all swagger endpoints individually, populating report entries for every endpoint.
 func TestAPI_06_EndpointSecurity(t *testing.T) {
-	tests.RunAPITestWithDetails(
-		t,
-		"API Security Audit - Secured vs Unsecured Endpoints",
-		"Audits API endpoints against Swagger spec to ensure protected endpoints return 401/403 without auth headers.",
-		"All protected endpoints return HTTP 401/403 Unauthorized, and public endpoints return non-401/403 responses.",
-		func(tc *tests.TestContext) {
-			baseURL := tests.GlobalConfig.BaseURL
-			if baseURL == "" {
-				baseURL = "https://api.nammataga.com"
-			}
+	baseURL := tests.GlobalConfig.BaseURL
+	if baseURL == "" {
+		baseURL = "https://api.nammataga.com"
+	}
 
-			httpClient := &http.Client{
-				Timeout: 10 * time.Second,
-			}
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 
-			var results []SecurityAuditResult
-			var securityRisks []SecurityAuditResult
-			var securedCount int
-			var publicCount int
+	for _, ep := range SwaggerEndpoints {
+		testName := fmt.Sprintf("[%s] %s", ep.Method, ep.Path)
+		description := fmt.Sprintf("Category: %s | Security audit for %s %s", ep.Category, ep.Method, ep.Path)
 
-			fmt.Println("====================================================================================================")
-			fmt.Println(" 🔒 TAGA-API Security Audit - Endpoint Protection Report")
-			fmt.Printf(" Target Base URL: %s\n", baseURL)
-			fmt.Println("====================================================================================================")
-			fmt.Printf("%-6s %-7s %-15s %-45s %-25s\n", "METHOD", "STATUS", "FLAG", "ENDPOINT", "CATEGORY")
-			fmt.Println(strings.Repeat("-", 105))
+		expectedStr := "UNSECURED (Public Access Allowed: HTTP 200/400/404)"
+		if ep.ExpectedProtected {
+			expectedStr = "SECURED (Authentication Required: HTTP 401/403)"
+		}
 
-			for _, ep := range SwaggerEndpoints {
-				fullURL := strings.TrimRight(baseURL, "/") + ep.Path
-				req, err := http.NewRequest(ep.Method, fullURL, nil)
+		endpointCopy := ep
+
+		tests.RunAPITestWithDetails(
+			t,
+			testName,
+			description,
+			expectedStr,
+			func(tc *tests.TestContext) {
+				fullURL := strings.TrimRight(baseURL, "/") + endpointCopy.Path
+				req, err := http.NewRequest(endpointCopy.Method, fullURL, nil)
 				if err != nil {
-					tc.Fatalf("Failed to create request for %s %s: %v", ep.Method, ep.Path, err)
+					tc.FailureReason = fmt.Sprintf("Failed to create HTTP request: %v", err)
+					tc.Fatalf("Failed to create HTTP request: %v", err)
 				}
 
 				req.Header.Set("User-Agent", "APISecurityAudit/1.0")
-				if ep.Method == "POST" || ep.Method == "PUT" {
+				if endpointCopy.Method == "POST" || endpointCopy.Method == "PUT" {
 					req.Header.Set("Content-Type", "application/json")
 				}
 
@@ -174,93 +159,29 @@ func TestAPI_06_EndpointSecurity(t *testing.T) {
 					statusCode = resp.StatusCode
 					_, _ = io.Copy(io.Discard, resp.Body)
 					resp.Body.Close()
+				} else {
+					tc.FailureReason = fmt.Sprintf("Network execution error: %v", err)
+					tc.Fatalf("Network execution error: %v", err)
 				}
 
-				// An endpoint is secured if unauthenticated access returns 401 (Unauthorized) or 403 (Forbidden)
 				isSecured := (statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden)
 
-				var flag string
-				var securityStatus string
-
-				if ep.ExpectedProtected {
+				if endpointCopy.ExpectedProtected {
 					if isSecured {
-						flag = "OK"
-						securityStatus = "PROTECTED (SECURE)"
-						securedCount++
+						tc.Actual = fmt.Sprintf("HTTP %d (SECURED)", statusCode)
 					} else {
-						flag = "SECURITY_RISK"
-						securityStatus = fmt.Sprintf("UNAUTHENTICATED ACCESS (HTTP %d)", statusCode)
-						securityRisks = append(securityRisks, SecurityAuditResult{
-							Method:            ep.Method,
-							Path:              ep.Path,
-							Category:          ep.Category,
-							StatusCode:        statusCode,
-							ExpectedProtected: ep.ExpectedProtected,
-							IsSecured:         isSecured,
-							Flag:              flag,
-							SecurityStatus:    securityStatus,
-						})
+						tc.Actual = fmt.Sprintf("HTTP %d (UNAUTHENTICATED ACCESS ALLOWED - SECURITY RISK)", statusCode)
+						tc.FailureReason = fmt.Sprintf("Endpoint %s %s should be SECURED (HTTP 401/403) but returned HTTP %d", endpointCopy.Method, endpointCopy.Path, statusCode)
+						tc.Errorf("Security Risk: Protected endpoint %s %s allowed unauthenticated access (HTTP %d)", endpointCopy.Method, endpointCopy.Path, statusCode)
 					}
 				} else {
 					if isSecured {
-						flag = "WARNING"
-						securityStatus = "UNEXPECTEDLY PROTECTED"
+						tc.Actual = fmt.Sprintf("HTTP %d (UNEXPECTEDLY PROTECTED)", statusCode)
 					} else {
-						flag = "PUBLIC"
-						securityStatus = fmt.Sprintf("PUBLIC (HTTP %d)", statusCode)
-						publicCount++
+						tc.Actual = fmt.Sprintf("HTTP %d (UNSECURED / PUBLIC)", statusCode)
 					}
 				}
-
-				res := SecurityAuditResult{
-					Method:            ep.Method,
-					Path:              ep.Path,
-					Category:          ep.Category,
-					StatusCode:        statusCode,
-					ExpectedProtected: ep.ExpectedProtected,
-					IsSecured:         isSecured,
-					Flag:              flag,
-					SecurityStatus:    securityStatus,
-				}
-				results = append(results, res)
-
-				flagSymbol := "🌐 PUBLIC"
-				if flag == "SECURITY_RISK" {
-					flagSymbol = "⚠️ RISK"
-				} else if flag == "OK" {
-					flagSymbol = "✅ SECURE"
-				}
-
-				fmt.Printf("%-6s %-7d %-15s %-45s %-25s\n", ep.Method, statusCode, flagSymbol, ep.Path, ep.Category)
-			}
-
-			fmt.Println("\n====================================================================================================")
-			fmt.Println(" 📊 SECURITY AUDIT SUMMARY")
-			fmt.Println("====================================================================================================")
-			fmt.Printf("Total Endpoints Audited  : %d\n", len(results))
-			fmt.Printf("Protected Endpoints (OK) : %d\n", securedCount)
-			fmt.Printf("Public Endpoints         : %d\n", publicCount)
-			fmt.Printf("Security Risks Detected  : %d\n", len(securityRisks))
-			fmt.Println("====================================================================================================")
-
-			// Save Audit JSON Report to evidence directory
-			evidenceDir := tests.EvidenceDir
-			if evidenceDir != "" {
-				reportPath := filepath.Join(evidenceDir, "reports", "endpoint-security-audit.json")
-				_ = os.MkdirAll(filepath.Dir(reportPath), 0755)
-				data, err := json.MarshalIndent(results, "", "  ")
-				if err == nil {
-					_ = os.WriteFile(reportPath, data, 0644)
-					fmt.Printf("📄 Audit JSON report saved to: %s\n", reportPath)
-				}
-			}
-
-			tc.Actual = fmt.Sprintf("Audited %d endpoints: %d protected (OK), %d public, %d security risks", len(results), securedCount, publicCount, len(securityRisks))
-
-			if len(securityRisks) > 0 {
-				tc.FailureReason = fmt.Sprintf("Security audit detected %d protected endpoints allowing unauthenticated access", len(securityRisks))
-				tc.Errorf("Security Audit Failed: %d protected endpoints allow unauthenticated access!", len(securityRisks))
-			}
-		},
-	)
+			},
+		)
+	}
 }
