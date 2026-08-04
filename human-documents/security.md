@@ -73,7 +73,7 @@ When an HTTP request enters `taga-api`, it passes through middlewares in a stric
 | **2** | `middleware.GinZapLogger()` | Global (`r.Use`) | Logs structured HTTP access details using Uber Zap logger. |
 | **3** | Unauthenticated Handlers | `/`, `/health`, `/api/public/*`, `/api/webhook/*` | Direct handler execution without authentication header requirement. |
 | **4** | Auth Issuance Routes | `/api/member/login`, `/api/admin/login`, `/api/auth/*` | Verifies credentials against DB/config and generates signed JWT tokens via `jwt_service.go`. |
-| **5** | `middleware.MemberAuthMiddleware()` | Route Group: `/api/member/*`, `/api/payments/*`, `/api/subscriptions/*` | Inspects `Authorization: Bearer <token>`, validates member claims, injects `member_id`, `member_email`, `member_name`, `role` into Gin context. Returns `401 Unauthorized` on failure. |
+| **5** | `middleware.MemberAuthMiddleware()` | Route Group: `/api/member/*`, `/api/resources/*`, `/api/payments/*`, `/api/subscriptions/*` | Inspects `Authorization: Bearer <token>`, validates member claims, injects `member_id`, `member_email`, `member_name`, `role` into Gin context. Returns `401 Unauthorized` on failure. |
 | **6** | `middleware.AdminAuthMiddleware()` | Route Group: `/api/admin/*` | Inspects `Authorization: Bearer <token>`, validates admin claims, verifies `role == "admin"`, injects `username`, `userID`, `role` into Gin context. Returns `401 Unauthorized` on failure. |
 
 ---
