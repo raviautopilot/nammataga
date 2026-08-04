@@ -196,6 +196,96 @@ func VisitAllMemberPages(mai MemberActionsInterface, cfg *config.Config, r *Resu
 	r.Advice = append(r.Advice, "Successfully visited all member pages.")
 }
 
+// PayAnnualSubscription navigates to the subscription page and mocks an annual subscription payment.
+func PayAnnualSubscription(mai MemberActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Pay Annual Subscription"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// 1. Navigate to Profile / Membership Page
+	if err := mp.Page.ClickByTestID("testid-membership-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-membership-button' element exists")
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// 2. Switch to Subscriptions Tab
+	if err := mp.Page.ClickByTestID("testid-member-subscriptions-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-member-subscriptions-button' exists in Membership tabs")
+		return
+	}
+	time.Sleep(1 * time.Second)
+	
+	if scr, scrErr := mp.Page.CaptureScreenshot("Step_03_Subscription_Tab_Opened"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 3. Click 'Pay Now' for Annual Subscription
+	if err := mp.Page.ClickByTestID("testid-pay-now-annual-subscription-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-pay-now-annual-subscription-button' exists. It might already be paid.")
+		return
+	}
+	time.Sleep(1 * time.Second)
+	
+	if scr, scrErr := mp.Page.CaptureScreenshot("Step_04_Payment_Modal_Opened"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 4. Inject Mock Razorpay
+	mockScript := `
+	window.Razorpay = function(options) {
+		this.open = function() {
+			options.handler({
+				razorpay_order_id: "mock_order_test_123",
+				razorpay_payment_id: "pay_mock_test_123",
+				razorpay_signature: "mock_signature"
+			});
+		};
+	};`
+	if _, err := mp.Page.Driver.ExecuteScript(mockScript, nil); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Failed to inject mock Razorpay script")
+		return
+	}
+
+	// 5. Click Proceed to Pay
+	if err := mp.Page.ClickByTestID("testid-membership-payment-submit-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-membership-payment-submit-button' exists in modal")
+		return
+	}
+
+	// Wait for processing and UI refresh (e.g., toast and modal close)
+	time.Sleep(3 * time.Second)
+
+	// 6. Check that UI updated to 'Paid'
+	if err := mp.Page.VerifyFormElements([]string{"testid-paid-badge-annual-subscription"}, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-paid-badge-annual-subscription' is visible after payment")
+		return
+	}
+
+	if scr, scrErr := mp.Page.CaptureScreenshot("Step_05_Annual_Subscription_Paid"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	r.Advice = append(r.Advice, "Successfully completed mock annual subscription payment.")
+}
+
 // LogoutMember logs out the member persona.
 func LogoutMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 	actionName := "Logout Member"
