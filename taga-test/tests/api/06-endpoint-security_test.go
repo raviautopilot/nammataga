@@ -31,7 +31,6 @@ var SwaggerEndpoints = []EndpointDefinition{
 	{Method: "GET", Path: "/api/public/about/services", Category: "Public Info", ExpectedProtected: false},
 	{Method: "GET", Path: "/api/public/about/contact", Category: "Public Info", ExpectedProtected: false},
 	{Method: "GET", Path: "/api/logo", Category: "Public Info", ExpectedProtected: false},
-	{Method: "GET", Path: "/api/member/banner", Category: "Public Info", ExpectedProtected: false},
 	{Method: "POST", Path: "/api/webhook/razorpay", Category: "Webhook", ExpectedProtected: false},
 
 	// Events & Gallery (Public)
@@ -74,11 +73,10 @@ var SwaggerEndpoints = []EndpointDefinition{
 	{Method: "GET", Path: "/api/member/notifications", Category: "Member Protected", ExpectedProtected: true},
 	{Method: "PUT", Path: "/api/member/notifications/1/read", Category: "Member Protected", ExpectedProtected: true},
 	{Method: "GET", Path: "/api/member/notifications/unread/count", Category: "Member Protected", ExpectedProtected: true},
+	{Method: "POST", Path: "/api/member/edit-request", Category: "Member Auth", ExpectedProtected: false},
 	{Method: "POST", Path: "/api/member/change-password", Category: "Member Protected", ExpectedProtected: false},
 
-	// Payment & Subscription Protected Routes (Auth Required)
-	{Method: "POST", Path: "/api/payments/create-order", Category: "Payment Protected", ExpectedProtected: true},
-	{Method: "POST", Path: "/api/payments/verify", Category: "Payment Protected", ExpectedProtected: true},
+	// Subscription Protected Routes (Auth Required)
 	{Method: "POST", Path: "/api/subscriptions/create-order", Category: "Subscription Protected", ExpectedProtected: true},
 	{Method: "POST", Path: "/api/subscriptions/verify-payment", Category: "Subscription Protected", ExpectedProtected: true},
 	{Method: "GET", Path: "/api/subscriptions/status", Category: "Subscription Protected", ExpectedProtected: true},
@@ -111,7 +109,6 @@ var SwaggerEndpoints = []EndpointDefinition{
 	{Method: "DELETE", Path: "/api/admin/resources/cat1/doc1", Category: "Admin Protected", ExpectedProtected: true},
 	{Method: "POST", Path: "/api/admin/send-renewal-reminders", Category: "Admin Protected", ExpectedProtected: true},
 	{Method: "GET", Path: "/api/towers/admin/bookings", Category: "TAGA Towers (Admin)", ExpectedProtected: false},
-	{Method: "POST", Path: "/admin/upload-registration", Category: "Legacy Admin Protected", ExpectedProtected: false},
 }
 
 // TestAPI_06_EndpointSecurity audits all swagger endpoints individually, populating report entries for every endpoint.

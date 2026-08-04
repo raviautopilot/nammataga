@@ -65,16 +65,11 @@ This document details the security architecture, middleware execution pipeline, 
 
 ## 2. Middleware Execution Pipeline & Order
 
-When an HTTP request enters `taga-api`, it passes through middlewares in a strict sequential order defined in [`router.go`](file:///home/ubuntu/code/github/raviautopilot/nammataga/taga-api/router/router.go#L26-L267):
-
-| Order | Component / Middleware | Target Path | Responsibility / Behavior |
-| :---: | :--- | :--- | :--- |
-| **1** | `cors.New(...)` | Global (`r.Use`) | Cross-Origin Resource Sharing check. Evaluates request origin against allowed list and sets pre-flight `OPTIONS` headers. |
-| **2** | `middleware.GinZapLogger()` | Global (`r.Use`) | Logs structured HTTP access details using Uber Zap logger. |
-| **3** | Unauthenticated Handlers | `/`, `/health`, `/api/public/*`, `/api/webhook/*` | Direct handler execution without authentication header requirement. |
-| **4** | Auth Issuance Routes | `/api/member/login`, `/api/admin/login`, `/api/auth/*` | Verifies credentials against DB/config and generates signed JWT tokens via `jwt_service.go`. |
-| **5** | `middleware.MemberAuthMiddleware()` | Route Group: `/api/member/*`, `/api/resources/*`, `/api/payments/*`, `/api/subscriptions/*` | Inspects `Authorization: Bearer <token>`, validates member claims, injects `member_id`, `member_email`, `member_name`, `role` into Gin context. Returns `401 Unauthorized` on failure. |
-| **6** | `middleware.AdminAuthMiddleware()` | Route Group: `/api/admin/*` | Inspects `Authorization: Bearer <token>`, validates admin claims, verifies `role == "admin"`, injects `username`, `userID`, `role` into Gin context. Returns `401 Unauthorized` on failure. |
+| **3** | Gin Engine Router (`router.SetupRouter()`) | Global | Delegates to domain route files (`public_routes.go`, `member_routes.go`, `payment_routes.go`, `admin_routes.go`, `static_routes.go`). |
+| **4** | Unauthenticated Handlers | `/`, `/health`, `/api/public/*`, `/api/webhook/*` | Direct handler execution without authentication header requirement. |
+| **5** | Auth Issuance Routes | `/api/member/login`, `/api/admin/login`, `/api/auth/*` | Verifies credentials against DB/config and generates signed JWT tokens via `jwt_service.go`. |
+| **6** | `middleware.MemberAuthMiddleware()` | Route Group: `/api/member/*`, `/api/resources/*`, `/api/subscriptions/*` | Inspects `Authorization: Bearer <token>`, validates member claims, injects `member_id`, `member_email`, `member_name`, `role` into Gin context. Returns `401 Unauthorized` on failure. |
+| **7** | `middleware.AdminAuthMiddleware()` | Route Group: `/api/admin/*` | Inspects `Authorization: Bearer <token>`, validates admin claims, verifies `role == "admin"`, injects `username`, `userID`, `role` into Gin context. Returns `401 Unauthorized` on failure. |
 
 ---
 

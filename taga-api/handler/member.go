@@ -299,17 +299,7 @@ func MemberLogoutHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
-// GetMemberBanner
-// @Summary Get member banner
-// @Description Returns member banner image path
-// @Tags Member
-// @Accept json
-// @Produce json
-// @Success 200 {object} map[string]interface{}
-// @Router /api/member/banner [get]
-func GetMemberBanner(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"image": "/api/images/member.jpg"})
-}
+
 
 // UpdateMemberProfileHandler
 // @Summary Update member profile
