@@ -108,12 +108,26 @@ export const getFileUrl = (url: string) => {
 };
 
 /* --------------------------------
+   Helper: Auth Header Extraction
+-------------------------------- */
+
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem("member_token") || localStorage.getItem("admin_token");
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+};
+
+/* --------------------------------
    Get Categories
 -------------------------------- */
 
 export const getCategories = async (): Promise<Category[]> => {
   try {
-    const res = await fetch(`${API_BASE}`);
+    const res = await fetch(`${API_BASE}`, {
+      headers: getAuthHeaders(),
+    });
     return await handleResponse(res);
   } catch (error) {
     console.error("❌ Error fetching categories:", error);
@@ -136,7 +150,9 @@ export const getDocumentsByCategory = async (
       url += `?subcategory=${encodeURIComponent(subcategory)}`;
     }
 
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
     return await handleResponse(res);
   } catch (error) {
     console.error("❌ Error fetching documents:", error);
@@ -149,6 +165,8 @@ export const getResourcesBanner = async (): Promise<string> => {
   return data.image;
 };
 export const getExternalLinks = async () => {
-  const res = await fetch(`${API_BASE}/external-links`);
+  const res = await fetch(`${API_BASE}/external-links`, {
+    headers: getAuthHeaders(),
+  });
   return await handleResponse(res);
 };
