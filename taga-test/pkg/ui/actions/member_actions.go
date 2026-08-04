@@ -93,3 +93,88 @@ func LogoutMemberCustom(mai MemberActionsInterface, cfg *config.Config, waitTime
 		r.Evidence = append(r.Evidence, scr)
 	}
 }
+
+// LoginAsMember logs in the member persona using credentials from the config.
+func LoginAsMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Login As Member"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+	homePage := pages.NewHomePage(mp.Page)
+	loginPage := pages.NewLoginPage(mp.Page)
+
+	if err := homePage.OpenMemberLogin(cfg.MemberLoginButtonTestID, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'memberLoginButtonTestID' element exists in header/navbar")
+		return
+	}
+
+	if err := loginPage.EnterUsername(cfg.MemberLoginUsernameInputTestID, cfg.MemberCredentials.Username, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Failed to enter member username")
+		return
+	}
+
+	if err := loginPage.EnterPassword(cfg.MemberLoginPasswordInputTestID, cfg.MemberCredentials.Password, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Failed to enter member password")
+		return
+	}
+
+	// Take screenshot before submitting the form
+	time.Sleep(1 * time.Second)
+	if scr, scrErr := mp.Page.CaptureScreenshot("Step_01_MemberLogin_Filled_Form"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	if err := loginPage.SubmitLogin(cfg.MemberLoginSubmitButtonTestID, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Failed to click submit login button")
+		return
+	}
+
+	// Wait for dashboard to fully render after login redirect
+	time.Sleep(3 * time.Second)
+	if scr, scrErr := mp.Page.CaptureScreenshot("Step_02_MemberLogin_Dashboard"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+	r.Advice = append(r.Advice, "Member logged in successfully.")
+}
+
+// LogoutMember logs out the member persona.
+func LogoutMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Logout Member"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+	homePage := pages.NewHomePage(mp.Page)
+
+	if err := homePage.Logout(cfg.LogoutButtonTestID, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'logoutButtonTestID' element exists in header/navbar")
+		return
+	}
+
+	time.Sleep(2 * time.Second)
+	_ = homePage.GoToHome(mp.BaseURL)
+	time.Sleep(2 * time.Second)
+
+	if scr, scrErr := mp.Page.CaptureScreenshot("Step_03_MemberLogout_HomePage"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+	r.Advice = append(r.Advice, "Member logged out successfully.")
+}
+
