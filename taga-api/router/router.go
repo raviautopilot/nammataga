@@ -80,11 +80,15 @@ func SetupRouter() *gin.Engine {
 	// Razorpay Webhook for payment notifications
 	r.POST("/api/webhook/razorpay", handler.WebhookHandler)
 
-	// Resources (Public)
-	r.GET("/api/resources", handler.GetResourceCategories)
-	r.GET("/api/resources/all", handler.GetAllResources)
-	r.GET("/api/resources/external-links", handler.GetExternalLinks)
-	r.GET("/api/resources/:id", handler.GetDocumentsByCategory)
+	// Resources (Protected with Member Auth)
+	resourcesGroup := r.Group("/api/resources")
+	resourcesGroup.Use(middleware.MemberAuthMiddleware())
+	{
+		resourcesGroup.GET("", handler.GetResourceCategories)
+		resourcesGroup.GET("/all", handler.GetAllResources)
+		resourcesGroup.GET("/external-links", handler.GetExternalLinks)
+		resourcesGroup.GET("/:id", handler.GetDocumentsByCategory)
+	}
 	r.GET("/api/resources-banner", handler.GetResourcesBanner)
 
 	// Events (Public)
@@ -259,8 +263,12 @@ func SetupRouter() *gin.Engine {
 		admin.GET("/office-bearers/backups", handler.ListBackupsHandler)
 	}
 
-	// Legacy Upload Route (to be deprecated)
-	r.POST("/admin/upload-registration", handler.UploadMemberRegistration)
+	// Legacy Upload Route (Protected with Admin Auth)
+	legacyAdmin := r.Group("/admin")
+	legacyAdmin.Use(middleware.AdminAuthMiddleware())
+	{
+		legacyAdmin.POST("/upload-registration", handler.UploadMemberRegistration)
+	}
 
 	// ==================== SWAGGER ====================
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
