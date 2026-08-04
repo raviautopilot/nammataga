@@ -9,15 +9,15 @@ import (
 	"strconv"
 	"strings"
 	"taga-api/config"
+	"taga-api/model"
+	"taga-api/service"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
-// ==================== DATA STRUCTURES ====================
-
-// Event struct
 type Event struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
@@ -29,7 +29,6 @@ type Event struct {
 	ImageURL    string `json:"imageUrl,omitempty"`
 }
 
-// ResourceDocument struct
 type ResourceDocument struct {
 	Title       string `json:"title"`
 	Year        string `json:"year"`
@@ -37,42 +36,65 @@ type ResourceDocument struct {
 	Subcategory string `json:"subcategory,omitempty"`
 }
 
-// ResourceCategory struct
 type ResourceCategory struct {
 	ID        string             `json:"id"`
 	Name      string             `json:"name"`
 	Documents []ResourceDocument `json:"documents"`
 }
 
-// GalleryImage struct
-type GalleryImage struct {
-	ID       string `json:"id"`
-	Title    string `json:"title"`
-	Event    string `json:"event"`
-	ImageURL string `json:"imageUrl"`
-	Date     string `json:"date"`
-	Year     int    `json:"year"`
+type AnnouncementRequest struct {
+	Title    string `json:"title" binding:"required"`
+	Message  string `json:"message" binding:"required"`
+	Priority string `json:"priority"`
+	SendTo   string `json:"sendTo"`
+	District string `json:"district,omitempty"`
 }
 
-// ==================== EVENT MANAGEMENT ====================
+type AnnouncementResponse struct {
+	Message        string `json:"message"`
+	Recipients     int    `json:"recipients"`
+	SendTo         string `json:"send_to"`
+	AnnouncementID string `json:"announcement_id"`
+}
+
+type AdminSubscriptionData struct {
+	PaymentID        string
+	OrderID          string
+	Amount           int
+	CustomerEmail    string
+	SubscriptionID   string
+	SubscriptionName string
+	MemberName       string
+	MemberTagaID     string
+	MemberEmail      string
+	PaymentType      string
+}
+
+type AdminRoomBookingData struct {
+	PaymentID     string
+	OrderID       string
+	Amount        int
+	CustomerEmail string
+	RoomName      string
+	RoomNumber    string
+	BedCount      int
+	CheckInDate   string
+	CheckOutDate  string
+	BookerName    string
+	BookerTagaID  string
+	BookerPhone   string
+	BookingFor    string
+	GuestDetails  string
+	PaymentType   string
+}
 
 // CreateEvent godoc
 // @Summary Create a new event
-// @Description Create a new event with optional image upload
 // @Tags Admin Content
 // @Accept multipart/form-data
 // @Produce json
 // @Security BearerAuth
-// @Param title formData string true "Event title"
-// @Param date formData string true "Event date (YYYY-MM-DD HH:MM)"
-// @Param location formData string false "Event location"
-// @Param description formData string false "Event description"
-// @Param status formData string false "Event status (upcoming/past/completed)"
-// @Param attendees formData int false "Number of attendees"
-// @Param image formData file false "Event image file"
 // @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
 // @Router /api/admin/events/create [post]
 func CreateEvent(c *gin.Context) {
 	title := c.PostForm("title")
@@ -83,7 +105,7 @@ func CreateEvent(c *gin.Context) {
 	attendeesStr := c.PostForm("attendees")
 
 	if title == "" || date == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Title and date are required"})
+		respondError(c, http.StatusBadRequest, "Title and date are required")
 		return
 	}
 
@@ -98,57 +120,47 @@ func CreateEvent(c *gin.Context) {
 
 	eventsPath := filepath.Join("data", "events.json")
 	data, err := os.ReadFile(eventsPath)
-	if err != nil && !os.IsNotExist(err) {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read events"})
-		return
+	var events []Event
+	if err == nil {
+		_ = json.Unmarshal(data, &events)
 	}
 
-	var events []Event
-	if len(data) > 0 {
-		if err := json.Unmarshal(data, &events); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse events"})
-			return
+	imageURL := ""
+	file, err := c.FormFile("image")
+	if err == nil {
+		uploadDir := filepath.Join("data", "image", "events")
+		_ = os.MkdirAll(uploadDir, 0755)
+		filename := fmt.Sprintf("%d_%s", time.Now().Unix(), filepath.Base(file.Filename))
+		dst := filepath.Join(uploadDir, filename)
+		if err := c.SaveUploadedFile(file, dst); err == nil {
+			imageURL = "/api/images/events/" + filename
 		}
 	}
 
 	newEvent := Event{
-		ID:          uuid.New().String(),
+		ID:          fmt.Sprintf("%d", time.Now().Unix()),
 		Title:       title,
 		Date:        date,
 		Location:    location,
 		Description: description,
 		Attendees:   attendees,
 		Status:      status,
-	}
-
-	// Handle image upload
-	file, err := c.FormFile("image")
-	if err == nil {
-		year := strings.Split(date, "-")[0]
-		imageDir := filepath.Join("data", "image", "eventImages", year)
-		if err := os.MkdirAll(imageDir, 0755); err == nil {
-			imageFilename := sanitizeFilename(title) + filepath.Ext(file.Filename)
-			imagePath := filepath.Join(imageDir, imageFilename)
-			if err := c.SaveUploadedFile(file, imagePath); err == nil {
-				newEvent.ImageURL = fmt.Sprintf("/images/eventImages/%s/%s", year, imageFilename)
-			}
-		}
+		ImageURL:    imageURL,
 	}
 
 	events = append(events, newEvent)
-
 	updatedData, err := json.MarshalIndent(events, "", "  ")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal events"})
+		respondError(c, http.StatusInternalServerError, "Failed to save event")
 		return
 	}
 
 	if err := os.WriteFile(eventsPath, updatedData, 0644); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write events"})
+		respondError(c, http.StatusInternalServerError, "Failed to write event file")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	respondOK(c, gin.H{
 		"message": "Event created successfully",
 		"event":   newEvent,
 	})
@@ -156,256 +168,180 @@ func CreateEvent(c *gin.Context) {
 
 // UpdateEvent godoc
 // @Summary Update an existing event
-// @Description Update an event by ID using multipart form data
 // @Tags Admin Content
-// @Accept multipart/form-data
+// @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param id path string true "Event ID"
-// @Param title formData string false "Event title"
-// @Param date formData string false "Event date (YYYY-MM-DD HH:MM)"
-// @Param location formData string false "Event location"
-// @Param description formData string false "Event description"
-// @Param status formData string false "Event status (upcoming/ongoing/completed/cancelled)"
-// @Param image formData file false "Replacement event image"
 // @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
 // @Router /api/admin/events/{id} [put]
 func UpdateEvent(c *gin.Context) {
-	eventID := c.Param("id")
-	if eventID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID is required"})
+	id := c.Param("id")
+	var req map[string]interface{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	eventsPath := filepath.Join("data", "events.json")
 	data, err := os.ReadFile(eventsPath)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read events"})
+		respondError(c, http.StatusInternalServerError, "Failed to read events")
 		return
 	}
 
 	var events []Event
-	if err := json.Unmarshal(data, &events); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse events"})
-		return
-	}
-
-	foundIdx := -1
-	for i, event := range events {
-		if event.ID == eventID {
-			foundIdx = i
-			break
-		}
-	}
-
-	if foundIdx == -1 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
-		return
-	}
-
-	// Only overwrite fields that are explicitly provided in the form
-	if title := c.PostForm("title"); title != "" {
-		events[foundIdx].Title = title
-	}
-	if date := c.PostForm("date"); date != "" {
-		events[foundIdx].Date = date
-	}
-	if location := c.PostForm("location"); location != "" {
-		events[foundIdx].Location = location
-	}
-	if description := c.PostForm("description"); description != "" {
-		events[foundIdx].Description = description
-	}
-	if status := c.PostForm("status"); status != "" {
-		events[foundIdx].Status = status
-	}
-
-	// Handle optional image replacement
-	file, err := c.FormFile("image")
-	if err == nil {
-		year := strings.Split(events[foundIdx].Date, "-")[0]
-		imageDir := filepath.Join("data", "image", "eventImages", year)
-		if mkErr := os.MkdirAll(imageDir, 0755); mkErr == nil {
-			imageFilename := fmt.Sprintf("event_%s%s", eventID, filepath.Ext(file.Filename))
-			imagePath := filepath.Join(imageDir, imageFilename)
-			if saveErr := c.SaveUploadedFile(file, imagePath); saveErr == nil {
-				events[foundIdx].ImageURL = fmt.Sprintf("/images/eventImages/%s/%s", year, imageFilename)
-			}
-		}
-	}
-
-	updatedData, err := json.MarshalIndent(events, "", "  ")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal events"})
-		return
-	}
-
-	if err := os.WriteFile(eventsPath, updatedData, 0644); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write events"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Event updated successfully",
-		"event":   events[foundIdx],
-	})
-}
-
-// DeleteEvent godoc
-// @Summary Delete an event
-// @Description Delete an event by ID
-// @Tags Admin Content
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "Event ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /api/admin/events/{id} [delete]
-func DeleteEvent(c *gin.Context) {
-	eventID := c.Param("id")
-	if eventID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID is required"})
-		return
-	}
-
-	eventsPath := filepath.Join("data", "events.json")
-	data, err := os.ReadFile(eventsPath)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read events"})
-		return
-	}
-
-	var events []Event
-	if err := json.Unmarshal(data, &events); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse events"})
-		return
-	}
+	_ = json.Unmarshal(data, &events)
 
 	found := false
-	var deletedEvent Event
-	for i, event := range events {
-		if event.ID == eventID {
-			deletedEvent = event
-			events = append(events[:i], events[i+1:]...)
+	for i, e := range events {
+		if e.ID == id {
+			if title, ok := req["title"].(string); ok && title != "" {
+				events[i].Title = title
+			}
+			if date, ok := req["date"].(string); ok && date != "" {
+				events[i].Date = date
+			}
+			if loc, ok := req["location"].(string); ok {
+				events[i].Location = loc
+			}
+			if desc, ok := req["description"].(string); ok {
+				events[i].Description = desc
+			}
+			if status, ok := req["status"].(string); ok {
+				events[i].Status = status
+			}
 			found = true
 			break
 		}
 	}
 
 	if !found {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		respondError(c, http.StatusNotFound, "Event not found")
 		return
 	}
 
-	// Clean up image file if it exists
-	if deletedEvent.ImageURL != "" {
-		imagePath := strings.TrimPrefix(deletedEvent.ImageURL, "/")
-		if _, err := os.Stat(imagePath); err == nil {
-			os.Remove(imagePath)
-		}
-	}
-
-	updatedData, err := json.MarshalIndent(events, "", "  ")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal events"})
-		return
-	}
-
-	if err := os.WriteFile(eventsPath, updatedData, 0644); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write events"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Event deleted successfully"})
+	updatedData, _ := json.MarshalIndent(events, "", "  ")
+	_ = os.WriteFile(eventsPath, updatedData, 0644)
+	respondMessage(c, "Event updated successfully")
 }
 
-// ==================== RESOURCE MANAGEMENT ====================
+// DeleteEvent godoc
+// @Summary Delete an event
+// @Tags Admin Content
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Router /api/admin/events/{id} [delete]
+func DeleteEvent(c *gin.Context) {
+	id := c.Param("id")
+	eventsPath := filepath.Join("data", "events.json")
+	data, err := os.ReadFile(eventsPath)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "Failed to read events")
+		return
+	}
 
-// UploadResourceRequest
-type UploadResourceRequest struct {
-	CategoryID  string `form:"categoryId" binding:"required"`
-	Title       string `form:"title" binding:"required"`
-	Year        string `form:"year" binding:"required"`
-	Subcategory string `form:"subcategory"`
+	var events []Event
+	_ = json.Unmarshal(data, &events)
+
+	found := false
+	var filtered []Event
+	for _, e := range events {
+		if e.ID == id {
+			found = true
+			continue
+		}
+		filtered = append(filtered, e)
+	}
+
+	if !found {
+		respondError(c, http.StatusNotFound, "Event not found")
+		return
+	}
+
+	updatedData, _ := json.MarshalIndent(filtered, "", "  ")
+	_ = os.WriteFile(eventsPath, updatedData, 0644)
+	respondMessage(c, "Event deleted successfully")
 }
 
 // UploadResource godoc
-// @Summary Upload a new resource document
-// @Description Upload a PDF document to a specific resource category
+// @Summary Upload resource document
 // @Tags Admin Content
 // @Accept multipart/form-data
 // @Produce json
 // @Security BearerAuth
-// @Param categoryId formData string true "Resource category ID"
-// @Param title formData string true "Document title"
-// @Param year formData string true "Year (e.g., 2025)"
-// @Param subcategory formData string false "Subcategory (for Scheme G.Os: Central or State)"
-// @Param file formData file true "PDF file to upload"
 // @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
 // @Router /api/admin/resources/upload [post]
 func UploadResource(c *gin.Context) {
-	var req UploadResourceRequest
-	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	categoryID := c.PostForm("categoryId")
+	title := c.PostForm("title")
+	year := c.PostForm("year")
+	subcategory := c.PostForm("subcategory")
+
+	if categoryID == "" || title == "" || year == "" {
+		respondError(c, http.StatusBadRequest, "categoryId, title, and year are required")
 		return
 	}
 
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		respondError(c, http.StatusBadRequest, "PDF file is required")
 		return
 	}
 
-	if !strings.HasSuffix(strings.ToLower(file.Filename), ".pdf") {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Only PDF files are allowed"})
+	uploadDir := filepath.Join("data", "docs")
+	_ = os.MkdirAll(uploadDir, 0755)
+	filename := fmt.Sprintf("%s_%s", categoryID, filepath.Base(file.Filename))
+	dst := filepath.Join(uploadDir, filename)
+
+	if err := c.SaveUploadedFile(file, dst); err != nil {
+		respondError(c, http.StatusInternalServerError, "Failed to save PDF file")
 		return
 	}
 
-	targetDir, err := getResourceDirectory(req.CategoryID, req.Subcategory)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	docURL := "/docs/" + filename
+	resourcesPath := filepath.Join("data", "resources.json")
+	data, _ := os.ReadFile(resourcesPath)
+
+	var categories []ResourceCategory
+	_ = json.Unmarshal(data, &categories)
+
+	found := false
+	newDoc := ResourceDocument{
+		Title:       title,
+		Year:        year,
+		URL:         docURL,
+		Subcategory: subcategory,
+	}
+
+	for i, cat := range categories {
+		if cat.ID == categoryID {
+			categories[i].Documents = append(categories[i].Documents, newDoc)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		respondError(c, http.StatusNotFound, "Resource category not found")
 		return
 	}
 
-	safeFilename := sanitizeFilename(req.Title) + ".pdf"
-	filePath := filepath.Join(targetDir, safeFilename)
+	updatedData, _ := json.MarshalIndent(categories, "", "  ")
+	_ = os.WriteFile(resourcesPath, updatedData, 0644)
 
-	if err := c.SaveUploadedFile(file, filePath); err != nil {
-		config.Logger.Error("Failed to save resource file", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
-		return
-	}
-
-	if err := addResourceToJSON(req.CategoryID, req.Title, req.Year, req.Subcategory, filePath); err != nil {
-		config.Logger.Error("Failed to update resources.json", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update resources database"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Resource uploaded successfully",
-		"path":    filePath,
+	respondOK(c, gin.H{
+		"message":  "Resource uploaded successfully",
+		"document": newDoc,
 	})
 }
 
 // DeleteResource godoc
-// @Summary Delete a resource document
-// @Description Delete a resource document from a category
+// @Summary Delete resource document
 // @Tags Admin Content
 // @Produce json
 // @Security BearerAuth
-// @Param categoryId path string true "Resource category ID"
-// @Param documentTitle path string true "Document title to delete"
 // @Success 200 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
 // @Router /api/admin/resources/{categoryId}/{documentTitle} [delete]
 func DeleteResource(c *gin.Context) {
 	categoryID := c.Param("categoryId")
@@ -414,307 +350,408 @@ func DeleteResource(c *gin.Context) {
 	resourcesPath := filepath.Join("data", "resources.json")
 	data, err := os.ReadFile(resourcesPath)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read resources"})
+		respondError(c, http.StatusInternalServerError, "Failed to read resources")
 		return
 	}
 
 	var categories []ResourceCategory
-	if err := json.Unmarshal(data, &categories); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse resources"})
-		return
-	}
+	_ = json.Unmarshal(data, &categories)
 
 	found := false
 	for i, cat := range categories {
 		if cat.ID == categoryID {
-			for j, doc := range cat.Documents {
-				if doc.Title == documentTitle {
-					// Clean up the physical file if it exists
-					if doc.URL != "" {
-						filePath := strings.TrimPrefix(doc.URL, "/")
-						if _, err := os.Stat(filePath); err == nil {
-							os.Remove(filePath)
-						}
-					}
-					categories[i].Documents = append(cat.Documents[:j], cat.Documents[j+1:]...)
+			var filteredDocs []ResourceDocument
+			for _, doc := range cat.Documents {
+				if strings.EqualFold(doc.Title, documentTitle) {
 					found = true
-					break
+					continue
 				}
+				filteredDocs = append(filteredDocs, doc)
 			}
+			categories[i].Documents = filteredDocs
 			break
 		}
 	}
 
 	if !found {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Document not found"})
+		respondError(c, http.StatusNotFound, "Resource document not found")
 		return
 	}
 
-	updatedData, err := json.MarshalIndent(categories, "", "  ")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal data"})
-		return
-	}
-
-	if err := os.WriteFile(resourcesPath, updatedData, 0644); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write resources"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Resource deleted successfully"})
-}
-
-// ==================== GALLERY MANAGEMENT ====================
-
-// UploadGalleryRequest
-type UploadGalleryRequest struct {
-	Title string `form:"title" binding:"required"`
-	Event string `form:"event" binding:"required"`
-	Date  string `form:"date" binding:"required"`
-	Year  int    `form:"year" binding:"required"`
+	updatedData, _ := json.MarshalIndent(categories, "", "  ")
+	_ = os.WriteFile(resourcesPath, updatedData, 0644)
+	respondMessage(c, "Resource document deleted successfully")
 }
 
 // UploadGalleryImage godoc
-// @Summary Upload a gallery image
-// @Description Add a new image to the photo gallery
+// @Summary Upload gallery image
 // @Tags Admin Content
 // @Accept multipart/form-data
 // @Produce json
 // @Security BearerAuth
-// @Param title formData string true "Image title"
-// @Param event formData string true "Event name"
-// @Param date formData string true "Date (YYYY-MM-DD)"
-// @Param year formData int true "Year"
-// @Param image formData file true "Image file (JPEG/PNG)"
 // @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
 // @Router /api/admin/gallery/upload [post]
 func UploadGalleryImage(c *gin.Context) {
-	var req UploadGalleryRequest
-	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	title := c.PostForm("title")
+	event := c.PostForm("event")
+	date := c.PostForm("date")
+	yearStr := c.PostForm("year")
+
+	if title == "" {
+		respondError(c, http.StatusBadRequest, "Title is required")
 		return
+	}
+
+	year := time.Now().Year()
+	if yearStr != "" {
+		if y, err := strconv.Atoi(yearStr); err == nil {
+			year = y
+		}
 	}
 
 	file, err := c.FormFile("image")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Image file is required"})
+		respondError(c, http.StatusBadRequest, "Image file is required")
 		return
 	}
 
-	ext := strings.ToLower(filepath.Ext(file.Filename))
-	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Only JPEG and PNG images are allowed"})
+	uploadDir := filepath.Join("data", "image", "gallery")
+	_ = os.MkdirAll(uploadDir, 0755)
+	filename := fmt.Sprintf("%d_%s", time.Now().Unix(), filepath.Base(file.Filename))
+	dst := filepath.Join(uploadDir, filename)
+
+	if err := c.SaveUploadedFile(file, dst); err != nil {
+		respondError(c, http.StatusInternalServerError, "Failed to save image")
 		return
 	}
 
-	imageDir := filepath.Join("data", "image", "eventImages", fmt.Sprintf("%d", req.Year))
-	if err := os.MkdirAll(imageDir, 0755); err != nil {
-		config.Logger.Error("Failed to create image directory", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create directory"})
-		return
-	}
-
-	imageFilename := sanitizeFilename(req.Title) + ext
-	imagePath := filepath.Join(imageDir, imageFilename)
-	if err := c.SaveUploadedFile(file, imagePath); err != nil {
-		config.Logger.Error("Failed to save gallery image", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save image"})
-		return
-	}
-
+	imageURL := "/api/images/gallery/" + filename
 	galleryPath := filepath.Join("data", "gallery.json")
-	data, err := os.ReadFile(galleryPath)
-	if err != nil && !os.IsNotExist(err) {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read gallery"})
-		return
+	data, _ := os.ReadFile(galleryPath)
+
+	var images []model.GalleryImage
+	_ = json.Unmarshal(data, &images)
+
+	newImg := model.GalleryImage{
+		ID:       fmt.Sprintf("%d", time.Now().Unix()),
+		Title:    title,
+		Event:    event,
+		ImageURL: imageURL,
+		Date:     date,
+		Year:     year,
 	}
 
-	var gallery []GalleryImage
-	if len(data) > 0 {
-		if err := json.Unmarshal(data, &gallery); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse gallery"})
-			return
-		}
-	}
+	images = append(images, newImg)
+	updatedData, _ := json.MarshalIndent(images, "", "  ")
+	_ = os.WriteFile(galleryPath, updatedData, 0644)
 
-	newImage := GalleryImage{
-		ID:       uuid.New().String(),
-		Title:    req.Title,
-		Event:    req.Event,
-		ImageURL: fmt.Sprintf("/images/eventImages/%d/%s", req.Year, imageFilename),
-		Date:     req.Date,
-		Year:     req.Year,
-	}
-
-	gallery = append(gallery, newImage)
-
-	updatedData, err := json.MarshalIndent(gallery, "", "  ")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal gallery"})
-		return
-	}
-
-	if err := os.WriteFile(galleryPath, updatedData, 0644); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write gallery"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
+	respondOK(c, gin.H{
 		"message": "Gallery image uploaded successfully",
-		"image":   newImage,
+		"image":   newImg,
 	})
 }
 
 // DeleteGalleryImage godoc
-// @Summary Delete a gallery image
-// @Description Remove an image from the gallery by ID
+// @Summary Delete gallery image
 // @Tags Admin Content
 // @Produce json
 // @Security BearerAuth
-// @Param id path string true "Gallery image ID"
 // @Success 200 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
 // @Router /api/admin/gallery/{id} [delete]
 func DeleteGalleryImage(c *gin.Context) {
-	imageID := c.Param("id")
-	if imageID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Image ID is required"})
-		return
-	}
-
+	id := c.Param("id")
 	galleryPath := filepath.Join("data", "gallery.json")
 	data, err := os.ReadFile(galleryPath)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read gallery"})
+		respondError(c, http.StatusInternalServerError, "Failed to read gallery")
 		return
 	}
 
-	var gallery []GalleryImage
-	if err := json.Unmarshal(data, &gallery); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse gallery"})
-		return
-	}
+	var images []model.GalleryImage
+	_ = json.Unmarshal(data, &images)
 
 	found := false
-	var deletedImage GalleryImage
-	for i, img := range gallery {
-		if img.ID == imageID {
-			deletedImage = img
-			gallery = append(gallery[:i], gallery[i+1:]...)
+	var filtered []model.GalleryImage
+	for _, img := range images {
+		if img.ID == id {
 			found = true
-			break
+			continue
 		}
+		filtered = append(filtered, img)
 	}
 
 	if !found {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Image not found"})
+		respondError(c, http.StatusNotFound, "Gallery image not found")
 		return
 	}
 
-	// Clean up the physical image file if it exists
-	if deletedImage.ImageURL != "" {
-		imagePath := strings.TrimPrefix(deletedImage.ImageURL, "/")
-		if _, err := os.Stat(imagePath); err == nil {
-			os.Remove(imagePath)
-		}
-	}
-
-	updatedData, err := json.MarshalIndent(gallery, "", "  ")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal gallery"})
-		return
-	}
-
-	if err := os.WriteFile(galleryPath, updatedData, 0644); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write gallery"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Gallery image deleted successfully"})
+	updatedData, _ := json.MarshalIndent(filtered, "", "  ")
+	_ = os.WriteFile(galleryPath, updatedData, 0644)
+	respondMessage(c, "Gallery image deleted successfully")
 }
 
-// ==================== HELPER FUNCTIONS ====================
-
-func getResourceDirectory(categoryID, subcategory string) (string, error) {
-	categoryMap := map[string]string{
-		"establishment":   "data/docs/Establishment",
-		"leave-forms":     "data/docs/Leave Forms & Other Applications",
-		"miscellaneous":   "data/docs/Miscellaneous",
-		"office-contacts": "data/docs/Office Address & Contacts",
-		"pay-gos":         "data/docs/Pay Related G.Os",
-		"scheme-gos":      "data/docs/Scheme G.Os/Scheme G.Os 2025-26",
-		"taga-membership": "data/docs/TAGA Membership & TBF Application",
-		"technical":       "data/docs/Technical",
-		"links":           "data/docs",
+// SendAnnouncement godoc
+// @Summary Send announcement to members
+// @Tags Admin Announcements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param announcement body AnnouncementRequest true "Announcement details"
+// @Success 200 {object} AnnouncementResponse
+// @Router /api/admin/announcements/send [post]
+func SendAnnouncement(c *gin.Context) {
+	var req AnnouncementRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, err.Error())
+		return
 	}
 
-	dir, ok := categoryMap[categoryID]
-	if !ok {
-		return "", fmt.Errorf("invalid category ID: %s", categoryID)
+	if req.Priority == "" {
+		req.Priority = "normal"
+	}
+	if req.SendTo == "" {
+		req.SendTo = "all"
 	}
 
-	if categoryID == "scheme-gos" && subcategory != "" {
-		switch subcategory {
-		case "Central":
-			dir = filepath.Join(dir, "GOI Schemes 2025-26")
-		case "State":
-			dir = filepath.Join(dir, "States Schemes 2025-26")
-		}
+	adminEmail, exists := c.Get("username")
+	if !exists {
+		adminEmail = config.GetConfig().AdminEmail
 	}
 
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	return dir, nil
-}
-
-func addResourceToJSON(categoryID, title, year, subcategory, filePath string) error {
-	resourcesPath := filepath.Join("data", "resources.json")
-
-	data, err := os.ReadFile(resourcesPath)
+	members, err := readExistingMembers()
 	if err != nil {
-		return fmt.Errorf("failed to read resources.json: %w", err)
+		config.Logger.Error("Failed to read members", zap.Error(err))
+		respondError(c, http.StatusInternalServerError, "Failed to read members")
+		return
 	}
 
-	var categories []ResourceCategory
-	if err := json.Unmarshal(data, &categories); err != nil {
-		return fmt.Errorf("failed to parse resources.json: %w", err)
+	if len(members) == 0 {
+		respondOK(c, gin.H{
+			"message":    "No members found in the system",
+			"recipients": 0,
+			"send_to":    req.SendTo,
+		})
+		return
 	}
 
-	webPath := "/" + strings.ReplaceAll(filePath, "\\", "/")
-	webPath = "/" + strings.TrimPrefix(strings.TrimPrefix(webPath, "/"), "data/")
+	var recipients []map[string]interface{}
+	sendToLower := strings.ToLower(strings.TrimSpace(req.SendTo))
 
-	for i, cat := range categories {
-		if cat.ID == categoryID {
-			newDoc := ResourceDocument{
-				Title:       title,
-				Year:        year,
-				URL:         webPath,
-				Subcategory: subcategory,
+	for _, member := range members {
+		email, ok := member["emailId"].(string)
+		if !ok || email == "" {
+			continue
+		}
+
+		memberID, _ := member["id"].(string)
+		workingDistrict := getString(member, "working_district")
+		paymentStatus := getString(member, "payment_status")
+		include := false
+
+		switch sendToLower {
+		case "all", "all members":
+			include = true
+		case "paid", "paid members", "paid members only":
+			if strings.EqualFold(paymentStatus, "paid") {
+				include = true
 			}
-			categories[i].Documents = append(categories[i].Documents, newDoc)
-			break
+		case "unpaid", "unpaid members":
+			if strings.EqualFold(paymentStatus, "unpaid") {
+				include = true
+			}
+		case "district", "district members":
+			if req.District != "" && strings.EqualFold(workingDistrict, req.District) {
+				include = true
+			}
+		default:
+			include = true
+		}
+
+		if include {
+			recipients = append(recipients, map[string]interface{}{
+				"email":            email,
+				"id":               memberID,
+				"working_district": workingDistrict,
+				"payment_status":   paymentStatus,
+			})
 		}
 	}
 
-	updatedData, err := json.MarshalIndent(categories, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal resources: %w", err)
+	if len(recipients) == 0 {
+		respondOK(c, gin.H{
+			"message":    fmt.Sprintf("No recipients found for filter: %s", req.SendTo),
+			"recipients": 0,
+			"send_to":    req.SendTo,
+		})
+		return
 	}
 
-	return os.WriteFile(resourcesPath, updatedData, 0644)
+	announcement := model.Notification{
+		ID:         uuid.New().String(),
+		Title:      req.Title,
+		Message:    req.Message,
+		Priority:   req.Priority,
+		SendTo:     req.SendTo,
+		SentBy:     adminEmail.(string),
+		SentAt:     time.Now(),
+		Recipients: len(recipients),
+		District:   req.District,
+	}
+
+	_ = saveAnnouncementToFile(announcement)
+
+	for _, recipient := range recipients {
+		memberNotification := model.MemberNotification{
+			ID:             uuid.New().String(),
+			MemberID:       recipient["id"].(string),
+			MemberEmail:    recipient["email"].(string),
+			NotificationID: announcement.ID,
+			Title:          req.Title,
+			Message:        req.Message,
+			Priority:       req.Priority,
+			IsRead:         false,
+			CreatedAt:      time.Now(),
+		}
+		_ = saveMemberNotificationToFile(memberNotification)
+	}
+
+	go func() {
+		for _, recipient := range recipients {
+			subject := formatAnnouncementSubject(req.Title, req.Priority)
+			body := buildAnnouncementEmailContent(req.Title, req.Message, req.Priority)
+			_ = sendEmail(recipient["email"].(string), subject, body)
+		}
+	}()
+
+	respondOK(c, AnnouncementResponse{
+		Message:        fmt.Sprintf("Announcement sent successfully to %d recipients", len(recipients)),
+		Recipients:     len(recipients),
+		SendTo:         req.SendTo,
+		AnnouncementID: announcement.ID,
+	})
 }
 
-func sanitizeFilename(name string) string {
-	invalid := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|", " ", "'", ","}
-	result := name
-	for _, char := range invalid {
-		result = strings.ReplaceAll(result, char, "_")
+// HandleSendRenewalReminders godoc
+// @Summary Manually trigger renewal reminders
+// @Tags Admin
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]string
+// @Router /api/admin/send-renewal-reminders [post]
+func HandleSendRenewalReminders(c *gin.Context) {
+	if err := service.SendRemindersIfDue(); err != nil {
+		respondError(c, http.StatusInternalServerError, err.Error())
+		return
 	}
-	return result
+	respondMessage(c, "Reminders processed")
+}
+
+// File Storage Helpers for Notifications
+func getAnnouncementsFilePath() string {
+	dir := "data/announcements"
+	_ = os.MkdirAll(dir, 0755)
+	return filepath.Join(dir, "announcements.json")
+}
+
+func getMemberNotificationsFilePath() string {
+	dir := "data/notifications"
+	_ = os.MkdirAll(dir, 0755)
+	return filepath.Join(dir, "member_notifications.json")
+}
+
+func saveAnnouncementToFile(announcement model.Notification) error {
+	filePath := getAnnouncementsFilePath()
+	var announcements []model.Notification
+	data, err := os.ReadFile(filePath)
+	if err == nil && len(data) > 0 {
+		_ = json.Unmarshal(data, &announcements)
+	}
+
+	announcements = append([]model.Notification{announcement}, announcements...)
+	updatedData, err := json.MarshalIndent(announcements, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filePath, updatedData, 0644)
+}
+
+func saveMemberNotificationToFile(notification model.MemberNotification) error {
+	filePath := getMemberNotificationsFilePath()
+	var notifications []model.MemberNotification
+	data, err := os.ReadFile(filePath)
+	if err == nil && len(data) > 0 {
+		_ = json.Unmarshal(data, &notifications)
+	}
+
+	notifications = append(notifications, notification)
+	updatedData, err := json.MarshalIndent(notifications, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filePath, updatedData, 0644)
+}
+
+func formatAnnouncementSubject(title, priority string) string {
+	switch priority {
+	case "urgent":
+		return "🚨 URGENT: " + title
+	case "high":
+		return "⚠️ IMPORTANT: " + title
+	default:
+		return "📢 " + title
+	}
+}
+
+func buildAnnouncementEmailContent(title, message, priority string) string {
+	var priorityColor, priorityBadge string
+	switch priority {
+	case "urgent":
+		priorityColor = "#ff4444"
+		priorityBadge = "URGENT"
+	case "high":
+		priorityColor = "#ff8800"
+		priorityBadge = "HIGH PRIORITY"
+	default:
+		priorityColor = "#44aa00"
+		priorityBadge = "NORMAL"
+	}
+
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head><style>body { font-family: Arial, sans-serif; }</style></head>
+<body>
+    <div style="padding: 20px;">
+        <span style="background:%s; color:white; padding:3px 8px; font-weight:bold;">%s</span>
+        <h3>%s</h3>
+        <p>%s</p>
+    </div>
+</body>
+</html>`, priorityColor, priorityBadge, title, message)
+}
+
+func sendAdminSubscriptionEmail(data AdminSubscriptionData) error {
+	cfg := config.GetConfig()
+	adminEmail := cfg.AdminEmail
+	if adminEmail == "" {
+		return nil
+	}
+
+	amountInRupees := float64(data.Amount) / 100
+	subject := fmt.Sprintf("💰 New Subscription Payment: %s", data.SubscriptionName)
+	body := fmt.Sprintf("Payment ID: %s, Amount: ₹%.2f, Member: %s (%s)", data.PaymentID, amountInRupees, data.MemberName, data.MemberEmail)
+	return sendEmail(adminEmail, subject, body)
+}
+
+func sendAdminRoomBookingEmail(data AdminRoomBookingData) error {
+	cfg := config.GetConfig()
+	adminEmail := cfg.AdminEmail
+	if adminEmail == "" {
+		return nil
+	}
+
+	amountInRupees := float64(data.Amount) / 100
+	subject := fmt.Sprintf("🏨 New Room Booking: %s", data.RoomName)
+	body := fmt.Sprintf("Payment ID: %s, Amount: ₹%.2f, Booker: %s (%s)", data.PaymentID, amountInRupees, data.BookerName, data.BookerPhone)
+	return sendEmail(adminEmail, subject, body)
 }
