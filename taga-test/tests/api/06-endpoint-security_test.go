@@ -34,11 +34,6 @@ var SwaggerEndpoints = []EndpointDefinition{
 	{Method: "GET", Path: "/api/member/banner", Category: "Public Info", ExpectedProtected: false},
 	{Method: "POST", Path: "/api/webhook/razorpay", Category: "Webhook", ExpectedProtected: false},
 
-	// Resources (Public)
-	{Method: "GET", Path: "/api/resources", Category: "Resources", ExpectedProtected: false},
-	{Method: "GET", Path: "/api/resources/external-links", Category: "Resources", ExpectedProtected: false},
-	{Method: "GET", Path: "/api/resources/1", Category: "Resources", ExpectedProtected: false},
-
 	// Events & Gallery (Public)
 	{Method: "GET", Path: "/api/events/upcoming", Category: "Events", ExpectedProtected: false},
 	{Method: "GET", Path: "/api/gallery/years", Category: "Gallery", ExpectedProtected: false},
@@ -50,6 +45,11 @@ var SwaggerEndpoints = []EndpointDefinition{
 	{Method: "GET", Path: "/api/office-bearers/district-office-bearers", Category: "Office Bearers", ExpectedProtected: false},
 	{Method: "GET", Path: "/api/office", Category: "Office", ExpectedProtected: false},
 
+	// Resources
+	{Method: "GET", Path: "/api/resources", Category: "Resources", ExpectedProtected: true},
+	{Method: "GET", Path: "/api/resources/external-links", Category: "Resources", ExpectedProtected: true},
+	{Method: "GET", Path: "/api/resources/1", Category: "Resources", ExpectedProtected: true},
+
 	// Grievances (Public)
 	{Method: "GET", Path: "/api/grievances", Category: "Grievances", ExpectedProtected: true},
 	{Method: "GET", Path: "/api/categories", Category: "Grievances", ExpectedProtected: true},
@@ -60,12 +60,13 @@ var SwaggerEndpoints = []EndpointDefinition{
 	{Method: "GET", Path: "/api/towers/availability", Category: "TAGA Towers", ExpectedProtected: true},
 
 	// Member Auth Entry Points (Public)
-	{Method: "POST", Path: "/api/auth/forgot-password", Category: "Member Auth", ExpectedProtected: false},
-	{Method: "POST", Path: "/api/auth/reset-password", Category: "Member Auth", ExpectedProtected: true},
-	{Method: "POST", Path: "/api/auth/member-forgot-password", Category: "Member Auth", ExpectedProtected: false},
-	{Method: "POST", Path: "/api/member/login", Category: "Member Auth", ExpectedProtected: false},
-	{Method: "POST", Path: "/api/member/logout", Category: "Member Auth", ExpectedProtected: true},
 	{Method: "POST", Path: "/api/admin/login", Category: "Admin Login", ExpectedProtected: false},
+	{Method: "POST", Path: "/api/member/login", Category: "Member Auth", ExpectedProtected: false},
+	{Method: "POST", Path: "/api/auth/forgot-password", Category: "Member Auth", ExpectedProtected: false},
+	{Method: "POST", Path: "/api/auth/member-forgot-password", Category: "Member Auth", ExpectedProtected: false},
+
+	{Method: "POST", Path: "/api/auth/reset-password", Category: "Member Auth", ExpectedProtected: true},
+	{Method: "POST", Path: "/api/member/logout", Category: "Member Auth", ExpectedProtected: true},
 
 	// Member Protected Routes (Auth Required)
 	{Method: "GET", Path: "/api/member/profile", Category: "Member Protected", ExpectedProtected: true},
