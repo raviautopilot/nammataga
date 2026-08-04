@@ -149,6 +149,53 @@ func LoginAsMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 	r.Advice = append(r.Advice, "Member logged in successfully.")
 }
 
+// VisitAllMemberPages navigates through all member-accessible pages and captures screenshots.
+func VisitAllMemberPages(mai MemberActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Visit All Member Pages"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+	
+	// Define navigation sequence
+	pages := []struct {
+		TestID         string
+		ScreenshotName string
+		WaitTime       time.Duration
+	}{
+		{"testid-home-button", "Step_03_Home_Page", 2 * time.Second},
+		{"testid-office-bearers-button", "Step_04_Office_Bearers_Page", 2 * time.Second},
+		{"testid-resources-button", "Step_05_Resources_Page", 2 * time.Second},
+		{"testid-events-button", "Step_06_Events_Gallery_Page", 2 * time.Second},
+		{"testid-upcoming-events-button", "Step_07_Upcoming_Events_Page", 2 * time.Second}, // Sub-tab of Events
+		{"testid-taga-towers-button", "Step_08_TAGATowers_Page", 2 * time.Second},
+		{"testid-grievance-button", "Step_09_Grievance_Page", 2 * time.Second},
+		{"testid-membership-button", "Step_10_Member_Profile_Page", 2 * time.Second}, // Membership default is Profile
+		{"testid-member-subscriptions-button", "Step_11_Subscriptions_Page", 2 * time.Second}, // Sub-tab of Membership
+		{"testid-member-announcements-button", "Step_12_Announcements_Page", 2 * time.Second}, // Sub-tab of Membership
+	}
+
+	for _, page := range pages {
+		if err := mp.Page.ClickByTestID(page.TestID, mp.DefaultTimeout); err != nil {
+			r.Status = "failed"
+			r.Error = err
+			r.Advice = append(r.Advice, fmt.Sprintf("Advice: Verify '%s' element exists", page.TestID))
+			return
+		}
+		
+		time.Sleep(page.WaitTime)
+		
+		if scr, scrErr := mp.Page.CaptureScreenshot(page.ScreenshotName); scrErr == nil {
+			r.Evidence = append(r.Evidence, scr)
+		}
+	}
+	
+	r.Advice = append(r.Advice, "Successfully visited all member pages.")
+}
+
 // LogoutMember logs out the member persona.
 func LogoutMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 	actionName := "Logout Member"
@@ -172,7 +219,7 @@ func LogoutMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 	_ = homePage.GoToHome(mp.BaseURL)
 	time.Sleep(2 * time.Second)
 
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_03_MemberLogout_HomePage"); scrErr == nil {
+	if scr, scrErr := mp.Page.CaptureScreenshot("Step_13_MemberLogout_HomePage"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, "Member logged out successfully.")
