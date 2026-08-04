@@ -267,7 +267,7 @@ func SetupRouter() *gin.Engine {
 	legacyAdmin := r.Group("/admin")
 	legacyAdmin.Use(middleware.AdminAuthMiddleware())
 	{
-		legacyAdmin.POST("/upload-registration", handler.UploadMemberRegistration)
+		legacyAdmin.POST("/upload-registration", handler.HandleMemberRegistration)
 	}
 
 	// ==================== SWAGGER ====================

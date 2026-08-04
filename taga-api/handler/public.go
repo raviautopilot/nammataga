@@ -139,6 +139,19 @@ func GetLogo(c *gin.Context) {
 	respondOK(c, gin.H{"url": "/images/logo/logo1.jpg"})
 }
 
+// GetMemberBanner godoc
+// @Summary Get member banner image info
+// @Description Get the relative path/url of the member banner image
+// @Tags member
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router /api/member-banner [get]
+func GetMemberBanner(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"image": "/api/images/member-banner.jpg",
+	})
+}
+
 // OfficeHandler retrieves office bearer information
 // @Summary Get office bearer information
 // @Tags office

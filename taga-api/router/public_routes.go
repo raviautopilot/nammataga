@@ -23,6 +23,7 @@ func RegisterPublicRoutes(r *gin.Engine) {
 		about.GET("/contact", handler.AboutContactHandler)
 	}
 	r.GET("/api/logo", handler.GetLogo)
+	r.GET("/api/member-banner", handler.GetMemberBanner)
 
 	// Razorpay Webhook
 	r.POST("/api/webhook/razorpay", handler.WebhookHandler)
@@ -74,4 +75,5 @@ func RegisterPublicRoutes(r *gin.Engine) {
 	}
 	r.GET("/api/categories", handler.GetCategories)
 	r.GET("/api/priorities", handler.GetPriorities)
+	r.GET("/api/grievance-banner", handler.GetGrievanceBanner)
 }
