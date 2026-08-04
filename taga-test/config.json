@@ -33,7 +33,7 @@
   "memberLoginPasswordInputTestID": "testid-login-password-input",
   "memberLoginSubmitButtonTestID": "testid-login-submit-button",
   "logoutButtonTestID": "testid-logout-button",
-  "newMemberEmail": "sudhantest08@gmail.com",
+  "newMemberEmail": "sudhantemproraytest@gmail.com",
   "newMemberFormData": {
     "tagaId": "TAGA999",
     "name": "Test Member Sudhan",
@@ -48,8 +48,8 @@
     "recruitmentBatch": "2022",
     "seniorityNumber": "SN12345",
     "dateOfBirth": "1995-05-15",
-    "mobileNumber": "9944637545",
-    "email": "sudhantest08@gmail.com",
+    "mobileNumber": "9944637500",
+    "email": "sudhantemproraytest@gmail.com",
     "tbfNumber": "TBF999",
     "cpsGpfNumber": "CPS888",
     "residentialAddress": "123 Test Street, Chennai",
@@ -87,7 +87,7 @@
   "adminBulkUploadFileInputTestID": "testid-bulk-upload-file-input",
   "adminBulkUploadSubmitButtonTestID": "testid-bulk-upload-submit-button",
   "bulkMemberEmails": [
-    "raviautopilot@gmail.com"
+    "raviautopilot1@gmail.com"
   ],
   "bulkMemberMobiles": [
     "9800000001"
