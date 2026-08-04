@@ -668,7 +668,10 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
                 // For any subscription that is paid (including annual) – but need‑based should NEVER be marked as paid
                 else if (!sub.needBased && isPaid) {
                   actionComponent = (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 text-green-700 text-sm font-medium">
+                    <span
+                      data-testid={`testid-paid-badge-${sub.id}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 text-green-700 text-sm font-medium"
+                    >
                       <span className="w-2 h-2 rounded-full bg-green-500" />
                       Paid
                     </span>
@@ -678,6 +681,7 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
                 else {
                   actionComponent = (
                     <button
+                      data-testid={`testid-pay-now-${sub.id}-button`}
                       className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-medium transition-colors"
                       onClick={() => {
                         setSelectedSubscription(sub);
