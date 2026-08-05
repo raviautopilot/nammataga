@@ -463,3 +463,259 @@ func CancelLatestBooking(mai MemberActionsInterface, cfg *config.Config, r *Resu
 		r.Evidence = append(r.Evidence, scr)
 	}
 }
+
+// BookRoomForGuest performs a booking for a guest rather than the logged-in member.
+func BookRoomForGuest(mai MemberActionsInterface, cfg *config.Config, r *Result, roomID string, guestName string, guestAge string, guestContact string) {
+	actionName := "Book TAGA Tower Room for Guest: " + roomID
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// Wait for room to load before clicking
+	bookBtnID := fmt.Sprintf("testid-room-%s-book-button", roomID)
+	if _, err := mp.Page.WaitUntilVisible(fmt.Sprintf("css:[data-testid='%s']", bookBtnID), mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("room button %s did not become visible: %v", bookBtnID, err)
+		r.Advice = append(r.Advice, "Advice: Room availability might not be loaded or room does not exist")
+		return
+	}
+
+	// Click Book on the specific room using JS to bypass sticky navbar
+	jsClickScript := fmt.Sprintf(`
+		const btn = document.querySelector('[data-testid="%s"]');
+		if(btn) {
+			btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+			setTimeout(() => btn.click(), 500);
+			return true;
+		}
+		return false;
+	`, bookBtnID)
+	
+	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
+	if err != nil || clicked == false {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to find or click %s: %v", bookBtnID, err)
+		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Verify %s exists and room is available", bookBtnID))
+		return
+	}
+	time.Sleep(2 * time.Second) // wait for modal to open
+
+	// Fill Modal: Booker Phone Number
+	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-booker-phone-input' exists")
+		return
+	}
+
+	// Select "Guest" / "Others"
+	if _, err := mp.Page.Driver.ExecuteScript("document.getElementById('guest').click();", nil); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Failed to select 'Guest' radio option")
+		return
+	}
+	time.Sleep(1 * time.Second) // wait for guest input fields to appear
+
+	// Fill Guest 1 details
+	if err := mp.Page.SendKeysByTestID("testid-guest-1-name-input", guestName, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+	if err := mp.Page.SendKeysByTestID("testid-guest-1-age-input", guestAge, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+	if err := mp.Page.SendKeysByTestID("testid-guest-1-contact-input", guestContact, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	// Capture modal state
+	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_GuestBooking_Modal_%s", roomID)); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Mocking Razorpay
+	mockScript := `
+	window.Razorpay = function(options) {
+		this.open = function() {
+			options.handler({
+				razorpay_order_id: "mock_order_tower_guest_123",
+				razorpay_payment_id: "pay_mock_tower_guest_123",
+				razorpay_signature: "mock_signature"
+			});
+		};
+	};`
+	mp.Page.Driver.ExecuteScript(mockScript, nil)
+
+	// Click proceed
+	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify payment button exists")
+		return
+	}
+	time.Sleep(3 * time.Second)
+
+	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_GuestBooking_Complete_%s", roomID)); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+}
+
+// BookAllBedsInRoom performs a booking for all beds in a dormitory or regular room.
+func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result, roomID string, capacity int) {
+	actionName := "Book All Beds in Room: " + roomID
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// Wait for room to load before clicking
+	bookBtnID := fmt.Sprintf("testid-room-%s-book-button", roomID)
+	if _, err := mp.Page.WaitUntilVisible(fmt.Sprintf("css:[data-testid='%s']", bookBtnID), mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("room button %s did not become visible: %v", bookBtnID, err)
+		r.Advice = append(r.Advice, "Advice: Room availability might not be loaded or room does not exist")
+		return
+	}
+
+	// Click Book on the specific room using JS to bypass sticky navbar
+	jsClickScript := fmt.Sprintf(`
+		const btn = document.querySelector('[data-testid="%s"]');
+		if(btn) {
+			btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+			setTimeout(() => btn.click(), 500);
+			return true;
+		}
+		return false;
+	`, bookBtnID)
+	
+	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
+	if err != nil || clicked == false {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to find or click %s: %v", bookBtnID, err)
+		return
+	}
+	time.Sleep(2 * time.Second) // wait for modal to open
+
+	// Fill Modal: Booker Phone Number
+	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	// Select "Guest" / "Others"
+	if _, err := mp.Page.Driver.ExecuteScript("document.getElementById('guest').click();", nil); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Check if Bed Count Select is visible in the UI (only for rooms allowing single beds)
+	checkSelectScript := `return !!document.querySelector('[data-testid="testid-bed-count-select"]');`
+	hasSelectObj, err := mp.Page.Driver.ExecuteScript(checkSelectScript, nil)
+	if err == nil && hasSelectObj == true {
+		// Select Bed Count (Capacity)
+		if err := mp.Page.ClickByTestID("testid-bed-count-select", mp.DefaultTimeout); err == nil {
+			time.Sleep(1 * time.Second)
+			bedText := fmt.Sprintf("%d bed", capacity)
+			selectOptionScript := fmt.Sprintf(`
+				const options = document.querySelectorAll('[role="option"]');
+				for(let opt of options) {
+					if(opt.textContent.includes('%s')) {
+						opt.click();
+						return true;
+					}
+				}
+				return false;
+			`, bedText)
+			_, _ = mp.Page.Driver.ExecuteScript(selectOptionScript, nil)
+			time.Sleep(1 * time.Second)
+		}
+	}
+
+	// Fill guest details one by one and click "Add Guest" if there are more
+	for i := 0; i < capacity; i++ {
+		idx := i + 1
+		nameID := fmt.Sprintf("testid-guest-%d-name-input", idx)
+		ageID := fmt.Sprintf("testid-guest-%d-age-input", idx)
+		contactID := fmt.Sprintf("testid-guest-%d-contact-input", idx)
+
+		// Fill name
+		nameVal := fmt.Sprintf("Male Guest %d", idx)
+		if err := mp.Page.SendKeysByTestID(nameID, nameVal, mp.DefaultTimeout); err != nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("failed to fill guest %d name: %v", idx, err)
+			return
+		}
+
+		// Fill age
+		ageVal := fmt.Sprintf("%d", 20+i)
+		if err := mp.Page.SendKeysByTestID(ageID, ageVal, mp.DefaultTimeout); err != nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("failed to fill guest %d age: %v", idx, err)
+			return
+		}
+
+		// Fill contact
+		contactVal := fmt.Sprintf("98765432%02d", idx)
+		if err := mp.Page.SendKeysByTestID(contactID, contactVal, mp.DefaultTimeout); err != nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("failed to fill guest %d contact: %v", idx, err)
+			return
+		}
+
+		// Click "Add Guest" if we still have more guests to fill
+		if idx < capacity {
+			if err := mp.Page.ClickByTestID("testid-add-guest-button", mp.DefaultTimeout); err != nil {
+				r.Status = "failed"
+				r.Error = fmt.Errorf("failed to click testid-add-guest-button for guest %d: %v", idx+1, err)
+				return
+			}
+			time.Sleep(500 * time.Millisecond) // wait for new inputs to render
+		}
+	}
+
+	// Capture modal state
+	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_AllRoomBooking_Modal_%s", roomID)); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Mocking Razorpay
+	mockScript := `
+	window.Razorpay = function(options) {
+		this.open = function() {
+			options.handler({
+				razorpay_order_id: "mock_order_tower_allroom_123",
+				razorpay_payment_id: "pay_mock_tower_allroom_123",
+				razorpay_signature: "mock_signature"
+			});
+		};
+	};`
+	mp.Page.Driver.ExecuteScript(mockScript, nil)
+
+	// Click proceed
+	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+	time.Sleep(3 * time.Second)
+
+	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_AllRoomBooking_Complete_%s", roomID)); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+}
