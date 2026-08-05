@@ -315,3 +315,151 @@ func LogoutMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 	r.Advice = append(r.Advice, "Member logged out successfully.")
 }
 
+// NavigateToTAGATower navigates a logged-in member to the TAGA Towers page.
+func NavigateToTAGATower(mai MemberActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Navigate to TAGA Towers"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	if err := mp.Page.ClickByTestID("testid-taga-towers-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-taga-towers-button' exists on the sidebar")
+		return
+	}
+	time.Sleep(2 * time.Second)
+
+	if scr, scrErr := mp.Page.CaptureScreenshot("Step_03_TAGATower_Dashboard"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+}
+
+// BookSimpleRoom performs a straightforward booking for the logged-in member.
+func BookSimpleRoom(mai MemberActionsInterface, cfg *config.Config, r *Result, roomID string) {
+	actionName := "Book Simple TAGA Tower Room: " + roomID
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// Wait for room to load before clicking
+	bookBtnID := fmt.Sprintf("testid-room-%s-book-button", roomID)
+	if _, err := mp.Page.WaitUntilVisible(fmt.Sprintf("css:[data-testid='%s']", bookBtnID), mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("room button %s did not become visible: %v", bookBtnID, err)
+		r.Advice = append(r.Advice, "Advice: Room availability might not be loaded or room does not exist")
+		return
+	}
+
+	// Click Book on the specific room using JS to bypass sticky navbar
+	jsClickScript := fmt.Sprintf(`
+		const btn = document.querySelector('[data-testid="%s"]');
+		if(btn) {
+			btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+			setTimeout(() => btn.click(), 500);
+			return true;
+		}
+		return false;
+	`, bookBtnID)
+	
+	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
+	if err != nil || clicked == false {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to find or click %s: %v", bookBtnID, err)
+		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Verify %s exists and room is available", bookBtnID))
+		return
+	}
+	time.Sleep(2 * time.Second) // wait for modal to open
+
+	// Fill Modal: Phone Number
+	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-booker-phone-input' exists")
+		return
+	}
+
+	// Capture modal state
+	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_Booking_Modal_%s", roomID)); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Mocking Razorpay
+	mockScript := `
+	window.Razorpay = function(options) {
+		this.open = function() {
+			options.handler({
+				razorpay_order_id: "mock_order_tower_123",
+				razorpay_payment_id: "pay_mock_tower_123",
+				razorpay_signature: "mock_signature"
+			});
+		};
+	};`
+	mp.Page.Driver.ExecuteScript(mockScript, nil)
+
+	// Click proceed
+	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify payment button exists")
+		return
+	}
+	time.Sleep(3 * time.Second)
+
+	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_Booking_Complete_%s", roomID)); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+}
+
+// CancelLatestBooking cancels the most recently created booking by clicking the first cancel button.
+func CancelLatestBooking(mai MemberActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Cancel Latest Booking"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// Locate and click the first cancel button matching the partial data-testid
+	clickCancelScript := `
+	const cancelBtns = document.querySelectorAll('[data-testid$="-cancel-button"]');
+	for (let btn of cancelBtns) {
+		if (btn.getAttribute('data-testid').startsWith('testid-booking-')) {
+			btn.click();
+			return true;
+		}
+	}
+	return false;
+	`
+	clicked, err := mp.Page.Driver.ExecuteScript(clickCancelScript, nil)
+	if err != nil || clicked == false {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to find or click a booking cancel button: %v", err)
+		r.Advice = append(r.Advice, "Advice: Make sure a booking exists in 'My Bookings'")
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Confirm cancellation in the modal
+	if err := mp.Page.ClickByTestID("testid-confirm-booking-cancel-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-confirm-booking-cancel-button' exists in modal")
+		return
+	}
+	time.Sleep(3 * time.Second)
+
+	if scr, scrErr := mp.Page.CaptureScreenshot("Step_06_TAGATower_Booking_Cancelled"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+}
