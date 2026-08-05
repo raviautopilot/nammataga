@@ -331,6 +331,66 @@ func BulkUploadMembers(aai AdminActionsInterface, cfg *config.Config, fixtureRel
 	r.Advice = append(r.Advice, "Bulk CSV uploaded successfully.")
 }
 
+// DownloadExcelReports generates the membership report with all-time selection and exports the member list table.
+func DownloadExcelReports(aai AdminActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Download Excel Reports"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	ap := aai.GetAdminPersona()
+
+	// 1. Generate Excel Report (Membership Report - All Time)
+	if err := ap.Page.ClickByTestID("testid-generate-excel-report-button", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-generate-excel-report-button' exists on Admin Panel")
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Select 'All Time' from period dropdown
+	if err := ap.Page.SelectCustomDropdownByText("testid-report-period-select", "All Time", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Failed to select 'All Time' from report period dropdown")
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Click download
+	if err := ap.Page.ClickByTestID("testid-download-excel-report-button", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-download-excel-report-button' exists in the report modal")
+		return
+	}
+	
+	// Screenshot: after triggering first download
+	time.Sleep(3 * time.Second) 
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_MembershipReport_Downloaded"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 2. Export Member List Table Excel
+	if err := ap.Page.ClickByTestID("testid-export-excel-button", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-export-excel-button' exists above the member list table")
+		return
+	}
+	
+	// Screenshot: after triggering second download
+	time.Sleep(3 * time.Second) 
+	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_MemberListTable_Downloaded"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	r.Advice = append(r.Advice, "Both excel reports generated and downloaded successfully.")
+}
+
 // Logout Admin persona.
 func LogoutAdmin(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	actionName := "Logout Admin"
