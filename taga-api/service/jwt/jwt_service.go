@@ -129,7 +129,7 @@ func ValidateAdminToken(tokenString string) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
-// ValidateMemberToken validates token and checks if role is member
+// ValidateMemberToken validates token and checks if role is member or admin
 func ValidateMemberToken(tokenString string) (jwt.MapClaims, error) {
 	claims, err := ValidateToken(tokenString)
 	if err != nil {
@@ -137,8 +137,8 @@ func ValidateMemberToken(tokenString string) (jwt.MapClaims, error) {
 	}
 
 	role, ok := claims["role"]
-	if !ok || role != RoleMember {
-		return nil, fmt.Errorf("member access required")
+	if !ok || (role != RoleMember && role != RoleAdmin) {
+		return nil, fmt.Errorf("member or admin access required")
 	}
 
 	return claims, nil

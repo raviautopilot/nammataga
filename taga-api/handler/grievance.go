@@ -214,18 +214,7 @@ func DeleteGrievance(c *gin.Context) {
 	})
 }
 
-// GetGrievanceBanner godoc
-// @Summary Get grievance banner image info
-// @Description Get the relative path/url of the grievance banner image
-// @Tags Grievances
-// @Produce json
-// @Success 200 {object} map[string]string
-// @Router /api/grievance-banner [get]
-func GetGrievanceBanner(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"image": "/images/grievance-banner.jpg",
-	})
-}
+
 
 // GetCategories godoc
 // @Summary Get grievance categories
@@ -269,4 +258,17 @@ func GetPriorities(c *gin.Context) {
 	json.Unmarshal(file, &priorities)
 
 	c.JSON(http.StatusOK, priorities)
+}
+
+// GetGrievanceBanner godoc
+// @Summary Get grievance banner image info
+// @Description Get the relative path/url of the grievance banner image
+// @Tags Grievances
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router /api/grievance-banner [get]
+func GetGrievanceBanner(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"image": "/api/images/grievance-banner.jpg",
+	})
 }

@@ -116,7 +116,7 @@ func SetupRouter() *gin.Engine {
 	r.GET("/api/office", handler.OfficeHandler)
 	r.GET("/api/office/:pathParam", handler.OfficeHandler)
 
-	// Grievances (Public)
+	// Grievances
 	r.POST("/api/grievances", handler.CreateGrievance)
 	r.GET("/api/grievances", handler.GetGrievances)
 	r.GET("/api/grievances/:id", handler.GetGrievanceByID)
@@ -267,7 +267,7 @@ func SetupRouter() *gin.Engine {
 	legacyAdmin := r.Group("/admin")
 	legacyAdmin.Use(middleware.AdminAuthMiddleware())
 	{
-		legacyAdmin.POST("/upload-registration", handler.UploadMemberRegistration)
+		legacyAdmin.POST("/upload-registration", handler.HandleMemberRegistration)
 	}
 
 	// ==================== SWAGGER ====================
