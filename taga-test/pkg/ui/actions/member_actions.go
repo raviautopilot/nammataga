@@ -875,7 +875,7 @@ func TryBookRoomAsSelfMultibooking(mai MemberActionsInterface, cfg *config.Confi
 	r.Advice = append(r.Advice, "Advice: Update frontend and backend validation to disallow BedCount > 1 when booking for Self")
 }
 
-// SelectFutureDates clicks the next month button on the calendar and selects a free date range.
+// SelectFutureDates selects a safe future date range (tomorrow and day after) within the 10-day limit.
 func SelectFutureDates(mai MemberActionsInterface, r *Result) {
 	actionName := "Select Future Dates in Calendar"
 	r.Actions = append(r.Actions, actionName)
@@ -886,36 +886,28 @@ func SelectFutureDates(mai MemberActionsInterface, r *Result) {
 
 	mp := mai.GetMemberPersona()
 
-	selectFutureDatesScript := `
-	// Click Next Month button
-	const nextBtn = document.querySelector('button.rdp-nav_button_next') || 
-	                document.querySelector('button[name="next-button"]') ||
-	                document.querySelector('.rdp-nav_button_next button');
-	if (nextBtn) {
-		nextBtn.click();
-		return true;
-	}
-	return false;
-	`
-
-	clicked, err := mp.Page.Driver.ExecuteScript(selectFutureDatesScript, nil)
-	if err != nil || clicked == false {
-		r.Advice = append(r.Advice, "Note: Next month button not found or clicked, proceeding with default dates")
-		return
-	}
-	time.Sleep(1 * time.Second)
-
-	// Select two active days in the next month
 	clickDaysScript := `
-	const days = Array.from(document.querySelectorAll('button.rdp-day')).filter(btn => {
-		return !btn.disabled && 
-		       !btn.classList.contains('rdp-day_outside') && 
-		       btn.getAttribute('aria-disabled') !== 'true';
+	const calendar = document.querySelector('[data-testid="testid-room-date-range-calendar"]');
+	if (!calendar) return false;
+	const buttons = Array.from(calendar.querySelectorAll('button'));
+	const days = buttons.filter(btn => {
+		const text = btn.textContent.trim();
+		const num = Number(text);
+		return !isNaN(num) && num >= 1 && num <= 31 && 
+		       !btn.disabled && 
+		       btn.getAttribute('aria-disabled') !== 'true' &&
+		       !btn.classList.contains('day-outside') &&
+		       !btn.classList.contains('rdp-day_outside');
 	});
-	if (days.length >= 5) {
-		days[2].click();
+	if (days.length >= 3) {
+		const clickEl = (el) => {
+			['mousedown', 'mouseup', 'click'].forEach(type => {
+				el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+			});
+		};
+		clickEl(days[1]);
 		setTimeout(() => {
-			days[3].click();
+			clickEl(days[2]);
 		}, 300);
 		return true;
 	}
@@ -1291,5 +1283,136 @@ func TryBookDormitoryWithOppositeGender(mai MemberActionsInterface, cfg *config.
 	r.Error = fmt.Errorf("security vulnerability: dormitory %s allowed booking for prohibited gender %s", roomID, prohibitedGender)
 	mp.Page.LastError = r.Error
 	r.Advice = append(r.Advice, fmt.Sprintf("Advice: Enforce gender checks in frontend and backend for gender-specific dormitory: %s", roomID))
+}
+
+// BookRoomForTenDays books a room for a duration of 10 days (from today to today + 9 days).
+func BookRoomForTenDays(mai MemberActionsInterface, cfg *config.Config, r *Result, roomID string) {
+	actionName := "Book Room for 10 Days: " + roomID
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// Select start date (today) twice, then select 10th day (today + 9 days) once
+	selectDatesScript := `
+	const calendar = document.querySelector('[data-testid="testid-room-date-range-calendar"]');
+	if (!calendar) return false;
+	const buttons = Array.from(calendar.querySelectorAll('button'));
+	const days = buttons.filter(btn => {
+		const text = btn.textContent.trim();
+		const num = Number(text);
+		return !isNaN(num) && num >= 1 && num <= 31 && 
+		       !btn.disabled && 
+		       btn.getAttribute('aria-disabled') !== 'true' &&
+		       !btn.classList.contains('day-outside') &&
+		       !btn.classList.contains('rdp-day_outside');
+	});
+	if (days.length >= 10) {
+		const clickEl = (el) => {
+			['mousedown', 'mouseup', 'click'].forEach(type => {
+				el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+			});
+		};
+		// Click check-in date (today) twice
+		clickEl(days[0]);
+		setTimeout(() => {
+			clickEl(days[0]);
+			// Click check-out date (10th day) after another delay
+			setTimeout(() => {
+				clickEl(days[9]);
+			}, 300);
+		}, 300);
+		return true;
+	}
+	return false;
+	`
+	selected, err := mp.Page.Driver.ExecuteScript(selectDatesScript, nil)
+	if err != nil || selected == false {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to select 10 days range on calendar: %v", err)
+		return
+	}
+	time.Sleep(3 * time.Second) // wait for UI/room list to refresh
+
+	// Verify if the room book button is visible.
+	// If it's not visible or full, this is the bug! The test should fail here.
+	bookBtnID := fmt.Sprintf("testid-room-%s-book-button", roomID)
+	checkVisibleScript := fmt.Sprintf(`
+		const btn = document.querySelector('[data-testid="%s"]');
+		return !!btn && btn.offsetParent !== null && !btn.disabled;
+	`, bookBtnID)
+	visibleObj, err := mp.Page.Driver.ExecuteScript(checkVisibleScript, nil)
+	visible, _ := visibleObj.(bool)
+
+	if err != nil || !visible {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("bug detected: room %s is not available or shown as full for a 10-day booking", roomID)
+		mp.Page.LastError = r.Error
+		r.Advice = append(r.Advice, "Advice: Fix the frontend room availability filter logic when handling 10-day bookings")
+		
+		// Capture failure screenshot
+		if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_10DaysBooking_FullBug_%s", roomID)); scrErr == nil {
+			r.Evidence = append(r.Evidence, scr)
+		}
+		return
+	}
+
+	// Click Book on the specific room using JS to bypass sticky navbar
+	jsClickScript := fmt.Sprintf(`
+		const btn = document.querySelector('[data-testid="%s"]');
+		if(btn) {
+			btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+			setTimeout(() => btn.click(), 500);
+			return true;
+		}
+		return false;
+	`, bookBtnID)
+	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
+	if err != nil || clicked == false {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click book button for %s: %v", roomID, err)
+		return
+	}
+	time.Sleep(2 * time.Second)
+
+	// Fill Modal: Booker Phone Number
+	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	// Capture modal state
+	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_10DaysBooking_Modal_%s", roomID)); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Mocking Razorpay
+	mockScript := `
+	window.Razorpay = function(options) {
+		this.open = function() {
+			options.handler({
+				razorpay_order_id: "mock_order_tower_10days_123",
+				razorpay_payment_id: "pay_mock_tower_10days_123",
+				razorpay_signature: "mock_signature"
+			});
+		};
+	};`
+	mp.Page.Driver.ExecuteScript(mockScript, nil)
+
+	// Click proceed
+	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+	time.Sleep(3 * time.Second)
+
+	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_10DaysBooking_Complete_%s", roomID)); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
 }
 
