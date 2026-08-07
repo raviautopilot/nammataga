@@ -1161,3 +1161,135 @@ func TryBookSingleBedWithGenderOpposite(mai MemberActionsInterface, cfg *config.
 	r.Advice = append(r.Advice, "Advice: Update frontend to send gender for all single-bed rooms and ensure backend checks are enforced")
 }
 
+// TryBookDormitoryWithOppositeGender tries to book a bed in a gender-specific dormitory (gents-dorm or ladies-dorm)
+// with the prohibited gender, expecting it to be disallowed.
+func TryBookDormitoryWithOppositeGender(mai MemberActionsInterface, cfg *config.Config, r *Result, roomID string, prohibitedGender string) {
+	actionName := fmt.Sprintf("Try Book Dormitory %s with Prohibited Gender %s", roomID, prohibitedGender)
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// Wait for room to load before clicking
+	bookBtnID := fmt.Sprintf("testid-room-%s-book-button", roomID)
+	if _, err := mp.Page.WaitUntilVisible(fmt.Sprintf("css:[data-testid='%s']", bookBtnID), mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("dormitory button %s did not become visible: %v", bookBtnID, err)
+		return
+	}
+
+	// Click Book on the specific room using JS to bypass sticky navbar
+	jsClickScript := fmt.Sprintf(`
+		const btn = document.querySelector('[data-testid="%s"]');
+		if(btn) {
+			btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+			setTimeout(() => btn.click(), 500);
+			return true;
+		}
+		return false;
+	`, bookBtnID)
+	
+	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
+	if err != nil || clicked == false {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to find or click %s: %v", bookBtnID, err)
+		return
+	}
+	time.Sleep(2 * time.Second) // wait for modal to open
+
+	// Fill Modal: Booker Phone Number
+	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	// Ensure Bed Count is 1
+	checkSelectScript := `return !!document.querySelector('[data-testid="testid-bed-count-select"]');`
+	hasSelectObj, err := mp.Page.Driver.ExecuteScript(checkSelectScript, nil)
+	if err == nil && hasSelectObj == true {
+		if err := mp.Page.ClickByTestID("testid-bed-count-select", mp.DefaultTimeout); err == nil {
+			time.Sleep(1 * time.Second)
+			selectOptionScript := `
+				const options = document.querySelectorAll('[role="option"]');
+				for(let opt of options) {
+					if(opt.textContent.includes('1 bed')) {
+						opt.click();
+						return true;
+					}
+				}
+				return false;
+			`
+			_, _ = mp.Page.Driver.ExecuteScript(selectOptionScript, nil)
+			time.Sleep(1 * time.Second)
+		}
+	}
+
+	// Click the prohibited gender radio button
+	genderScript := fmt.Sprintf("document.getElementById('%s').click();", prohibitedGender)
+	if _, err := mp.Page.Driver.ExecuteScript(genderScript, nil); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to select prohibited gender %s: %v", prohibitedGender, err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Capture modal state
+	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_Dormitory_%s_%s_Attempt", roomID, prohibitedGender)); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Mocking Razorpay
+	mockScript := `
+	window.Razorpay = function(options) {
+		this.open = function() {
+			options.handler({
+				razorpay_order_id: "mock_order_dorm_opp_123",
+				razorpay_payment_id: "pay_mock_dorm_opp_123",
+				razorpay_signature: "mock_signature"
+			});
+		};
+	};`
+	mp.Page.Driver.ExecuteScript(mockScript, nil)
+
+	// Click proceed to payment
+	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
+		r.Advice = append(r.Advice, "System prevented proceeding to payment for prohibited gender booking in dormitory.")
+		return
+	}
+	time.Sleep(3 * time.Second)
+
+	// Capture modal state of the allowed (but should be disallowed) booking
+	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_Dormitory_%s_%s_Allowed_Failure", roomID, prohibitedGender)); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Clean up the booking immediately
+	clickCancelScript := `
+	const cancelBtns = document.querySelectorAll('[data-testid$="-cancel-button"]');
+	for (let btn of cancelBtns) {
+		if (btn.getAttribute('data-testid').startsWith('testid-booking-')) {
+			btn.click();
+			return true;
+		}
+	}
+	return false;
+	`
+	clickedCancel, cErr := mp.Page.Driver.ExecuteScript(clickCancelScript, nil)
+	if cErr == nil && clickedCancel == true {
+		time.Sleep(1 * time.Second)
+		if err := mp.Page.ClickByTestID("testid-confirm-booking-cancel-button", mp.DefaultTimeout); err == nil {
+			time.Sleep(3 * time.Second)
+		}
+	}
+
+	// Mark test as failed since prohibited gender booking was allowed
+	r.Status = "failed"
+	r.Error = fmt.Errorf("security vulnerability: dormitory %s allowed booking for prohibited gender %s", roomID, prohibitedGender)
+	mp.Page.LastError = r.Error
+	r.Advice = append(r.Advice, fmt.Sprintf("Advice: Enforce gender checks in frontend and backend for gender-specific dormitory: %s", roomID))
+}
+
