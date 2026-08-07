@@ -871,6 +871,7 @@ func TryBookRoomAsSelfMultibooking(mai MemberActionsInterface, cfg *config.Confi
 	// Mark the result as failed
 	r.Status = "failed"
 	r.Error = fmt.Errorf("security vulnerability: member was allowed to book %d beds for Self (multibooking). Only guest bookings should allow multibed bookings", beds)
+	mp.Page.LastError = r.Error
 	r.Advice = append(r.Advice, "Advice: Update frontend and backend validation to disallow BedCount > 1 when booking for Self")
 }
 
@@ -1156,6 +1157,7 @@ func TryBookSingleBedWithGenderOpposite(mai MemberActionsInterface, cfg *config.
 	// Mark test as failed since opposite gender booking was allowed
 	r.Status = "failed"
 	r.Error = fmt.Errorf("security vulnerability: room %s allowed booking for both male and female concurrently. Gender mixed dorm bookings should be disallowed", roomID)
+	mp.Page.LastError = r.Error
 	r.Advice = append(r.Advice, "Advice: Update frontend to send gender for all single-bed rooms and ensure backend checks are enforced")
 }
 
