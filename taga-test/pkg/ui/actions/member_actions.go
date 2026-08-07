@@ -875,7 +875,7 @@ func TryBookRoomAsSelfMultibooking(mai MemberActionsInterface, cfg *config.Confi
 	r.Advice = append(r.Advice, "Advice: Update frontend and backend validation to disallow BedCount > 1 when booking for Self")
 }
 
-// SelectFutureDates selects a safe future date range (tomorrow and day after) within the 10-day limit.
+// SelectFutureDates clicks the next month button on the calendar and selects a free date range.
 func SelectFutureDates(mai MemberActionsInterface, r *Result) {
 	actionName := "Select Future Dates in Calendar"
 	r.Actions = append(r.Actions, actionName)
@@ -886,28 +886,36 @@ func SelectFutureDates(mai MemberActionsInterface, r *Result) {
 
 	mp := mai.GetMemberPersona()
 
+	selectFutureDatesScript := `
+	// Click Next Month button
+	const nextBtn = document.querySelector('button.rdp-nav_button_next') || 
+	                document.querySelector('button[name="next-button"]') ||
+	                document.querySelector('.rdp-nav_button_next button');
+	if (nextBtn) {
+		nextBtn.click();
+		return true;
+	}
+	return false;
+	`
+
+	clicked, err := mp.Page.Driver.ExecuteScript(selectFutureDatesScript, nil)
+	if err != nil || clicked == false {
+		r.Advice = append(r.Advice, "Note: Next month button not found or clicked, proceeding with default dates")
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Select two active days in the next month
 	clickDaysScript := `
-	const calendar = document.querySelector('[data-testid="testid-room-date-range-calendar"]');
-	if (!calendar) return false;
-	const buttons = Array.from(calendar.querySelectorAll('button'));
-	const days = buttons.filter(btn => {
-		const text = btn.textContent.trim();
-		const num = Number(text);
-		return !isNaN(num) && num >= 1 && num <= 31 && 
-		       !btn.disabled && 
-		       btn.getAttribute('aria-disabled') !== 'true' &&
-		       !btn.classList.contains('day-outside') &&
-		       !btn.classList.contains('rdp-day_outside');
+	const days = Array.from(document.querySelectorAll('button.rdp-day')).filter(btn => {
+		return !btn.disabled && 
+		       !btn.classList.contains('rdp-day_outside') && 
+		       btn.getAttribute('aria-disabled') !== 'true';
 	});
-	if (days.length >= 3) {
-		const clickEl = (el) => {
-			['mousedown', 'mouseup', 'click'].forEach(type => {
-				el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
-			});
-		};
-		clickEl(days[1]);
+	if (days.length >= 5) {
+		days[2].click();
 		setTimeout(() => {
-			clickEl(days[2]);
+			days[3].click();
 		}, 300);
 		return true;
 	}
@@ -1414,5 +1422,92 @@ func BookRoomForTenDays(mai MemberActionsInterface, cfg *config.Config, r *Resul
 	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_10DaysBooking_Complete_%s", roomID)); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
+}
+
+// TryBookOverlappingRoom attempts to book the same room for overlapping dates and expects it to be blocked.
+func TryBookOverlappingRoom(mai MemberActionsInterface, cfg *config.Config, r *Result, roomID string) {
+	actionName := "Try Book Overlapping Room: " + roomID
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// Verify if the room book button is visible and active (not disabled/Full).
+	// If it is disabled or has offsetParent == null (or doesn't exist), that means it's correctly blocked!
+	bookBtnID := fmt.Sprintf("testid-room-%s-book-button", roomID)
+	checkVisibleScript := fmt.Sprintf(`
+		const btn = document.querySelector('[data-testid="%s"]');
+		return !!btn && btn.offsetParent !== null && !btn.disabled;
+	`, bookBtnID)
+	visibleObj, err := mp.Page.Driver.ExecuteScript(checkVisibleScript, nil)
+	visible, _ := visibleObj.(bool)
+
+	if err != nil || !visible {
+		r.Advice = append(r.Advice, "System correctly blocked overlapping booking (room button is disabled/unavailable).")
+		return
+	}
+
+	// Capture modal state of the allowed (but should be disallowed) booking
+	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_Overlapping_Allowed_Failure_%s", roomID)); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Try clicking Book just to see if we can open payment modal
+	jsClickScript := fmt.Sprintf(`
+		const btn = document.querySelector('[data-testid="%s"]');
+		if(btn) {
+			btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+			setTimeout(() => btn.click(), 500);
+			return true;
+		}
+		return false;
+	`, bookBtnID)
+	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
+	if err != nil || clicked == false {
+		r.Advice = append(r.Advice, "System correctly blocked overlapping booking (could not click book button).")
+		return
+	}
+	time.Sleep(2 * time.Second)
+
+	// Fill Modal: Booker Phone Number
+	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
+		r.Advice = append(r.Advice, "System correctly prevented proceeding with overlapping booking.")
+		return
+	}
+
+	// Click proceed
+	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
+		r.Advice = append(r.Advice, "System correctly blocked proceeding to payment for overlapping booking.")
+		return
+	}
+	time.Sleep(3 * time.Second)
+
+	// Clean up the overlapping booking if it got created
+	clickCancelScript := `
+	const cancelBtns = document.querySelectorAll('[data-testid$="-cancel-button"]');
+	for (let btn of cancelBtns) {
+		if (btn.getAttribute('data-testid').startsWith('testid-booking-')) {
+			btn.click();
+			return true;
+		}
+	}
+	return false;
+	`
+	clickedCancel, cErr := mp.Page.Driver.ExecuteScript(clickCancelScript, nil)
+	if cErr == nil && clickedCancel == true {
+		time.Sleep(1 * time.Second)
+		if err := mp.Page.ClickByTestID("testid-confirm-booking-cancel-button", mp.DefaultTimeout); err == nil {
+			time.Sleep(3 * time.Second)
+		}
+	}
+
+	// Mark test as failed since overlapping booking was allowed
+	r.Status = "failed"
+	r.Error = fmt.Errorf("security vulnerability: room %s allowed booking for overlapping dates when it was already occupied", roomID)
+	mp.Page.LastError = r.Error
+	r.Advice = append(r.Advice, "Advice: Enforce strict backend validation to prevent overlapping bookings for the same room")
 }
 
