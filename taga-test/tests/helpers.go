@@ -190,6 +190,30 @@ func stopChromeDriver() {
 	}
 }
 
+func openBrowser(url string) error {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = "cmd"
+		args = []string{"/c", "start", url}
+	case "darwin":
+		cmd = "open"
+		args = []string{url}
+	default: // "linux", "freebsd", "openbsd", "netbsd"
+		cmd = "xdg-open"
+		args = []string{url}
+	}
+	
+	c := exec.Command(cmd, args...)
+	if err := c.Start(); err == nil {
+		return nil
+	}
+	
+	return exec.Command("python3", "-m", "webbrowser", url).Start()
+}
+
 // TeardownSuite generates test execution reports.
 func TeardownSuite() {
 	stopChromeDriver()
@@ -199,6 +223,18 @@ func TeardownSuite() {
 		logger.Error("Failed to compile test reports: %v", err)
 	} else {
 		logger.Info("Test reports generated in '%s' directory.", ExecutionReportDir)
+
+		// Automatically open report in browser if not running in headless mode
+		// and only trigger it during the final 'ui.test' package run.
+		if GlobalConfig != nil && !GlobalConfig.Headless && os.Getenv("E2E_HEADLESS") != "true" && strings.Contains(os.Args[0], "ui.test") {
+			htmlPath := filepath.Join(ExecutionReportDir, "report.html")
+			if absPath, err := filepath.Abs(htmlPath); err == nil {
+				logger.Info("Opening test report: %s", absPath)
+				if err := openBrowser(absPath); err != nil {
+					logger.Error("Failed to open report in browser: %v", err)
+				}
+			}
+		}
 	}
 }
 

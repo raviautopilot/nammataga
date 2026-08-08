@@ -44,7 +44,7 @@ export E2E_RUN_TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 
 # 4. Run the Go E2E tests in headless mode
 echo "Running E2E test suite..."
-E2E_HEADLESS=true go test -v ./tests/... "$@"
+E2E_HEADLESS=true go test -v -timeout 30m ./tests/... "$@"
 TEST_EXIT_CODE=$?
 
 echo "========================================="

@@ -43,7 +43,7 @@ export E2E_RUN_TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 
 # 4. Run UI test suite
 echo "Running UI test suite..."
-go test -v ./tests/ui/... "$@"
+go test -v -timeout 30m ./tests/ui/... "$@"
 TEST_EXIT_CODE=$?
 
 echo "========================================="
