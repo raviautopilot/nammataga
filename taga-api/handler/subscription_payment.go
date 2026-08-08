@@ -14,6 +14,7 @@ import (
 
 	"taga-api/config"
 	"taga-api/model"
+	"taga-api/service/audit"
 	"taga-api/service/member"
 
 	"github.com/gin-gonic/gin"
@@ -341,6 +342,20 @@ func VerifySubscriptionPayment(c *gin.Context) {
 			config.Logger.Error("Failed to update payment status", zap.Error(err))
 		}
 	}
+
+	// Audit subscription payment confirmation
+	_ = audit.Log(c, memberID, req.Email,
+		audit.ActionPaymentConfirmed, audit.ModulePayment,
+		"subscription", req.SubscriptionID,
+		fmt.Sprintf("Member %s paid %d for subscription '%s' (Order: %s, Payment: %s)",
+			req.Email, req.Amount, subscriptionName, req.OrderID, req.PaymentID),
+		nil, map[string]interface{}{
+			"subscription_id":   req.SubscriptionID,
+			"subscription_name": subscriptionName,
+			"amount":            req.Amount,
+			"order_id":          req.OrderID,
+			"payment_id":        req.PaymentID,
+		})
 
 	// ========== SEND ADMIN EMAIL (DIRECT - NO WEBHOOK NEEDED) ==========
 	// Check if email already sent for this payment (duplicate prevention)
