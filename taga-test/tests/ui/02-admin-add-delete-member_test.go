@@ -23,9 +23,18 @@ func TestUI_06_AdminAddDeleteMember(t *testing.T) {
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
 		actions.AddSingleMember(admin, cfg, result)
-		cleanMobile := strings.TrimSpace(cfg.NewMemberFormData.MobileNumber)
-		cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
-		actions.DeleteMemberByMobile(admin, cfg, cleanMobile, result)
+
+		// Defer cleanup if member was added successfully
+		if !result.Failed() {
+			defer func() {
+				cleanupResult := actions.NewResult("Cleanup")
+				cleanMobile := strings.TrimSpace(cfg.NewMemberFormData.MobileNumber)
+				cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
+				actions.DeleteMemberByMobile(admin, cfg, cleanMobile, cleanupResult)
+			}()
+		}
+
+		actions.SetPaymentStatusToPaid(admin, cfg, result)
 		actions.LogoutAdmin(admin, cfg, result)
 
 		// Assert Result

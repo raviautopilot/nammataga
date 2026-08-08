@@ -235,10 +235,11 @@ func (a *AdminDashboardPage) DeleteMemberByMobile(searchInputTestID string, mobi
 	// 3. Wait for debounced search filter & React table re-render
 	time.Sleep(2 * time.Second)
 
-	// 4. Click View button on the filtered row with retries
+	// 4. Click View button on the filtered row matching the mobile number exactly
+	rowViewBtnXPath := fmt.Sprintf("//table//tbody//tr[contains(., '%s')]//button[contains(@data-testid, '-view-button') or contains(text(), 'View')]", cleanMobile)
 	var lastClickErr error
 	for attempt := 1; attempt <= 3; attempt++ {
-		if err := a.ClickFirstTableRowViewButton(timeout); err == nil {
+		if err := a.Click(rowViewBtnXPath, timeout); err == nil {
 			lastClickErr = nil
 			break
 		} else {

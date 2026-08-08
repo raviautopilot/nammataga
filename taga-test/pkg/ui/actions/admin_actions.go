@@ -170,6 +170,24 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	r.Advice = append(r.Advice, "Member added successfully with all 19 fields populated.")
 }
 
+// SetPaymentStatusToPaid attempts to select the paid checkbox/button (which currently does not exist and will fail).
+func SetPaymentStatusToPaid(aai AdminActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Set Member Payment Status to Paid"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	ap := aai.GetAdminPersona()
+	if err := ap.Page.ClickByTestID("testid-member-payment-paid-checkbox", 5*time.Second); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to select paid status: %w", err)
+		r.Advice = append(r.Advice, "Advice: Verify testid-member-payment-paid-checkbox exists on form")
+		return
+	}
+}
+
 // DeleteMemberByEmail searches for a member by email and confirms deletion.
 func DeleteMemberByEmail(aai AdminActionsInterface, cfg *config.Config, email string, r *Result) {
 	cleanEmail := strings.TrimSpace(email)
