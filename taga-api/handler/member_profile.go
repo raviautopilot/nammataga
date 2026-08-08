@@ -2,11 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"taga-api/config"
 	"taga-api/model"
 	"taga-api/service"
+	"taga-api/service/audit"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -80,8 +82,15 @@ func UpdateMemberProfileHandler(c *gin.Context) {
 	}
 
 	found := false
+	var oldState map[string]interface{}
 	for i, member := range members {
 		if id, ok := member["id"].(string); ok && id == memberID {
+			// Capture old state for audit
+			oldCopy := make(map[string]interface{}, len(member))
+			for k, v := range member {
+				oldCopy[k] = v
+			}
+			oldState = oldCopy
 			if name, ok := updates["name"].(string); ok {
 				members[i]["name"] = name
 			}
@@ -118,6 +127,25 @@ func UpdateMemberProfileHandler(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "Failed to save")
 		return
 	}
+
+	// Audit member self-update
+	tagaID := getMemberTagaIdByUUID(fmt.Sprintf("%v", memberID))
+	memberEmail := ""
+	if val, ok := c.Get("member_email"); ok {
+		memberEmail, _ = val.(string)
+	}
+	var newState map[string]interface{}
+	for _, m := range members {
+		if id, _ := m["id"].(string); id == fmt.Sprintf("%v", memberID) {
+			newState = m
+			break
+		}
+	}
+	_ = audit.Log(c, tagaID, memberEmail,
+		audit.ActionUpdate, audit.ModuleMember,
+		"member", tagaID,
+		fmt.Sprintf("Member %s updated their profile", memberEmail),
+		audit.Sanitize(oldState), audit.Sanitize(newState))
 
 	respondMessage(c, "Profile updated successfully")
 }

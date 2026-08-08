@@ -1,6 +1,7 @@
 package handler
 
 import (
+
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"sync"
 	"taga-api/config"
 	"taga-api/model"
+	"taga-api/service/audit"
 	"taga-api/service/member"
 	"time"
 
@@ -298,6 +300,18 @@ func AddMember(c *gin.Context) {
 
 	go sendSuccessEmail(req.Email, tempPassword)
 
+	// Audit member creation — do not include the temp password
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionCreate, audit.ModuleMember,
+		"member", newMember.TagaID,
+		fmt.Sprintf("Admin created new member %s (tagaId: %s)", newMember.Name, newMember.TagaID),
+		nil, map[string]interface{}{
+			"tagaId":   newMember.TagaID,
+			"name":     newMember.Name,
+			"emailId":  newMember.EmailId,
+			"district": newMember.WorkingDistrict,
+		})
+
 	respondOK(c, gin.H{
 		"message":       "Member added successfully",
 		"member_id":     newMember.ID,
@@ -342,11 +356,18 @@ func UpdateMember(c *gin.Context) {
 	}
 
 	found := false
+	var oldState map[string]interface{}
 	for i, m := range members {
 		id, _ := m["id"].(string)
 		if id != memberID {
 			continue
 		}
+		// Capture old state before modification
+		oldCopy := make(map[string]interface{}, len(m))
+		for k, v := range m {
+			oldCopy[k] = v
+		}
+		oldState = oldCopy
 
 		if req.Name != "" {
 			members[i]["name"] = req.Name
@@ -425,6 +446,24 @@ func UpdateMember(c *gin.Context) {
 		return
 	}
 
+	// Audit member update with old/new diff
+	resourceTagaID := ""
+	if oldState != nil {
+		resourceTagaID, _ = oldState["tagaId"].(string)
+	}
+	var newState map[string]interface{}
+	for _, m := range members {
+		if id, _ := m["id"].(string); id == memberID {
+			newState = m
+			break
+		}
+	}
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionUpdate, audit.ModuleMember,
+		"member", resourceTagaID,
+		fmt.Sprintf("Admin updated member %s (tagaId: %s)", memberID, resourceTagaID),
+		audit.Sanitize(oldState), audit.Sanitize(newState))
+
 	respondMessage(c, "Member updated successfully")
 }
 
@@ -457,6 +496,7 @@ func DeleteMember(c *gin.Context) {
 	}
 
 	found := false
+	var deletedMember map[string]interface{}
 	var deletedName string
 	filtered := make([]map[string]interface{}, 0, len(members))
 	for _, m := range members {
@@ -464,6 +504,8 @@ func DeleteMember(c *gin.Context) {
 		if id == memberID {
 			found = true
 			deletedName, _ = m["name"].(string)
+			// Capture the member before deletion for audit
+			deletedMember = m
 			continue
 		}
 		filtered = append(filtered, m)
@@ -484,6 +526,17 @@ func DeleteMember(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "Failed to save members")
 		return
 	}
+
+	// Audit member deletion
+	resourceTagaID := ""
+	if deletedMember != nil {
+		resourceTagaID, _ = deletedMember["tagaId"].(string)
+	}
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionDelete, audit.ModuleMember,
+		"member", resourceTagaID,
+		fmt.Sprintf("Admin deleted member '%s' (tagaId: %s)", deletedName, resourceTagaID),
+		audit.Sanitize(deletedMember), nil)
 
 	go cleanupMemberSubscriptions(memberID)
 	respondMessage(c, fmt.Sprintf("Member '%s' deleted permanently", deletedName))

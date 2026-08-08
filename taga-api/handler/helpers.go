@@ -12,6 +12,7 @@ import (
 	"strings"
 	"taga-api/config"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -180,4 +181,18 @@ func getMemberTagaIdByUUID(uuid string) string {
 		}
 	}
 	return uuid
+}
+
+// getAdminUsername retrieves the admin username from the Gin context.
+// Set by AdminAuthMiddleware from the JWT claims.
+func getAdminUsername(c *gin.Context) string {
+	if c == nil {
+		return "admin"
+	}
+	if val, exists := c.Get("username"); exists {
+		if s, ok := val.(string); ok && s != "" {
+			return s
+		}
+	}
+	return "admin"
 }

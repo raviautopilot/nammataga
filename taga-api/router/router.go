@@ -261,6 +261,10 @@ func SetupRouter() *gin.Engine {
 		admin.PUT("/office-bearers/district/:district", handler.UpdateDistrictBearersHandler)
 		admin.POST("/office-bearers/backup/restore", handler.RestoreBackupHandler)
 		admin.GET("/office-bearers/backups", handler.ListBackupsHandler)
+
+		// ==================== AUDIT LOG ====================
+		admin.GET("/audit", handler.GetAuditLogsHandler)
+		admin.GET("/audit/users", handler.GetAuditUsersHandler)
 	}
 
 	// Legacy Upload Route (Protected with Admin Auth)

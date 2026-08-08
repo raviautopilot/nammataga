@@ -136,9 +136,10 @@ COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "no-commit")
 LOG_ENTRY="[$DEPLOY_TIME] User: $DEPLOY_USER | Branch: $BRANCH_NAME | Commit: $COMMIT_HASH | Status: SHIPPED | Built: (API:$BUILD_API WEB:$BUILD_WEB)"
 
 # 3. Upload archives to VPS
-echo "🚚 Shipping production image archives to VPS ($SSH_TARGET)..."
+echo "🚚 Shipping production image archives and docker-compose config to VPS ($SSH_TARGET)..."
 ssh "$SSH_TARGET" "mkdir -p $REMOTE_PATH/dist"
 scp "${FILES_TO_UPLOAD[@]}" "$SSH_TARGET:$REMOTE_PATH/dist/"
+scp "$PROJECT_ROOT/docker-compose.yml" "$SSH_TARGET:$REMOTE_PATH/"
 
 # Log execution on VPS
 ssh "$SSH_TARGET" "echo \"$LOG_ENTRY\" >> $REMOTE_PATH/deploy.log"

@@ -14,7 +14,8 @@ import {
     X,
     Building2,
     Calendar,
-    CreditCard
+    CreditCard,
+    Shield
 } from 'lucide-react';
 import { AboutUs } from './components/AboutUs';
 import { OfficeBearers } from "./components/OfficeBearers";
@@ -26,6 +27,7 @@ import { Grievance } from './components/Grievance';
 import { TAGATowers } from './components/TAGATowers';
 import { Membership } from './components/Membership';
 import { Events } from './components/Events';
+import { AuditLog } from './components/admin/AuditLog';
 import { getLogo } from './api/logo';
 import API_BASE_URL from "./config/api";
 
@@ -39,7 +41,8 @@ type Page =
     | 'grievance'
     | 'taga-towers'
     | 'membership'
-    | 'events';
+    | 'events'
+    | 'audit-log';
 
 type UserType = 'general' | 'member' | 'subscriber';
 
@@ -66,12 +69,34 @@ export default function App() {
     const [userType, setUserType] = useState<UserType>('general');
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [copyrightClickCount, setCopyrightClickCount] = useState(0);
+
+    const handleCopyrightClick = () => {
+        if (!isLoggedIn || !isAdmin) {
+            return;
+        }
+        setCopyrightClickCount(prev => {
+            const next = prev + 1;
+            if (next >= 5) {
+                setCurrentPage('audit-log');
+                toast.success("Secret Access Granted: Opening Audit Logs");
+                return 0;
+            }
+            return next;
+        });
+    };
 
     // ==================== RESTORE SESSION ON PAGE LOAD ====================
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const pageParam = params.get('page') as Page | null;
         const validQueryPages: Page[] = ['member-login', 'admin-login', 'home'];
+
+        // Support /internal/audit direct URL
+        if (window.location.pathname === '/internal/audit') {
+            window.history.replaceState({}, '', window.location.pathname);
+            // Will set to audit-log after auth is checked below
+        }
 
         if (pageParam && validQueryPages.includes(pageParam)) {
             setCurrentPage(pageParam);
@@ -99,6 +124,8 @@ export default function App() {
 
             if (savedPage && savedPage !== 'member-login' && savedPage !== 'admin-login') {
                 restoredPage = savedPage;
+            } else if (window.location.pathname === '/internal/audit') {
+                restoredPage = 'audit-log';
             } else {
                 restoredPage = 'members';
             }
@@ -227,7 +254,8 @@ export default function App() {
             'events': true,
             'grievance': isPaid,
             'members': false, // 🔥 FIX: Members cannot access the 'members' page at all
-            'member-login': !isLoggedIn
+            'member-login': !isLoggedIn,
+            'audit-log': isAdmin, // Only admins can access audit log
         };
 
         return accessControl[page] ?? true;
@@ -287,6 +315,8 @@ export default function App() {
             case 'members':
                 // 🔥 Only admins can see this page
                 return isAdmin ? <MembersDashboard isAdmin={isAdmin} /> : <AboutUs />;
+            case 'audit-log':
+                return <AuditLog isAdmin={isAdmin} />;
             case 'resources':
                 return <Resources isLoggedIn={isLoggedIn} />;
             case 'grievance':
@@ -409,7 +439,16 @@ export default function App() {
             <footer className="border-t bg-card mt-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <div className="text-center text-muted-foreground">
-                        <p>&copy; 2026 Tamil Nadu Agriculture Graduates Association (TAGA). All rights reserved.</p>
+                        <p>
+                            <span
+                                onClick={handleCopyrightClick}
+                                className={`select-none ${isLoggedIn && isAdmin ? 'cursor-pointer hover:text-primary transition-colors' : 'cursor-default'}`}
+                                data-testid="copyright-symbol"
+                            >
+                                &copy;
+                            </span>
+                            {" "}2026 Tamil Nadu Agriculture Graduates Association (TAGA). All rights reserved.
+                        </p>
                         <p className="mt-2">Empowering agricultural graduates of the Tamil Nadu agriculture department with knowledge, unity, and progress.</p>
                         {!isLoggedIn && (
                             <div className="mt-4">

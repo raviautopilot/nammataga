@@ -11,6 +11,7 @@ import (
 	"taga-api/config"
 	"taga-api/model"
 	"taga-api/service"
+	"taga-api/service/audit"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -160,6 +161,13 @@ func CreateEvent(c *gin.Context) {
 		return
 	}
 
+	// Audit event creation
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionCreate, audit.ModuleEvent,
+		"event", newEvent.ID,
+		fmt.Sprintf("Admin created event '%s' (ID: %s)", newEvent.Title, newEvent.ID),
+		nil, audit.Sanitize(newEvent))
+
 	respondOK(c, gin.H{
 		"message": "Event created successfully",
 		"event":   newEvent,
@@ -192,9 +200,11 @@ func UpdateEvent(c *gin.Context) {
 	var events []Event
 	_ = json.Unmarshal(data, &events)
 
+	var oldState Event
 	found := false
 	for i, e := range events {
 		if e.ID == id {
+			oldState = e
 			if title, ok := req["title"].(string); ok && title != "" {
 				events[i].Title = title
 			}
@@ -222,6 +232,23 @@ func UpdateEvent(c *gin.Context) {
 
 	updatedData, _ := json.MarshalIndent(events, "", "  ")
 	_ = os.WriteFile(eventsPath, updatedData, 0644)
+
+	// Retrieve new state after update
+	var newState Event
+	for _, e := range events {
+		if e.ID == id {
+			newState = e
+			break
+		}
+	}
+
+	// Audit event update
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionUpdate, audit.ModuleEvent,
+		"event", id,
+		fmt.Sprintf("Admin updated event %s (ID: %s)", oldState.Title, id),
+		audit.Sanitize(oldState), audit.Sanitize(newState))
+
 	respondMessage(c, "Event updated successfully")
 }
 
@@ -245,10 +272,12 @@ func DeleteEvent(c *gin.Context) {
 	_ = json.Unmarshal(data, &events)
 
 	found := false
+	var deletedEvent Event
 	var filtered []Event
 	for _, e := range events {
 		if e.ID == id {
 			found = true
+			deletedEvent = e
 			continue
 		}
 		filtered = append(filtered, e)
@@ -261,6 +290,14 @@ func DeleteEvent(c *gin.Context) {
 
 	updatedData, _ := json.MarshalIndent(filtered, "", "  ")
 	_ = os.WriteFile(eventsPath, updatedData, 0644)
+
+	// Audit event deletion
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionDelete, audit.ModuleEvent,
+		"event", id,
+		fmt.Sprintf("Admin deleted event '%s' (ID: %s)", deletedEvent.Title, id),
+		audit.Sanitize(deletedEvent), nil)
+
 	respondMessage(c, "Event deleted successfully")
 }
 
@@ -330,6 +367,13 @@ func UploadResource(c *gin.Context) {
 	updatedData, _ := json.MarshalIndent(categories, "", "  ")
 	_ = os.WriteFile(resourcesPath, updatedData, 0644)
 
+	// Audit resource creation
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionCreate, audit.ModuleResource,
+		"resource", title,
+		fmt.Sprintf("Admin uploaded resource document '%s' (category: %s)", title, categoryID),
+		nil, audit.Sanitize(newDoc))
+
 	respondOK(c, gin.H{
 		"message":  "Resource uploaded successfully",
 		"document": newDoc,
@@ -358,12 +402,14 @@ func DeleteResource(c *gin.Context) {
 	_ = json.Unmarshal(data, &categories)
 
 	found := false
+	var deletedDoc ResourceDocument
 	for i, cat := range categories {
 		if cat.ID == categoryID {
 			var filteredDocs []ResourceDocument
 			for _, doc := range cat.Documents {
 				if strings.EqualFold(doc.Title, documentTitle) {
 					found = true
+					deletedDoc = doc
 					continue
 				}
 				filteredDocs = append(filteredDocs, doc)
@@ -380,6 +426,14 @@ func DeleteResource(c *gin.Context) {
 
 	updatedData, _ := json.MarshalIndent(categories, "", "  ")
 	_ = os.WriteFile(resourcesPath, updatedData, 0644)
+
+	// Audit resource deletion
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionDelete, audit.ModuleResource,
+		"resource", documentTitle,
+		fmt.Sprintf("Admin deleted resource document '%s' from category %s", documentTitle, categoryID),
+		audit.Sanitize(deletedDoc), nil)
+
 	respondMessage(c, "Resource document deleted successfully")
 }
 
@@ -445,6 +499,13 @@ func UploadGalleryImage(c *gin.Context) {
 	updatedData, _ := json.MarshalIndent(images, "", "  ")
 	_ = os.WriteFile(galleryPath, updatedData, 0644)
 
+	// Audit gallery upload
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionCreate, audit.ModuleGallery,
+		"gallery", newImg.ID,
+		fmt.Sprintf("Admin uploaded gallery image '%s' (ID: %s)", newImg.Title, newImg.ID),
+		nil, audit.Sanitize(newImg))
+
 	respondOK(c, gin.H{
 		"message": "Gallery image uploaded successfully",
 		"image":   newImg,
@@ -471,10 +532,12 @@ func DeleteGalleryImage(c *gin.Context) {
 	_ = json.Unmarshal(data, &images)
 
 	found := false
+	var deletedImg model.GalleryImage
 	var filtered []model.GalleryImage
 	for _, img := range images {
 		if img.ID == id {
 			found = true
+			deletedImg = img
 			continue
 		}
 		filtered = append(filtered, img)
@@ -487,6 +550,14 @@ func DeleteGalleryImage(c *gin.Context) {
 
 	updatedData, _ := json.MarshalIndent(filtered, "", "  ")
 	_ = os.WriteFile(galleryPath, updatedData, 0644)
+
+	// Audit gallery deletion
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionDelete, audit.ModuleGallery,
+		"gallery", id,
+		fmt.Sprintf("Admin deleted gallery image '%s' (ID: %s)", deletedImg.Title, id),
+		audit.Sanitize(deletedImg), nil)
+
 	respondMessage(c, "Gallery image deleted successfully")
 }
 
@@ -623,6 +694,13 @@ func SendAnnouncement(c *gin.Context) {
 		}
 	}()
 
+	// Audit announcement send
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionCreate, audit.ModuleResource,
+		"announcement", announcement.ID,
+		fmt.Sprintf("Admin sent announcement '%s' to %d recipients via %s", announcement.Title, len(recipients), announcement.SendTo),
+		nil, audit.Sanitize(announcement))
+
 	respondOK(c, AnnouncementResponse{
 		Message:        fmt.Sprintf("Announcement sent successfully to %d recipients", len(recipients)),
 		Recipients:     len(recipients),
@@ -643,6 +721,14 @@ func HandleSendRenewalReminders(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	// Audit manual renewal reminder trigger
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionUpdate, audit.ModuleMember,
+		"reminders", "renewal",
+		"Admin manually triggered renewal reminders email process",
+		nil, nil)
+
 	respondMessage(c, "Reminders processed")
 }
 
