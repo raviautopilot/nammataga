@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # Dev Backend API Container (Go Service)
+  # ==========================================
+  taga-backend-dev:
+    image: taga-api:dev
+    container_name: taga-api-dev
+    ports:
+      - "1801:1801"
+    env_file:
+      - .env
+    environment:
+      - PORT=1801
+      - ENVIRONMENT=development
+    volumes:
+      # Maps local data folder on VPS to container /app/data
+      - ./data:/app/data
+      # Maps local audit logs folder on VPS to container /app/audit-logs
+      - ./audit-logs:/app/audit-logs
+    restart: unless-stopped
+
+  # ==========================================
+  # Dev Frontend UI Container (Nginx Static Server)
+  # ==========================================
+  taga-frontend-dev:
+    image: taga-web:dev
+    container_name: taga-web-dev
+    ports:
+      - "1701:80"
+    environment:
+      - VITE_API_BASE_URL=https://devapi.nammataga.com/api
+    depends_on:
+      - taga-backend-dev
+    restart: unless-stopped
