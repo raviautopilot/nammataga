@@ -1,4 +1,4 @@
-package ui_tests
+package ui_test
 
 import (
 	"strings"

@@ -17,6 +17,7 @@ graphify-out/.rebuild.lock
 *.dylib
 *.bin
 *.out
+*.test
 *.zip
 *.tgz
 rbot.exe
