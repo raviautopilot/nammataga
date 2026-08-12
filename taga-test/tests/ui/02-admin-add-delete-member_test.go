@@ -21,24 +21,20 @@ func TestUI_02_AdminAddDeleteMember(t *testing.T) {
 		// Pre-test setup: Ensure target test member is deleted via API so test runs with a clean state
 		cleanEmail := strings.TrimSpace(cfg.NewMemberFormData.Email)
 		cleanMobile := strings.TrimSpace(cfg.NewMemberFormData.MobileNumber)
+		cleanMobileNoSpace := strings.ReplaceAll(cleanMobile, " ", "")
 		tests.CleanupMemberByEmailOrMobile(cfg, cleanEmail, cleanMobile)
+
+		// Defer fallback API cleanup to guarantee clean DB state if any step fails
+		defer func() {
+			tests.CleanupMemberByEmailOrMobile(cfg, cleanEmail, cleanMobile)
+		}()
 
 		// Declarative Persona Action Flow
 		actions.GoToHome(admin, result)
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
 		actions.AddSingleMember(admin, cfg, result)
-
-		// Defer cleanup if member was added successfully
-		if !result.Failed() {
-			defer func() {
-				cleanupResult := actions.NewResult("Cleanup")
-				cleanMobileNoSpace := strings.ReplaceAll(cleanMobile, " ", "")
-				actions.DeleteMemberByMobile(admin, cfg, cleanMobileNoSpace, cleanupResult)
-				tests.CleanupMemberByEmailOrMobile(cfg, cleanEmail, cleanMobile)
-			}()
-		}
-
+		actions.DeleteMemberByMobile(admin, cfg, cleanMobileNoSpace, result)
 		actions.LogoutAdmin(admin, cfg, result)
 
 		// Assert Result
