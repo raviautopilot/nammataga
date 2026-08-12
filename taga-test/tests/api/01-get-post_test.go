@@ -132,6 +132,54 @@ func TestAPI_01_GetPost_TableDriven(t *testing.T) {
 				}
 			},
 		},
+		{
+			Name:        "Extreme Boundary - Max Integer Pagination Limit",
+			Path:        "/api/public/about/stats?page=1&limit=9223372036854775807",
+			Description: "Verifies extreme integer bounds on pagination do not crash the server.",
+			Expected:    "HTTP 400 Bad Request or default pagination",
+			ValidateFn: func(tc *tests.TestContext) {
+				var dummy map[string]interface{}
+				err := tc.Client.SendHttpRequest("GET", "/api/public/about/stats?page=1&limit=9223372036854775807", nil, nil, &dummy, nil)
+				if err != nil && err.StatusCode() == 500 {
+					tc.FailureReason = "Server crashed on max integer bounds"
+					tc.Errorf("Server crashed on max integer bounds")
+				} else {
+					tc.Actual = "Handled gracefully"
+				}
+			},
+		},
+		{
+			Name:        "Logical Paradox - Contradictory Date Range with Negative Capacity",
+			Path:        "/api/public/about/stats?start_date=2100-01-01&end_date=1900-01-01&capacity=-5",
+			Description: "Verifies that dates contradicting each other with negative capacities are handled gracefully.",
+			Expected:    "HTTP 400 Bad Request or 200 OK without crashing",
+			ValidateFn: func(tc *tests.TestContext) {
+				var dummy map[string]interface{}
+				err := tc.Client.SendHttpRequest("GET", "/api/public/about/stats?start_date=2100-01-01&end_date=1900-01-01&capacity=-5", nil, nil, &dummy, nil)
+				if err != nil && err.StatusCode() == 500 {
+					tc.FailureReason = "Server crashed on logical paradox payload"
+					tc.Errorf("Server crashed on logical paradox payload")
+				} else {
+					tc.Actual = "Handled gracefully"
+				}
+			},
+		},
+		{
+			Name:        "State Machine Violation - Cancel Already Completed Stats Task via GET",
+			Path:        "/api/public/about/stats?action=cancel&status=completed",
+			Description: "Verifies state machine violation attempt via query parameters on GET.",
+			Expected:    "HTTP 400 Bad Request or safely ignored",
+			ValidateFn: func(tc *tests.TestContext) {
+				var dummy map[string]interface{}
+				err := tc.Client.SendHttpRequest("GET", "/api/public/about/stats?action=cancel&status=completed", nil, nil, &dummy, nil)
+				if err != nil && err.StatusCode() == 500 {
+					tc.FailureReason = "Server crashed on state machine violation"
+					tc.Errorf("Server crashed on state machine violation")
+				} else {
+					tc.Actual = "Handled gracefully"
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {

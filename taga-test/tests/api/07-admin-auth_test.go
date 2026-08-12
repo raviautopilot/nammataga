@@ -145,6 +145,30 @@ func TestAPI_AdminLogin_TableDriven(t *testing.T) {
 			expectedStatus: http.StatusUnauthorized,
 			expectedErrSub: "Invalid credentials",
 		},
+		{
+			name:           "Extreme Boundary - Expiry 100 Years",
+			persona:        "Attacker Requesting Long JWT",
+			description:    "Submits extremely long requested expiry time.",
+			payload:        &map[string]interface{}{"username": adminCreds.Username, "password": adminCreds.Password, "expires_in": 3153600000},
+			expectedStatus: http.StatusOK,
+			expectToken:    true,
+		},
+		{
+			name:           "State Machine Violation - Logout Already Logged Out Admin",
+			persona:        "Admin",
+			description:    "Attempts to login with a flag to logout first.",
+			payload:        &map[string]interface{}{"username": adminCreds.Username, "password": adminCreds.Password, "action": "logout"},
+			expectedStatus: http.StatusOK,
+			expectToken:    true,
+		},
+		{
+			name:           "Logical Paradox - Admin Login With Member Role Request",
+			persona:        "Admin",
+			description:    "Admin attempts to login but requests member role downscoping.",
+			payload:        &map[string]interface{}{"username": adminCreds.Username, "password": adminCreds.Password, "role": "member"},
+			expectedStatus: http.StatusOK,
+			expectToken:    true,
+		},
 	}
 
 	for _, tc := range cases {

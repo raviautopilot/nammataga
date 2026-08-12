@@ -114,6 +114,59 @@ func TestAPI_03_PointerValidation_TableDriven(t *testing.T) {
 				tc.Actual = fmt.Sprintf("Handled IDOR gracefully with error: %v", err)
 			},
 		},
+		{
+			Name:        "State Machine Violation - Update Cancelled Pointer",
+			TargetURL:   "/api/grievances/123/update?status=cancelled",
+			Body:        &map[string]interface{}{"status": "processing"},
+			RespObj:     &map[string]interface{}{},
+			Description: "Verifies that updating a logically cancelled pointer state machine safely fails without panic.",
+			Expected:    "HTTP 400/404 or cleanly rejected",
+			ValidateFn: func(tc *tests.TestContext) {
+				var resp map[string]interface{}
+				body := map[string]interface{}{"status": "processing"}
+				err := tc.Client.SendHttpRequest("POST", "/api/grievances/123/update?status=cancelled", nil, &body, &resp, nil)
+				if err != nil && err.StatusCode() == 500 {
+					tc.FailureReason = "Expected non-500 error for state machine violation, got 500"
+					tc.Fatalf("Expected non-500 error for state machine violation, got 500")
+				}
+				tc.Actual = fmt.Sprintf("Handled gracefully with error: %v", err)
+			},
+		},
+		{
+			Name:        "Extreme Boundary - Pointer Max Integer Slice Allocation",
+			TargetURL:   "/api/public/about/stats",
+			Body:        nil,
+			RespObj:     &[]StatsResponse{},
+			Description: "Verifies extreme integer boundaries for pointer slice allocation limit does not crash.",
+			Expected:    "HTTP 400/200 safely handled",
+			ValidateFn: func(tc *tests.TestContext) {
+				var resp []StatsResponse
+				err := tc.Client.SendHttpRequest("GET", "/api/public/about/stats?limit=9223372036854775807", nil, nil, &resp, nil)
+				if err != nil && err.StatusCode() == 500 {
+					tc.FailureReason = "Server crashed on extreme pointer slice allocation boundary"
+					tc.Fatalf("Server crashed on extreme pointer slice allocation boundary")
+				}
+				tc.Actual = "Safely handled pointer allocation"
+			},
+		},
+		{
+			Name:        "Logical Paradox - Nested Pointer with Contradicting Flags",
+			TargetURL:   "/api/grievances",
+			Body:        &map[string]interface{}{"is_active": true, "is_deleted": true},
+			RespObj:     &map[string]interface{}{},
+			Description: "Verifies logical paradox in payload pointer fields.",
+			Expected:    "Validation error or safely ignored",
+			ValidateFn: func(tc *tests.TestContext) {
+				var resp map[string]interface{}
+				body := map[string]interface{}{"is_active": true, "is_deleted": true}
+				err := tc.Client.SendHttpRequest("POST", "/api/grievances", nil, &body, &resp, nil)
+				if err != nil && err.StatusCode() == 500 {
+					tc.FailureReason = "Server crashed on logical paradox pointer validation"
+					tc.Fatalf("Server crashed on logical paradox pointer validation")
+				}
+				tc.Actual = fmt.Sprintf("Handled paradox gracefully: %v", err)
+			},
+		},
 	}
 
 	for _, tc := range testCases {

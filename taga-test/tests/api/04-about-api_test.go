@@ -422,6 +422,10 @@ func TestAPI_About_UnexpectedPayloads(t *testing.T) {
 		{"GET with XML Payload", "<xml><data>test</data></xml>"},
 		{"Business Logic - Past Date for Future Range", map[string]string{"start_date": "2050-01-01", "end_date": "2020-01-01"}},
 		{"Business Logic - Negative Priority", map[string]int{"priority": -5}},
+		{"Business Logic - Extreme Boundary 100-year Future Date", map[string]string{"event_date": "2126-01-01"}},
+		{"Business Logic - State Machine Violation Canceling Completed", map[string]string{"action": "cancel", "status": "completed"}},
+		{"Business Logic - Role Context Switch to Admin in Body", map[string]string{"role": "admin", "override": "true"}},
+		{"Business Logic - Logical Paradox Contradicting Flags", map[string]bool{"is_public": true, "is_private": true}},
 	}
 
 	for _, tc := range testCases {

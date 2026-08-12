@@ -190,6 +190,35 @@ func TestAPI_NegativeScenarios_BookingOverlap(t *testing.T) {
 			Payload:        map[string]interface{}{"roomId": "kurinchi"},
 			ExpectedStatus: http.StatusBadRequest,
 		},
+		{
+			Name:           "Logical Paradox - Checkout Before Checkin",
+			Persona:        "Member",
+			Description:    "Booking with checkout date preceding checkin date",
+			Method:         "POST",
+			Endpoint:       "/api/towers/bookings",
+			AuthType:       "member",
+			Payload:        map[string]interface{}{"roomId": "kurinchi", "checkInDate": "2026-11-22", "checkOutDate": "2026-11-20", "bookerPhone": "9944637254", "bookingFor": "self", "bedCount": 1},
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           "State Machine Violation - Cancel Completed Booking",
+			Persona:        "Member",
+			Description:    "Attempting to cancel a booking that is already past and completed",
+			Method:         "DELETE",
+			Endpoint:       "/api/towers/bookings/completed_booking_123",
+			AuthType:       "member",
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           "Extreme Boundary - 100 Year Booking",
+			Persona:        "Member",
+			Description:    "Booking a room for a full century",
+			Method:         "POST",
+			Endpoint:       "/api/towers/bookings",
+			AuthType:       "member",
+			Payload:        map[string]interface{}{"roomId": "kurinchi", "checkInDate": "2026-01-01", "checkOutDate": "2126-01-01", "bookerPhone": "9944637254", "bookingFor": "self", "bedCount": 1},
+			ExpectedStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tc := range testCases {

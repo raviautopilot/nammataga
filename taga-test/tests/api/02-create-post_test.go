@@ -295,6 +295,83 @@ func TestAPI_02_CreatePost_TableDriven(t *testing.T) {
 				}
 			},
 		},
+		{
+			Name:        "Extreme Boundary - Grievance 100-Year Date with Max Integer Phone",
+			Path:        "/api/grievances",
+			Description: "Verifies extreme boundaries on grievance creation.",
+			Expected:    "HTTP 400 Bad Request",
+			ValidateFn: func(tc *tests.TestContext) {
+				payload := map[string]interface{}{
+					"name":        "Test User",
+					"email":       "test@test.com",
+					"phone":       "92233720368547758079223372036854775807",
+					"category":    "General",
+					"priority":    "Medium",
+					"subject":     "Extreme Bounds",
+					"description": "Valid description long enough",
+					"incident_date": "2126-08-12",
+				}
+				var response map[string]interface{}
+				err := tc.Client.SendHttpRequest("POST", "/api/grievances", nil, payload, &response, nil)
+				if err == nil {
+					tc.FailureReason = "Expected validation error for extreme boundary, got success"
+					tc.Errorf("Expected validation error for extreme boundary, got success")
+				} else {
+					tc.Actual = fmt.Sprintf("Rejected properly with status: %d", err.StatusCode())
+				}
+			},
+		},
+		{
+			Name:        "Logical Paradox - Membership Application Future DOB and Negative Age",
+			Path:        "/api/membership/apply",
+			Description: "Verifies application rejected if DOB is in the future while claiming negative age.",
+			Expected:    "HTTP 400 Bad Request",
+			ValidateFn: func(tc *tests.TestContext) {
+				payload := map[string]interface{}{
+					"name":             "Paradox Applicant",
+					"gender":           "male",
+					"email":            "paradox@test.com",
+					"mobileNumber":     "9800000999",
+					"dob":              "2120-01-01",
+					"age":              -25,
+				}
+				var response map[string]interface{}
+				err := tc.Client.SendHttpRequest("POST", "/api/membership/apply", nil, payload, &response, nil)
+				if err == nil {
+					tc.FailureReason = "Expected rejection for logical paradox, got success"
+					tc.Errorf("Expected rejection for logical paradox, got success")
+				} else {
+					tc.Actual = fmt.Sprintf("Rejected properly with status: %d", err.StatusCode())
+				}
+			},
+		},
+		{
+			Name:        "Role Context Switching - Grievance Forcing Admin Role via Payload",
+			Path:        "/api/grievances",
+			Description: "Verifies that supplying role escalation fields in public grievance creation fails.",
+			Expected:    "HTTP 400 Bad Request or safely ignored",
+			ValidateFn: func(tc *tests.TestContext) {
+				payload := map[string]interface{}{
+					"name":        "Role Escalator",
+					"email":       "escalate@test.com",
+					"phone":       "9999999999",
+					"category":    "General",
+					"priority":    "Medium",
+					"subject":     "Valid Subject",
+					"description": "Valid description long enough",
+					"role":        "admin",
+					"is_admin":    true,
+				}
+				var response map[string]interface{}
+				err := tc.Client.SendHttpRequest("POST", "/api/grievances", nil, payload, &response, nil)
+				if err != nil && err.StatusCode() == 500 {
+					tc.FailureReason = "Server crashed on role context switch"
+					tc.Errorf("Server crashed on role context switch")
+				} else {
+					tc.Actual = "Handled safely without crashing"
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {

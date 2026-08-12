@@ -117,6 +117,10 @@ var SwaggerEndpoints = []EndpointDefinition{
 	// Business Logic Negative
 	{Method: "GET", Path: "/api/member/profile?user_id=-1", Category: "Business Logic IDOR", ExpectedProtected: true},
 	{Method: "GET", Path: "/api/admin/members?page=-5", Category: "Business Logic Negative Pagination", ExpectedProtected: true},
+	{Method: "GET", Path: "/api/admin/members?page=9223372036854775807", Category: "Business Logic Extreme Bounds", ExpectedProtected: true},
+	{Method: "PUT", Path: "/api/admin/events/1?action=cancel&status=completed", Category: "Business Logic State Machine Violation", ExpectedProtected: true},
+	{Method: "POST", Path: "/api/admin/members/add?role=superadmin&override=true", Category: "Business Logic Role Context Switch", ExpectedProtected: true},
+	{Method: "GET", Path: "/api/admin/events/1?start_date=2120-01-01&end_date=1990-01-01", Category: "Business Logic Paradox", ExpectedProtected: true},
 }
 
 // TestAPI_06_EndpointSecurity audits all swagger endpoints individually, populating report entries for every endpoint.

@@ -111,6 +111,36 @@ func TestAPI_NegativeScenarios_OfficeBearersBackup(t *testing.T) {
 			Payload:        "not-a-json-payload-string",
 			ExpectedStatus: http.StatusBadRequest,
 		},
+		{
+			Name:           "Role Context Switching - Member Restoring Backup",
+			Persona:        "Member",
+			Description:    "Member attempts to restore system backup",
+			Method:         "POST",
+			Endpoint:       "/api/admin/office-bearers/backup/restore",
+			AuthType:       "member",
+			Payload:        map[string]string{"backup_file": "backup-2026.json"},
+			ExpectedStatus: http.StatusForbidden,
+		},
+		{
+			Name:           "Logical Paradox - Future Backup File",
+			Persona:        "Admin",
+			Description:    "Restore a backup that claims to be from the future",
+			Method:         "POST",
+			Endpoint:       "/api/admin/office-bearers/backup/restore",
+			AuthType:       "admin",
+			Payload:        map[string]string{"backup_file": "backup-2099-01-01.json"},
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           "State Machine Violation - Concurrent Restores",
+			Persona:        "Admin",
+			Description:    "Restore when a restore is supposedly already in progress",
+			Method:         "POST",
+			Endpoint:       "/api/admin/office-bearers/backup/restore",
+			AuthType:       "admin",
+			Payload:        map[string]string{"backup_file": "locked_backup_in_progress.json"},
+			ExpectedStatus: http.StatusConflict,
+		},
 	}
 
 	for _, tc := range testCases {

@@ -295,6 +295,34 @@ func TestAPI_NegativeScenarios_AdminAuditOffice(t *testing.T) {
 			Payload:        map[string]interface{}{},
 			ExpectedStatus: http.StatusBadRequest,
 		},
+		{
+			Name:           "Role Context Switching - Member Accessing Admin Audit",
+			Persona:        "Member",
+			Description:    "A normal member tries to fetch admin audit logs",
+			Method:         "GET",
+			Endpoint:       "/api/admin/audit?page=1&limit=20",
+			AuthType:       "member",
+			ExpectedStatus: http.StatusForbidden,
+		},
+		{
+			Name:           "Extreme Boundary - Max Integer Page Limit",
+			Persona:        "Admin",
+			Description:    "Requesting audit logs with max int64 page limit",
+			Method:         "GET",
+			Endpoint:       "/api/admin/audit?page=1&limit=9223372036854775807",
+			AuthType:       "admin",
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           "Logical Paradox - Nullified Office Bearers",
+			Persona:        "Admin",
+			Description:    "Updating bearers with negative contacts and empty names",
+			Method:         "PUT",
+			Endpoint:       "/api/admin/office-bearers/district/salem",
+			AuthType:       "admin",
+			Payload:        []map[string]string{{"name": "", "title": "President", "contact": "-999999999"}},
+			ExpectedStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tc := range testCases {

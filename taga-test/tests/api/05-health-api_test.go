@@ -386,6 +386,10 @@ func TestAPI_Health_UnexpectedPayloads(t *testing.T) {
 		{"GET /health with XML Payload", "<health>check</health>"},
 		{"Business Logic - Health check with negative IDOR", map[string]int{"user_id": -9999}},
 		{"Business Logic - Health check with End date before Start date", map[string]string{"start": "2025-01-01", "end": "2024-01-01"}},
+		{"Business Logic - Extreme Boundary 100-year Future Date", map[string]string{"event_date": "2126-01-01"}},
+		{"Business Logic - State Machine Violation Canceling Completed", map[string]string{"action": "cancel", "status": "completed"}},
+		{"Business Logic - Role Context Switch to Admin in Body", map[string]string{"role": "admin", "override": "true"}},
+		{"Business Logic - Logical Paradox Contradicting Flags", map[string]bool{"is_public": true, "is_private": true}},
 	}
 
 	for _, tc := range testCases {

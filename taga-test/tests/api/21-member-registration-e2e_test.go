@@ -228,6 +228,36 @@ func TestAPI_NegativeScenarios_MemberRegistration(t *testing.T) {
 			AuthType:       "admin",
 			ExpectedStatus: http.StatusNotFound,
 		},
+		{
+			Name:           "Role Context Switching - Member Bulk Registration",
+			Persona:        "Member",
+			Description:    "Member attempts to access bulk registration",
+			Method:         "POST",
+			Endpoint:       "/api/admin/member-registration",
+			AuthType:       "member",
+			Payload:        "fake-multipart-data",
+			ExpectedStatus: http.StatusForbidden,
+		},
+		{
+			Name:           "Logical Paradox - Future DOB",
+			Persona:        "Admin",
+			Description:    "Registration with a future Date of Birth",
+			Method:         "POST",
+			Endpoint:       "/api/admin/member-registration",
+			AuthType:       "admin",
+			Payload:        `[{"tagaId": "TEST99", "date_of_birth": "2099-01-01"}]`,
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           "Extreme Boundary - Negative Seniority",
+			Persona:        "Admin",
+			Description:    "Registration with a negative seniority number",
+			Method:         "POST",
+			Endpoint:       "/api/admin/member-registration",
+			AuthType:       "admin",
+			Payload:        `[{"tagaId": "TEST98", "seniority_number": "-100"}]`,
+			ExpectedStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tc := range testCases {

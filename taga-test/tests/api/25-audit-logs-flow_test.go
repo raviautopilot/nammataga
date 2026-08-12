@@ -107,6 +107,33 @@ func TestAPI_NegativeScenarios_AuditLogsFlow(t *testing.T) {
 			AuthType:       "admin",
 			ExpectedStatus: http.StatusBadRequest, // Or 400
 		},
+		{
+			Name:           "Role Context Switching - Member Accessing Logs",
+			Persona:        "Member",
+			Description:    "Member queries audit logs",
+			Method:         "GET",
+			Endpoint:       "/api/admin/audit?search=admin",
+			AuthType:       "member",
+			ExpectedStatus: http.StatusForbidden,
+		},
+		{
+			Name:           "Logical Paradox - Invalid Date Range",
+			Persona:        "Admin",
+			Description:    "Search with end_date before start_date",
+			Method:         "GET",
+			Endpoint:       "/api/admin/audit?start_date=2026-12-01&end_date=2026-01-01",
+			AuthType:       "admin",
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           "Extreme Boundary - Negative Pagination",
+			Persona:        "Admin",
+			Description:    "Negative page and limit",
+			Method:         "GET",
+			Endpoint:       "/api/admin/audit?page=-1&limit=-100",
+			AuthType:       "admin",
+			ExpectedStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tc := range testCases {

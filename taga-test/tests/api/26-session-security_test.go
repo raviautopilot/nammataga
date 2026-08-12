@@ -95,6 +95,36 @@ func TestAPI_NegativeScenarios_SessionSecurity(t *testing.T) {
 			AuthType:       "member",
 			ExpectedStatus: http.StatusBadRequest,
 		},
+		{
+			Name:           "State Machine Violation - Revoked Token",
+			Persona:        "Member",
+			Description:    "Use a token that has been explicitly logged out",
+			Method:         "GET",
+			Endpoint:       "/api/member/profile",
+			AuthType:       "member",
+			Headers:        map[string]string{"Authorization": "Bearer revoked_token_123"},
+			ExpectedStatus: http.StatusUnauthorized,
+		},
+		{
+			Name:           "Logical Paradox - Future Issued Token",
+			Persona:        "Member",
+			Description:    "Token with 'iat' claim in the future",
+			Method:         "GET",
+			Endpoint:       "/api/member/profile",
+			AuthType:       "member",
+			Headers:        map[string]string{"Authorization": "Bearer future_issued_token_123"},
+			ExpectedStatus: http.StatusUnauthorized,
+		},
+		{
+			Name:           "Extreme Boundary - Massive Token Payload",
+			Persona:        "Member",
+			Description:    "Bearer token of extreme length",
+			Method:         "GET",
+			Endpoint:       "/api/member/profile",
+			AuthType:       "member",
+			Headers:        map[string]string{"Authorization": "Bearer extremely_long_token_string_which_exceeds_maximum_header_size_limit_and_causes_issues_1234567890"},
+			ExpectedStatus: http.StatusUnauthorized,
+		},
 	}
 
 	for _, tc := range testCases {

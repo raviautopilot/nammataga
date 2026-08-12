@@ -203,6 +203,36 @@ func TestAPI_NegativeScenarios_EventsManagement(t *testing.T) {
 			},
 			ExpectedStatus: http.StatusBadRequest,
 		},
+		{
+			Name:           "State Machine Violation - Modify Completed Event",
+			Persona:        "Admin",
+			Description:    "Update an event that is already marked as completed",
+			Method:         "PUT",
+			Endpoint:       "/api/admin/events/completed_event_123",
+			AuthType:       "admin",
+			Payload:        map[string]interface{}{"status": "upcoming"},
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           "Logical Paradox - End Before Start",
+			Persona:        "Admin",
+			Description:    "Event dates contradict each other",
+			Method:         "POST",
+			Endpoint:       "/api/admin/events/create",
+			AuthType:       "admin",
+			Payload:        map[string]interface{}{"title": "Paradox Event", "date": "2026-12-01", "end_date": "2026-11-01"},
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           "Extreme Boundary - 100 Year Duration",
+			Persona:        "Admin",
+			Description:    "Event spanning a century",
+			Method:         "POST",
+			Endpoint:       "/api/admin/events/create",
+			AuthType:       "admin",
+			Payload:        map[string]interface{}{"title": "Century Event", "date": "2026-01-01", "end_date": "2126-01-01"},
+			ExpectedStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tc := range testCases {

@@ -183,6 +183,52 @@ func TestAPI_MemberProfile_Update(t *testing.T) {
 			},
 			expectedStatus: http.StatusBadRequest,
 		},
+		{
+			name:        "Extreme Boundary - 100 Year Address",
+			persona:     "Authenticated Member",
+			description: "Submits extremely large address length.",
+			authType:    "member",
+			payload: &map[string]interface{}{
+				"residential_address": strings.Repeat("A", 10000),
+			},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:        "State Machine Violation - Edit Approved Profile",
+			persona:     "Authenticated Member",
+			description: "Submits state override to edit an already approved profile.",
+			authType:    "member",
+			payload: &map[string]interface{}{
+				"status": "approved",
+				"action": "edit",
+			},
+			expectedStatus: http.StatusOK,
+			expectedSub:    "successfully",
+		},
+		{
+			name:        "Logical Paradox - Both Active and Suspended",
+			persona:     "Authenticated Member",
+			description: "Submits contradictory status flags.",
+			authType:    "member",
+			payload: &map[string]interface{}{
+				"is_active": true,
+				"is_suspended": true,
+			},
+			expectedStatus: http.StatusOK,
+			expectedSub:    "successfully",
+		},
+		{
+			name:        "Role Context Switching - Member Self Promotion",
+			persona:     "Authenticated Member",
+			description: "Attempts to update their own role to admin.",
+			authType:    "member",
+			payload: &map[string]interface{}{
+				"role": "admin",
+				"is_admin": true,
+			},
+			expectedStatus: http.StatusOK,
+			expectedSub:    "successfully",
+		},
 	}
 
 	for _, tc := range cases {

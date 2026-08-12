@@ -177,6 +177,33 @@ func TestAPI_NegativeScenarios_SubscriptionStatus(t *testing.T) {
 			AuthType:       "member",
 			ExpectedStatus: http.StatusBadRequest,
 		},
+		{
+			Name:           "State Machine Violation - Cancelled But Active",
+			Persona:        "Member",
+			Description:    "Status check for a logically impossible state (not directly triggerable, but simulating via params)",
+			Method:         "GET",
+			Endpoint:       "/api/subscriptions/status?email=cancelled@active.com&status=cancelled",
+			AuthType:       "member",
+			ExpectedStatus: http.StatusNotFound,
+		},
+		{
+			Name:           "Extreme Boundary - Max Length Email",
+			Persona:        "Member",
+			Description:    "Email param exceeding max string limit",
+			Method:         "GET",
+			Endpoint:       "/api/subscriptions/status?email=extremely-long-email-address-which-exceeds-standard-varchar-limits-by-a-lot-and-should-be-rejected-by-the-system-immediately-upon-parsing-due-to-database-constraints@test.com",
+			AuthType:       "member",
+			ExpectedStatus: http.StatusBadRequest,
+		},
+		{
+			Name:           "Role Context Switching - Admin Checking Member Status w/o Member Token",
+			Persona:        "Admin",
+			Description:    "Admin uses admin token on member route",
+			Method:         "GET",
+			Endpoint:       "/api/subscriptions/status?email=test@test.com",
+			AuthType:       "admin",
+			ExpectedStatus: http.StatusForbidden,
+		},
 	}
 
 	for _, tc := range testCases {

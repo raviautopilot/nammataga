@@ -164,6 +164,30 @@ func TestAPI_MemberLogin_TableDriven(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectToken:    true,
 		},
+		{
+			name:           "Extreme Boundary - Expiry 100 Years",
+			persona:        "Attacker Requesting Long JWT",
+			description:    "Submits extremely long requested expiry time.",
+			payload:        &map[string]interface{}{"email": memberCreds.Username, "password": memberCreds.Password, "expires_in": 3153600000},
+			expectedStatus: http.StatusOK,
+			expectToken:    true,
+		},
+		{
+			name:           "State Machine Violation - Logout Already Logged Out Member",
+			persona:        "Member",
+			description:    "Attempts to login with a flag to logout first.",
+			payload:        &map[string]interface{}{"email": memberCreds.Username, "password": memberCreds.Password, "action": "logout"},
+			expectedStatus: http.StatusOK,
+			expectToken:    true,
+		},
+		{
+			name:           "Logical Paradox - Member Login With Both Force Password Change and Skip Flags",
+			persona:        "Member",
+			description:    "Attempts to set contradicting force_change and skip_change flags.",
+			payload:        &map[string]interface{}{"email": memberCreds.Username, "password": memberCreds.Password, "force_change": true, "skip_change": true},
+			expectedStatus: http.StatusOK,
+			expectToken:    true,
+		},
 	}
 
 	for _, tc := range cases {
