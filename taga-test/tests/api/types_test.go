@@ -1,4 +1,4 @@
-package api_tests
+package api_test
 
 // Post models the structure used for the API placeholder mock tests.
 type Post struct {
