@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"strings"
 
 	"taga-api/config"
+	"taga-api/service/audit"
 	"taga-api/service/office_bearers"
 
 	"github.com/gin-gonic/gin"
@@ -167,6 +169,9 @@ func UpdateDistrictBearersHandler(c *gin.Context) {
 		zap.String("district", district),
 		zap.Int("bearers_count", len(bearers)))
 
+	// Capture old bearers for audit
+	oldBearers, _ := office_bearers.GetDistrictBearers(district)
+
 	// Perform update
 	err := office_bearers.UpdateDistrictBearers(district, bearers)
 	if err != nil {
@@ -187,6 +192,13 @@ func UpdateDistrictBearersHandler(c *gin.Context) {
 		})
 		return
 	}
+
+	// Audit district bearers update
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionUpdate, audit.ModuleResource,
+		"office-bearers", district,
+		fmt.Sprintf("Admin updated office bearers for district '%s'", district),
+		audit.Sanitize(oldBearers), audit.Sanitize(bearers))
 
 	// Get backup path from the last backup (indicated by success)
 	config.Logger.Info("Successfully updated district bearers",
@@ -245,6 +257,13 @@ func RestoreBackupHandler(c *gin.Context) {
 		})
 		return
 	}
+
+	// Audit backup restore action
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionUpdate, audit.ModuleResource,
+		"office-bearers-backup", filepath.Base(request.BackupFile),
+		fmt.Sprintf("Admin restored office bearers from backup file '%s'", filepath.Base(request.BackupFile)),
+		nil, map[string]interface{}{"backup_file": request.BackupFile})
 
 	config.Logger.Info("Successfully restored from backup",
 		zap.String("backup_file", request.BackupFile))

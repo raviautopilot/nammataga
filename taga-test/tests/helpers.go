@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
@@ -13,6 +14,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"e2e-template/pkg/client"
 	"e2e-template/pkg/config"
@@ -101,18 +104,150 @@ func SetupSuite() {
 		ExecutionScreenshotDir = filepath.Join(EvidenceDir, "screenshots")
 
 		// Create directories for the current run
-		if err := os.MkdirAll(ExecutionLogDir, 0755); err != nil {
+		if err := os.MkdirAll(ExecutionLogDir, 0777); err != nil {
 			fmt.Printf("WARNING: Failed to create log directory: %v\n", err)
 		}
-		if err := os.MkdirAll(ExecutionReportDir, 0755); err != nil {
+		if err := os.MkdirAll(ExecutionReportDir, 0777); err != nil {
 			fmt.Printf("WARNING: Failed to create report directory: %v\n", err)
 		}
-		if err := os.MkdirAll(ExecutionScreenshotDir, 0755); err != nil {
+		if err := os.MkdirAll(ExecutionScreenshotDir, 0777); err != nil {
 			fmt.Printf("WARNING: Failed to create screenshot directory: %v\n", err)
 		}
 
+		seedMemberUser()
+		mergeOfficeData()
 		logger.SetLevel(logger.INFO)
 	})
+}
+
+func mergeOfficeData() {
+	stateFile := "/home/sudhan_dev/Downloads/code/nammataga/taga-api/data/office_bearers/state-executive.json"
+	districtFile := "/home/sudhan_dev/Downloads/code/nammataga/taga-api/data/office_bearers/district_office_bearers.json"
+	targetDir := "/home/sudhan_dev/Downloads/code/nammataga/taga-api/data/office"
+	targetFile := filepath.Join(targetDir, "taga-office.json")
+
+	stateData, err := os.ReadFile(stateFile)
+	if err != nil {
+		fmt.Printf("WARNING: Failed to read state officers: %v\n", err)
+		return
+	}
+	var stateOfficers []interface{}
+	if err := json.Unmarshal(stateData, &stateOfficers); err != nil {
+		fmt.Printf("WARNING: Failed to parse state officers: %v\n", err)
+		return
+	}
+
+	districtData, err := os.ReadFile(districtFile)
+	if err != nil {
+		fmt.Printf("WARNING: Failed to read district officers: %v\n", err)
+		return
+	}
+	var districtOfficers map[string]interface{}
+	if err := json.Unmarshal(districtData, &districtOfficers); err != nil {
+		fmt.Printf("WARNING: Failed to parse district officers: %v\n", err)
+		return
+	}
+
+	combined := map[string]interface{}{
+		"state_officers":    stateOfficers,
+		"district_officers": districtOfficers,
+	}
+
+	combinedJSON, err := json.MarshalIndent(combined, "", "  ")
+	if err != nil {
+		fmt.Printf("WARNING: Failed to marshal merged office data: %v\n", err)
+		return
+	}
+
+	if err := os.MkdirAll(targetDir, 0777); err != nil {
+		fmt.Printf("WARNING: Failed to create target office dir: %v\n", err)
+		return
+	}
+
+	if err := os.WriteFile(targetFile, combinedJSON, 0777); err != nil {
+		fmt.Printf("WARNING: Failed to write merged office data file: %v\n", err)
+		return
+	}
+
+	fmt.Println("✅ Successfully merged state & district office bearers into taga-office.json")
+}
+
+func seedMemberUser() {
+	membersFile := "/home/sudhan_dev/Downloads/code/nammataga/taga-api/data/member/members.json"
+
+	data, err := os.ReadFile(membersFile)
+	if err != nil {
+		fmt.Printf("WARNING: Failed to read members file %s: %v\n", membersFile, err)
+		return
+	}
+
+	var members []map[string]interface{}
+	if err := json.Unmarshal(data, &members); err != nil {
+		fmt.Printf("WARNING: Failed to parse members file: %v\n", err)
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("test123"), bcrypt.DefaultCost)
+	if err != nil {
+		fmt.Printf("WARNING: Failed to hash password: %v\n", err)
+		return
+	}
+
+	email := "sudhantest08@gmail.com"
+	found := false
+	for i, m := range members {
+		if mEmail, ok := m["emailId"].(string); ok && strings.EqualFold(mEmail, email) {
+			members[i]["password"] = string(hashedPassword)
+			members[i]["first_login"] = false
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		newM := map[string]interface{}{
+			"id":                       "d11348e1-9a65-4945-bb1b-f100a5df15cg",
+			"emailId":                  email,
+			"username":                 email,
+			"password":                 string(hashedPassword),
+			"first_login":              false,
+			"name":                     "Test Member Sudhan",
+			"initial":                  "S",
+			"gender":                   "Male",
+			"mobile_number":            "9944637254",
+			"tagaId":                   "TAGA005",
+			"payment_status":           "Paid",
+			"subscription_active":      true,
+			"cps_gpf_number":           "GPF001",
+			"date_of_birth":            "1988-05-15",
+			"designation":              "Agriculture Officer",
+			"educational_qualification": "M.Sc Agriculture",
+			"father_name":              "Rajendran",
+			"mother_name":              "Sita Lakshmi",
+			"native_district":          "Salem",
+			"working_district":         "Salem",
+			"residential_address":      "12 Gandhi Nagar",
+			"permanent_address":        "12 Gandhi Nagar",
+			"tbf_number":               "TBF001",
+			"sno":                      1,
+			"login_count":              6,
+			"created_at":               time.Now().Format(time.RFC3339),
+		}
+		members = append(members, newM)
+	}
+
+	updatedData, err := json.MarshalIndent(members, "", "  ")
+	if err != nil {
+		fmt.Printf("WARNING: Failed to marshal seeded members: %v\n", err)
+		return
+	}
+
+	if err := os.WriteFile(membersFile, updatedData, 0644); err != nil {
+		fmt.Printf("WARNING: Failed to write seeded members file: %v\n", err)
+		return
+	}
+
+	fmt.Println("✅ Successfully seeded member user 'sudhantest08@gmail.com' in database")
 }
 
 var (
@@ -190,6 +325,30 @@ func stopChromeDriver() {
 	}
 }
 
+func openBrowser(url string) error {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = "cmd"
+		args = []string{"/c", "start", url}
+	case "darwin":
+		cmd = "open"
+		args = []string{url}
+	default: // "linux", "freebsd", "openbsd", "netbsd"
+		cmd = "xdg-open"
+		args = []string{url}
+	}
+	
+	c := exec.Command(cmd, args...)
+	if err := c.Start(); err == nil {
+		return nil
+	}
+	
+	return exec.Command("python3", "-m", "webbrowser", url).Start()
+}
+
 // TeardownSuite generates test execution reports.
 func TeardownSuite() {
 	stopChromeDriver()
@@ -199,6 +358,18 @@ func TeardownSuite() {
 		logger.Error("Failed to compile test reports: %v", err)
 	} else {
 		logger.Info("Test reports generated in '%s' directory.", ExecutionReportDir)
+
+		// Automatically open report in browser if not running in headless mode
+		// and only trigger it during the final 'ui.test' package run.
+		if GlobalConfig != nil && !GlobalConfig.Headless && os.Getenv("E2E_HEADLESS") != "true" && strings.Contains(os.Args[0], "ui.test") {
+			htmlPath := filepath.Join(ExecutionReportDir, "report.html")
+			if absPath, err := filepath.Abs(htmlPath); err == nil {
+				logger.Info("Opening test report: %s", absPath)
+				if err := openBrowser(absPath); err != nil {
+					logger.Error("Failed to open report in browser: %v", err)
+				}
+			}
+		}
 	}
 }
 

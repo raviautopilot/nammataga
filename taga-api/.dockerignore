@@ -1,0 +1,18 @@
+# Ignore local data and logs during docker builds
+data/
+audit-logs/
+tmp/
+*.log
+*.exe
+.git
+.idea
+.vscode
+docker-compose*
+Dockerfile
+.env
+.env.*
+.dockerignore
+go.work
+node_modules/
+dist/
+build/

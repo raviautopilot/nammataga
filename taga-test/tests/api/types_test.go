@@ -80,7 +80,8 @@ type RootResponse struct {
 
 // HealthResponse represents the health check status payload
 type HealthResponse struct {
-	Status string `json:"status"`
+	Status  string `json:"status,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 

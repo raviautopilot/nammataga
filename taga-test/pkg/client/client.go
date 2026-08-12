@@ -209,7 +209,7 @@ func (c *Client) logExchange(startTime time.Time, req *http.Request, reqBody []b
 	suffix := fmt.Sprintf("%06d", rand.Intn(1000000))
 	baseDir := filepath.Join(c.LogDir, dateDir)
 
-	if err := os.MkdirAll(baseDir, 0755); err != nil {
+	if err := os.MkdirAll(baseDir, 0777); err != nil {
 		logger.Error("Failed to create log directory: %s", err)
 		return
 	}

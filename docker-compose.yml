@@ -14,8 +14,11 @@ services:
     environment:
       - PORT=1801
       - ENVIRONMENT=development
+    env_file:
+      - ./taga-api/data/.env
     volumes:
       - ./taga-api/data:/app/data
+      - ./taga-api/audit-logs:/app/audit-logs
     restart: unless-stopped
 
   # ==========================================

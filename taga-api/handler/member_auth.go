@@ -2,12 +2,14 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"taga-api/config"
 	"taga-api/model"
+	"taga-api/service/audit"
 	"taga-api/service/auth"
 	"taga-api/service/jwt"
 	"taga-api/utils"
@@ -204,6 +206,17 @@ func MemberLoginHandler(c *gin.Context) {
 
 	if err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(req.Password)); err != nil {
 		config.Logger.Warn("Invalid password for member", zap.String("email", req.Email))
+		// Audit failed login — use tagaId if resolvable, otherwise anonymous
+		tagaID := getMemberTagaIdByEmail(req.Email)
+		resID := tagaID
+		if tagaID == "" {
+			tagaID = "anonymous"
+			resID = req.Email
+		}
+		_ = audit.Log(c, tagaID, req.Email,
+			audit.ActionLoginFailed, audit.ModuleAuth,
+			"member", resID, fmt.Sprintf("Member login failed for %s: invalid password", req.Email),
+			nil, nil)
 		respondError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
@@ -268,6 +281,16 @@ func MemberLoginHandler(c *gin.Context) {
 		User:                userResponse,
 		ForceChangePassword: false,
 	})
+
+	// Audit successful member login (after response so it does not delay the user)
+	tagaID := getMemberTagaIdByEmail(req.Email)
+	if tagaID == "" {
+		tagaID = memberID
+	}
+	_ = audit.Log(c, tagaID, memberEmail,
+		audit.ActionLogin, audit.ModuleAuth,
+		"member", tagaID, fmt.Sprintf("Member %s logged in", memberEmail),
+		nil, nil)
 }
 
 // MemberLogoutHandler
@@ -277,6 +300,23 @@ func MemberLoginHandler(c *gin.Context) {
 // @Success 200 {object} map[string]interface{}
 // @Router /api/member/logout [post]
 func MemberLogoutHandler(c *gin.Context) {
+	// Audit logout — resolve tagaId from JWT context
+	memberUUID, _ := c.Get("member_id")
+	tagaID := "anonymous"
+	username := ""
+	if memberUUID != nil {
+		tagaID = getMemberTagaIdByUUID(fmt.Sprintf("%v", memberUUID))
+		if val, ok := c.Get("member_email"); ok {
+			if s, ok := val.(string); ok {
+				username = s
+			}
+		}
+	}
+
+	_ = audit.Log(c, tagaID, fmt.Sprintf("%v", username),
+		audit.ActionLogout, audit.ModuleAuth,
+		"member", tagaID, fmt.Sprintf("Member %v logged out", username),
+		nil, nil)
 	respondMessage(c, "Logged out successfully")
 }
 
@@ -346,6 +386,16 @@ func ChangeMemberPasswordHandler(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "Failed to save")
 		return
 	}
+
+	// Audit password change — never store old/new password
+	tagaID := getMemberTagaIdByEmail(req.Email)
+	if tagaID == "" {
+		tagaID = "anonymous"
+	}
+	_ = audit.Log(c, tagaID, req.Email,
+		audit.ActionPasswordChanged, audit.ModuleAuth,
+		"member", tagaID, fmt.Sprintf("Member %s changed their password", req.Email),
+		nil, nil)
 
 	respondMessage(c, "Password has been successfully changed")
 }

@@ -324,6 +324,14 @@ func TestAPI_About_HeaderValidations(t *testing.T) {
 			name:    "Malformed Authorization Header",
 			headers: map[string]string{"Authorization": "Basic YWRtaW46cGFzc3dvcmQ="},
 		},
+		{
+			name:    "Extremely Large Header Value",
+			headers: map[string]string{"X-Custom-Header": strings.Repeat("A", 10000)},
+		},
+		{
+			name:    "SQL Injection in Header",
+			headers: map[string]string{"User-Agent": "' OR '1'='1"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -410,6 +418,14 @@ func TestAPI_About_UnexpectedPayloads(t *testing.T) {
 		{"GET with Valid JSON Body", map[string]string{"key": "value"}},
 		{"GET with Empty JSON Body", map[string]string{}},
 		{"GET with Large JSON Payload", map[string]interface{}{"data": strings.Repeat("X", 5000)}},
+		{"GET with Malformed JSON Payload", "invalid-json-content"},
+		{"GET with XML Payload", "<xml><data>test</data></xml>"},
+		{"Business Logic - Past Date for Future Range", map[string]string{"start_date": "2050-01-01", "end_date": "2020-01-01"}},
+		{"Business Logic - Negative Priority", map[string]int{"priority": -5}},
+		{"Business Logic - Extreme Boundary 100-year Future Date", map[string]string{"event_date": "2126-01-01"}},
+		{"Business Logic - State Machine Violation Canceling Completed", map[string]string{"action": "cancel", "status": "completed"}},
+		{"Business Logic - Role Context Switch to Admin in Body", map[string]string{"role": "admin", "override": "true"}},
+		{"Business Logic - Logical Paradox Contradicting Flags", map[string]bool{"is_public": true, "is_private": true}},
 	}
 
 	for _, tc := range testCases {

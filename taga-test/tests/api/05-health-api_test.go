@@ -30,8 +30,11 @@ func TestAPI_Health_ValidRequest(t *testing.T) {
 				tc.Fatalf("Expected 200 OK from /health, got error: %v", err)
 			}
 
-			tc.Actual = fmt.Sprintf("HTTP 200 OK, Status = '%s'", resp.Status)
-			if resp.Status != "healthy" {
+			tc.Actual = fmt.Sprintf("HTTP 200 OK, Status = '%s', Message = '%s'", resp.Status, resp.Message)
+			if resp.Status == "" && resp.Message == "healthy" {
+				tc.FailureReason = "REAL API CONTRACT BUG: Endpoint GET /health returned 'message':'healthy' instead of required contract key 'status':'healthy'"
+				tc.Errorf("REAL API CONTRACT BUG: Endpoint GET /health returned 'message':'healthy' instead of required contract key 'status':'healthy'")
+			} else if resp.Status != "healthy" {
 				tc.FailureReason = fmt.Sprintf("Expected status 'healthy', got '%s'", resp.Status)
 				tc.Errorf("Expected status 'healthy', got '%s'", resp.Status)
 			}
@@ -87,8 +90,11 @@ func TestAPI_Health_ValidHeaders(t *testing.T) {
 				tc.Fatalf("Request failed with custom headers: %v", err)
 			}
 
-			tc.Actual = fmt.Sprintf("HTTP 200 OK, Status = '%s'", resp.Status)
-			if resp.Status != "healthy" {
+			tc.Actual = fmt.Sprintf("HTTP 200 OK, Status = '%s', Message = '%s'", resp.Status, resp.Message)
+			if resp.Status == "" && resp.Message == "healthy" {
+				tc.FailureReason = "REAL API CONTRACT BUG: Endpoint GET /health returned 'message':'healthy' instead of required contract key 'status':'healthy'"
+				tc.Errorf("REAL API CONTRACT BUG: Endpoint GET /health returned 'message':'healthy' instead of required contract key 'status':'healthy'")
+			} else if resp.Status != "healthy" {
 				tc.FailureReason = fmt.Sprintf("Expected status 'healthy', got '%s'", resp.Status)
 				tc.Errorf("Expected status 'healthy', got '%s'", resp.Status)
 			}
@@ -286,6 +292,14 @@ func TestAPI_Health_HeaderValidations(t *testing.T) {
 			name:    "Malformed Authorization Header",
 			headers: map[string]string{"Authorization": "Basic YWRtaW46cGFzc3dvcmQ="},
 		},
+		{
+			name:    "Extremely Large Header Value",
+			headers: map[string]string{"X-Custom-Header": strings.Repeat("A", 10000)},
+		},
+		{
+			name:    "SQL Injection in Header",
+			headers: map[string]string{"User-Agent": "' OR '1'='1"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -368,6 +382,14 @@ func TestAPI_Health_UnexpectedPayloads(t *testing.T) {
 		{"GET /health with Valid JSON Body", map[string]string{"ping": "pong"}},
 		{"GET /health with Empty JSON Body", map[string]string{}},
 		{"GET /health with Large JSON Payload", map[string]interface{}{"data": strings.Repeat("H", 5000)}},
+		{"GET /health with Malformed JSON Payload", "invalid-json-data"},
+		{"GET /health with XML Payload", "<health>check</health>"},
+		{"Business Logic - Health check with negative IDOR", map[string]int{"user_id": -9999}},
+		{"Business Logic - Health check with End date before Start date", map[string]string{"start": "2025-01-01", "end": "2024-01-01"}},
+		{"Business Logic - Extreme Boundary 100-year Future Date", map[string]string{"event_date": "2126-01-01"}},
+		{"Business Logic - State Machine Violation Canceling Completed", map[string]string{"action": "cancel", "status": "completed"}},
+		{"Business Logic - Role Context Switch to Admin in Body", map[string]string{"role": "admin", "override": "true"}},
+		{"Business Logic - Logical Paradox Contradicting Flags", map[string]bool{"is_public": true, "is_private": true}},
 	}
 
 	for _, tc := range testCases {

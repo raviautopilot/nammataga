@@ -7,6 +7,7 @@ import (
 	"os"
 	"taga-api/config"
 	"taga-api/model"
+	"taga-api/service/audit"
 	"taga-api/service/jwt"
 
 	"github.com/gin-gonic/gin"
@@ -49,6 +50,11 @@ func AdminLoginHandler(c *gin.Context) {
 
 	if req.Username != adminUsername || req.Password != adminPassword {
 		config.Logger.Warn("Failed admin login - invalid credentials")
+		// Audit failed login attempt
+		_ = audit.Log(c, "admin", req.Username,
+			audit.ActionLoginFailed, audit.ModuleAuth,
+			"admin", req.Username, "Admin login failed: invalid credentials",
+			nil, nil)
 		respondError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
@@ -63,6 +69,12 @@ func AdminLoginHandler(c *gin.Context) {
 	config.Logger.Info("Admin login successful",
 		zap.String("username", req.Username),
 		zap.Int64("expires_in", expiresIn))
+
+	// Audit successful admin login
+	_ = audit.Log(c, "admin", req.Username,
+		audit.ActionLogin, audit.ModuleAuth,
+		"admin", "admin", "Admin logged in successfully",
+		nil, nil)
 
 	respondOK(c, AdminLoginResponse{
 		Token:     token,

@@ -23,16 +23,22 @@ func TestUI_07_BulkUploadMembers(t *testing.T) {
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
 		actions.BulkUploadMembers(admin, cfg, "../../fixtures/bulk_members_sample.csv", result)
-		actions.GoToHome(admin, result)
-		actions.OpenAdminPanel(admin, cfg, result)
 
-		// Delete bulk-uploaded member by mobile number
-		for _, mobile := range cfg.BulkMemberMobiles {
-			cleanMobile := strings.TrimSpace(mobile)
-			cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
-			actions.DeleteMemberByMobile(admin, cfg, cleanMobile, result)
+		// Defer cleanup if bulk upload was initiated
+		if !result.Failed() {
+			defer func() {
+				cleanupResult := actions.NewResult("Cleanup")
+				for _, mobile := range cfg.BulkMemberMobiles {
+					cleanMobile := strings.TrimSpace(mobile)
+					cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
+					actions.DeleteMemberByMobile(admin, cfg, cleanMobile, cleanupResult)
+				}
+			}()
 		}
 
+		actions.SetPaymentStatusToPaid(admin, cfg, result)
+		actions.GoToHome(admin, result)
+		actions.OpenAdminPanel(admin, cfg, result)
 		actions.LogoutAdmin(admin, cfg, result)
 
 		// Assert Result

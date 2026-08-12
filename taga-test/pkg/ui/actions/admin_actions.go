@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tebeka/selenium"
 	"e2e-template/pkg/config"
 	"e2e-template/pkg/ui/pages"
 )
@@ -168,6 +169,24 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		r.Evidence = append(r.Evidence, scr)
 	}
 	r.Advice = append(r.Advice, "Member added successfully with all 19 fields populated.")
+}
+
+// SetPaymentStatusToPaid attempts to select the paid checkbox/button (which currently does not exist and will fail).
+func SetPaymentStatusToPaid(aai AdminActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Set Member Payment Status to Paid"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	ap := aai.GetAdminPersona()
+	if err := ap.Page.ClickByTestID("testid-member-payment-paid-checkbox", 5*time.Second); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to select paid status: %w", err)
+		r.Advice = append(r.Advice, "Advice: Verify testid-member-payment-paid-checkbox exists on form")
+		return
+	}
 }
 
 // DeleteMemberByEmail searches for a member by email and confirms deletion.
@@ -878,8 +897,9 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 	// Click delete trash icon for the uploaded test PDF document (starting with 'a')
 	deleteDocXPath := "//p[contains(text(), 'a_test_resource_sample')]/ancestor::div[contains(@class, 'flex items-center')]//button[contains(@class, 'text-destructive')]"
 	if err := ap.Page.Click(deleteDocXPath, ap.DefaultTimeout); err != nil {
-		// Fallback: Click first delete icon inside Establishment category
-		_ = ap.Page.Click("//div[contains(., 'Establishment')]//button[contains(@class, 'text-destructive')]", ap.DefaultTimeout)
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to locate or click delete button for the uploaded resource 'a_test_resource_sample': %w", err)
+		return
 	}
 	time.Sleep(1 * time.Second)
 
@@ -893,6 +913,25 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 	// Screenshot Step 04: Resource Deleted
 	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_Resource_Deleted"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// Verify the resource has actually disappeared from the list
+	err = ap.Page.Driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
+		el, err := wd.FindElement(selenium.ByXPATH, "//p[contains(text(), 'a_test_resource_sample')]")
+		if err != nil {
+			return true, nil // successfully disappeared
+		}
+		disp, err := el.IsDisplayed()
+		if err != nil || !disp {
+			return true, nil // successfully hidden or disappeared
+		}
+		return false, nil // still visible
+	}, 5*time.Second)
+
+	if err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("resource document was not deleted and is still present in the list: %w", err)
+		return
 	}
 
 	// Close Modal

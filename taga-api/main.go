@@ -55,6 +55,9 @@ func main() {
 	// Start the renewal reminder scheduler
 	service.StartScheduler()
 
+	// Start the audit log retention cleanup scheduler
+	service.StartAuditCleanupScheduler()
+
 	// Setup router
 	r := router.SetupRouter()
 

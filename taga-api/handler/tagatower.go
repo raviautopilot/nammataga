@@ -18,6 +18,7 @@ import (
 	"taga-api/config"
 	"taga-api/model"
 	"taga-api/service"
+	"taga-api/service/audit"
 
 	"go.uber.org/zap"
 )
@@ -82,6 +83,14 @@ func CreateBooking(c *gin.Context) {
 		return
 	}
 
+	// Audit room booking request
+	_ = audit.Log(c, bookerID, bookerName,
+		audit.ActionBookingCreated, audit.ModuleBooking,
+		"booking", booking.ID,
+		fmt.Sprintf("Member %s (ID: %s) requested room booking %s for room '%s' (%s to %s)",
+			bookerName, bookerID, booking.ID, booking.RoomName, booking.CheckInDate, booking.CheckOutDate),
+		nil, booking)
+
 	c.JSON(http.StatusCreated, booking)
 }
 
@@ -139,7 +148,7 @@ func GetAllBookingsAdmin(c *gin.Context) {
 func DeleteBooking(c *gin.Context) {
 	bookingID := c.Param("id")
 
-	_, err := service.GetBookingByID(bookingID)
+	booking, err := service.GetBookingByID(bookingID)
 	if err != nil {
 		c.JSON(404, gin.H{"error": "Booking not found"})
 		return
@@ -150,6 +159,13 @@ func DeleteBooking(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Audit room booking cancellation
+	_ = audit.Log(c, booking.BookerID, booking.BookerName,
+		audit.ActionBookingCancelled, audit.ModuleBooking,
+		"booking", booking.ID,
+		fmt.Sprintf("Member %s (ID: %s) cancelled room booking %s", booking.BookerName, booking.BookerID, booking.ID),
+		booking, nil)
 
 	c.JSON(200, gin.H{"message": "Booking cancelled"})
 }
@@ -372,6 +388,17 @@ func ConfirmPayment(c *gin.Context) {
 		return
 	}
 
+	// Audit room booking payment confirmation via UPI
+	booking, err := service.GetBookingByID(bookingID)
+	if err == nil {
+		_ = audit.Log(c, booking.BookerID, booking.BookerName,
+			audit.ActionPaymentConfirmed, audit.ModulePayment,
+			"booking", bookingID,
+			fmt.Sprintf("Payment confirmed for room booking %s via UPI ID: %s (Amount: %d)",
+				bookingID, upiID, booking.AdvanceAmount),
+			nil, map[string]interface{}{"upi_id": upiID, "booking_id": bookingID})
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Payment confirmed"})
 }
 
@@ -556,9 +583,18 @@ func VerifyPayment(c *gin.Context) {
 		return
 	}
 
-	// ========== SEND ADMIN EMAIL FOR ROOM BOOKING ==========
-	// Get booking details from service
+	// Audit room booking payment confirmation via Razorpay
 	booking, err := service.GetBookingByID(req.BookingID)
+	if err == nil {
+		_ = audit.Log(c, booking.BookerID, booking.BookerName,
+			audit.ActionPaymentConfirmed, audit.ModulePayment,
+			"booking", req.BookingID,
+			fmt.Sprintf("Razorpay payment confirmed for room booking %s (Order: %s, Payment: %s)",
+				req.BookingID, req.OrderID, req.PaymentID),
+			nil, map[string]interface{}{"order_id": req.OrderID, "payment_id": req.PaymentID, "booking_id": req.BookingID})
+	}
+
+	// ========== SEND ADMIN EMAIL FOR ROOM BOOKING ==========
 	if err == nil && booking != nil {
 		// Get room details
 		room, _ := service.GetRoomByID(booking.RoomID)

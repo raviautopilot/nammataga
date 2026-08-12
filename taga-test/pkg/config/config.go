@@ -126,7 +126,7 @@ type Config struct {
 // LoadConfig reads the configuration file from path and applies environment overrides.
 func LoadConfig(path string) (*Config, error) {
 	cfg := &Config{
-		BaseURL:     "https://api.nammataga.com",
+		BaseURL:     "http://localhost:8080",
 		UiURL:       "https://nammataga.com",
 		SeleniumURL: "http://localhost:9515",
 		Headless:    false,

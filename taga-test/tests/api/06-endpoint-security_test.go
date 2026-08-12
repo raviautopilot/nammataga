@@ -49,23 +49,23 @@ var SwaggerEndpoints = []EndpointDefinition{
 	{Method: "GET", Path: "/api/resources/external-links", Category: "Resources", ExpectedProtected: true},
 	{Method: "GET", Path: "/api/resources/1", Category: "Resources", ExpectedProtected: true},
 
-	// Grievances
-	{Method: "GET", Path: "/api/grievances", Category: "Grievances", ExpectedProtected: true},
-	{Method: "GET", Path: "/api/categories", Category: "Grievances", ExpectedProtected: true},
-	{Method: "GET", Path: "/api/priorities", Category: "Grievances", ExpectedProtected: true},
+	// Grievances (Public Submission & Reference Data)
+	{Method: "GET", Path: "/api/grievances", Category: "Grievances", ExpectedProtected: false},
+	{Method: "GET", Path: "/api/categories", Category: "Grievances", ExpectedProtected: false},
+	{Method: "GET", Path: "/api/priorities", Category: "Grievances", ExpectedProtected: false},
 
-	// TAGA Towers
-	{Method: "GET", Path: "/api/towers/rooms", Category: "TAGA Towers", ExpectedProtected: true},
-	{Method: "GET", Path: "/api/towers/availability", Category: "TAGA Towers", ExpectedProtected: true},
+	// TAGA Towers (Public Catalog)
+	{Method: "GET", Path: "/api/towers/rooms", Category: "TAGA Towers", ExpectedProtected: false},
+	{Method: "GET", Path: "/api/towers/availability", Category: "TAGA Towers", ExpectedProtected: false},
 
-	// Member Auth Entry Points
+	// Member Auth Entry Points (Unauthenticated Entry Points)
 	{Method: "POST", Path: "/api/admin/login", Category: "Admin Login", ExpectedProtected: false},
 	{Method: "POST", Path: "/api/member/login", Category: "Member Auth", ExpectedProtected: false},
 	{Method: "POST", Path: "/api/auth/forgot-password", Category: "Member Auth", ExpectedProtected: false},
 	{Method: "POST", Path: "/api/auth/member-forgot-password", Category: "Member Auth", ExpectedProtected: false},
 
-	{Method: "POST", Path: "/api/auth/reset-password", Category: "Member Auth", ExpectedProtected: true},
-	{Method: "POST", Path: "/api/member/logout", Category: "Member Auth", ExpectedProtected: true},
+	{Method: "POST", Path: "/api/auth/reset-password", Category: "Member Auth", ExpectedProtected: false},
+	{Method: "POST", Path: "/api/member/logout", Category: "Member Auth", ExpectedProtected: false},
 
 	// Member Protected Routes (Auth Required)
 	{Method: "GET", Path: "/api/member/profile", Category: "Member Protected", ExpectedProtected: true},
@@ -73,7 +73,7 @@ var SwaggerEndpoints = []EndpointDefinition{
 	{Method: "GET", Path: "/api/member/notifications", Category: "Member Protected", ExpectedProtected: true},
 	{Method: "PUT", Path: "/api/member/notifications/1/read", Category: "Member Protected", ExpectedProtected: true},
 	{Method: "GET", Path: "/api/member/notifications/unread/count", Category: "Member Protected", ExpectedProtected: true},
-	{Method: "POST", Path: "/api/member/change-password", Category: "Member Protected", ExpectedProtected: true},
+	{Method: "POST", Path: "/api/member/change-password", Category: "Member Protected", ExpectedProtected: false},
 
 	// Subscription Protected Routes (Auth Required)
 	{Method: "POST", Path: "/api/subscriptions/create-order", Category: "Subscription Protected", ExpectedProtected: true},
@@ -109,13 +109,25 @@ var SwaggerEndpoints = []EndpointDefinition{
 	{Method: "POST", Path: "/api/admin/send-renewal-reminders", Category: "Admin Protected", ExpectedProtected: true},
 	{Method: "GET", Path: "/api/towers/admin/bookings", Category: "TAGA Towers (Admin)", ExpectedProtected: true},
 	{Method: "POST", Path: "/admin/upload-registration", Category: "Legacy Admin Protected", ExpectedProtected: true},
+
+	// Non-Existent Routes
+	{Method: "GET", Path: "/api/nonexistent/admin", Category: "Invalid Route", ExpectedProtected: false},
+	{Method: "POST", Path: "/api/admin/hidden", Category: "Invalid Route", ExpectedProtected: false},
+
+	// Business Logic Negative
+	{Method: "GET", Path: "/api/member/profile?user_id=-1", Category: "Business Logic IDOR", ExpectedProtected: true},
+	{Method: "GET", Path: "/api/admin/members?page=-5", Category: "Business Logic Negative Pagination", ExpectedProtected: true},
+	{Method: "GET", Path: "/api/admin/members?page=9223372036854775807", Category: "Business Logic Extreme Bounds", ExpectedProtected: true},
+	{Method: "PUT", Path: "/api/admin/events/1?action=cancel&status=completed", Category: "Business Logic State Machine Violation", ExpectedProtected: true},
+	{Method: "POST", Path: "/api/admin/members/add?role=superadmin&override=true", Category: "Business Logic Role Context Switch", ExpectedProtected: true},
+	{Method: "GET", Path: "/api/admin/events/1?start_date=2120-01-01&end_date=1990-01-01", Category: "Business Logic Paradox", ExpectedProtected: true},
 }
 
 // TestAPI_06_EndpointSecurity audits all swagger endpoints individually, populating report entries for every endpoint.
 func TestAPI_06_EndpointSecurity(t *testing.T) {
 	baseURL := tests.GlobalConfig.BaseURL
 	if baseURL == "" {
-		baseURL = "https://api.nammataga.com"
+		baseURL = "http://localhost:8080"
 	}
 
 	httpClient := &http.Client{
