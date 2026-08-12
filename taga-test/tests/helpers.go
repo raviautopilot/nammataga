@@ -541,3 +541,62 @@ func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) 
 		fn(subT, page)
 	})
 }
+
+// CleanupMemberByEmailOrMobile ensures any existing member matching email or mobile is deleted via API.
+func CleanupMemberByEmailOrMobile(cfg *config.Config, identifiers ...string) {
+	if cfg == nil || cfg.BaseURL == "" {
+		logger.Info("[API Cleanup] Skipping: cfg or BaseURL is empty")
+		return
+	}
+
+	c := client.NewClient(cfg.BaseURL, time.Duration(cfg.Timeout)*time.Second, ExecutionLogDir)
+
+	loginReq := map[string]string{
+		"username": cfg.AdminCredentials.Username,
+		"password": cfg.AdminCredentials.Password,
+	}
+	var loginResp struct {
+		Token string `json:"token"`
+	}
+	if err := c.SendHttpRequest("POST", "/api/admin/login", nil, &loginReq, &loginResp, nil); err != nil || loginResp.Token == "" {
+		logger.Error("[API Cleanup] Failed to login admin via API: %v", err)
+		return
+	}
+
+	auth := &client.BearerTokenAuth{Token: loginResp.Token}
+	deletedIDs := make(map[string]bool)
+
+	for _, idStr := range identifiers {
+		clean := strings.TrimSpace(idStr)
+		if clean == "" {
+			continue
+		}
+
+		var searchResp struct {
+			Members []struct {
+				ID string `json:"id"`
+			} `json:"members"`
+		}
+
+		err := c.SendHttpRequest("GET", "/api/admin/members?search="+url.QueryEscape(clean), nil, nil, &searchResp, auth)
+		if err != nil {
+			logger.Error("[API Cleanup] Search failed for '%s': %v", clean, err)
+			continue
+		}
+
+		logger.Info("[API Cleanup] Search for '%s' returned %d member(s)", clean, len(searchResp.Members))
+		for _, m := range searchResp.Members {
+			if m.ID != "" && !deletedIDs[m.ID] {
+				var delResp map[string]interface{}
+				if err := c.SendHttpRequest("DELETE", "/api/admin/members/"+m.ID, nil, nil, &delResp, auth); err != nil {
+					logger.Error("[API Cleanup] Failed to delete member ID %s: %v", m.ID, err)
+				} else {
+					logger.Info("[API Cleanup] Successfully deleted member ID %s via API", m.ID)
+					deletedIDs[m.ID] = true
+				}
+			}
+		}
+	}
+}
+
+

@@ -18,6 +18,11 @@ func TestUI_02_AdminAddDeleteMember(t *testing.T) {
 		admin := actions.NewAdminPersona(page, cfg.UiURL, 5*time.Second)
 		result := actions.NewResult("TestUI_02_AdminAddDeleteMember")
 
+		// Pre-test setup: Ensure target test member is deleted via API so test runs with a clean state
+		cleanEmail := strings.TrimSpace(cfg.NewMemberFormData.Email)
+		cleanMobile := strings.TrimSpace(cfg.NewMemberFormData.MobileNumber)
+		tests.CleanupMemberByEmailOrMobile(cfg, cleanEmail, cleanMobile)
+
 		// Declarative Persona Action Flow
 		actions.GoToHome(admin, result)
 		actions.LoginAsAdmin(admin, cfg, result)
@@ -28,13 +33,12 @@ func TestUI_02_AdminAddDeleteMember(t *testing.T) {
 		if !result.Failed() {
 			defer func() {
 				cleanupResult := actions.NewResult("Cleanup")
-				cleanMobile := strings.TrimSpace(cfg.NewMemberFormData.MobileNumber)
-				cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
-				actions.DeleteMemberByMobile(admin, cfg, cleanMobile, cleanupResult)
+				cleanMobileNoSpace := strings.ReplaceAll(cleanMobile, " ", "")
+				actions.DeleteMemberByMobile(admin, cfg, cleanMobileNoSpace, cleanupResult)
+				tests.CleanupMemberByEmailOrMobile(cfg, cleanEmail, cleanMobile)
 			}()
 		}
 
-		actions.SetPaymentStatusToPaid(admin, cfg, result)
 		actions.LogoutAdmin(admin, cfg, result)
 
 		// Assert Result

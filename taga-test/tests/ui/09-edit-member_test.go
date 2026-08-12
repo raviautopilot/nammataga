@@ -1,6 +1,7 @@
 package ui_tests
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +20,11 @@ func TestUI_09_EditMemberDetails(t *testing.T) {
 
 		updatedDesignation := "Senior Agriculture Officer"
 		updatedDistrict := "Coimbatore"
+
+		// Pre-test setup: Ensure target test member is deleted via API so test runs with a clean state
+		cleanEmail := strings.TrimSpace(cfg.NewMemberFormData.Email)
+		cleanMobile := strings.TrimSpace(cfg.NewMemberFormData.MobileNumber)
+		tests.CleanupMemberByEmailOrMobile(cfg, cleanEmail, cleanMobile)
 
 		// Declarative Persona Action Flow
 		actions.GoToHome(admin, result)
