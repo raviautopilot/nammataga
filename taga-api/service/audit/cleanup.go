@@ -1,7 +1,10 @@
 package audit
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -12,16 +15,16 @@ import (
 	"taga-api/config"
 )
 
-// RunCleanup deletes audit-log year/month directories that are older than the
+// RunCleanup archives audit-log year/month directories that are older than the
 // configured retention period (AUDIT_LOG_RETENTION_MONTHS env var, default 3).
 //
 // Safety rules:
-//   - Never deletes the current month.
-//   - Never deletes future months.
+//   - Never touches the current month.
+//   - Never touches future months.
 //   - Never touches directories outside "audit-logs/".
 //   - Handles missing directories gracefully.
-//   - Removes empty year directories after month cleanup.
-//   - Logs every deletion and every error via the application logger.
+//   - Compresses expired months to .tar.gz and deletes original folders.
+//   - Logs every compression and every error via the application logger.
 func RunCleanup() {
 	retention := retentionMonths()
 	// Cutoff: the first moment of the month that is `retention` months ago.
@@ -63,17 +66,37 @@ func RunCleanup() {
 				continue
 			}
 
+			archiveName := filepath.Join(yearDir, fmt.Sprintf("%s.tar.gz", month))
+
+			// Check if already compressed (should not happen as monthDirs is matching '??')
+			if _, err := os.Stat(archiveName); err == nil {
+				// Already exists, just remove original dir
+				_ = os.RemoveAll(monthDir)
+				continue
+			}
+
+			if err := compressDir(monthDir, archiveName); err != nil {
+				if config.Logger != nil {
+					config.Logger.Error("Audit cleanup failed to compress directory",
+						zap.String("dir", monthDir),
+						zap.Error(err),
+					)
+				}
+				continue
+			}
+
 			if err := os.RemoveAll(monthDir); err != nil {
 				if config.Logger != nil {
-					config.Logger.Error("Audit cleanup failed to delete directory",
+					config.Logger.Error("Audit cleanup failed to delete directory after compression",
 						zap.String("dir", monthDir),
 						zap.Error(err),
 					)
 				}
 			} else {
 				if config.Logger != nil {
-					config.Logger.Info("Audit cleanup deleted expired directory",
+					config.Logger.Info("Audit cleanup compressed and removed expired directory",
 						zap.String("dir", monthDir),
+						zap.String("archive", archiveName),
 					)
 				}
 			}
@@ -104,4 +127,57 @@ func retentionMonths() int {
 		return n
 	}
 	return 3
+}
+
+// compressDir compresses a directory into a .tar.gz archive.
+func compressDir(srcDir, destArchive string) error {
+	out, err := os.Create(destArchive)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	gw := gzip.NewWriter(out)
+	defer gw.Close()
+
+	tw := tar.NewWriter(gw)
+	defer tw.Close()
+
+	return filepath.Walk(srcDir, func(file string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		header, err := tar.FileInfoHeader(fi, fi.Name())
+		if err != nil {
+			return err
+		}
+
+		// Make the path relative to the srcDir parent
+		relPath, err := filepath.Rel(filepath.Dir(srcDir), file)
+		if err != nil {
+			return err
+		}
+		header.Name = relPath
+
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		if !fi.Mode().IsRegular() {
+			return nil
+		}
+
+		f, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		if _, err := io.Copy(tw, f); err != nil {
+			return err
+		}
+
+		return nil
+	})
 }

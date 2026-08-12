@@ -353,9 +353,23 @@
         </div>
     </div>
 
-    <!-- Filter Bar -->
+    <!-- Advanced Filter Bar: Status & Type -->
     <div class="filter-container">
-        <span style="font-weight: 600; color: var(--text-muted);">Filter by Test File:</span>
+        <span style="font-weight: 600; color: var(--text-muted); margin-right: 0.5rem;">Status:</span>
+        <button class="filter-btn active" data-filter-type="status" onclick="applyAdvancedFilter('status', 'all', this)">All</button>
+        <button class="filter-btn" data-filter-type="status" onclick="applyAdvancedFilter('status', 'failed', this)">❌ Failed Only</button>
+        
+        <span style="margin: 0 1rem; color: var(--border);">|</span>
+        
+        <span style="font-weight: 600; color: var(--text-muted); margin-right: 0.5rem;">Test Type:</span>
+        <button class="filter-btn active" data-filter-type="type" onclick="applyAdvancedFilter('type', 'all', this)">All</button>
+        <button class="filter-btn" data-filter-type="type" onclick="applyAdvancedFilter('type', 'API', this)">🔌 API Tests</button>
+        <button class="filter-btn" data-filter-type="type" onclick="applyAdvancedFilter('type', 'UI', this)">🖥️ UI Tests</button>
+    </div>
+
+    <!-- Filter Bar: Category -->
+    <div class="filter-container">
+        <span style="font-weight: 600; color: var(--text-muted); margin-right: 0.5rem;">Test File:</span>
         <button class="filter-btn active" onclick="filterCategory('all', this)">All Categories</button>
         {{range .GroupedResults}}
         <button class="filter-btn" onclick="filterCategory('cat-{{.Category}}', this)">📄 {{.Category}}</button>
@@ -376,7 +390,7 @@
 
         <!-- Test Cards within this category -->
         {{range .Results}}
-        <div class="test-card">
+        <div class="test-card" data-status="{{.Status}}" data-type="{{.Type}}">
             <!-- Clickable Header -->
             <div class="test-card-header" onclick="toggleCard(this)">
                 <div class="test-card-title">
@@ -503,11 +517,56 @@
         }
     }
 
+    let currentFilters = {
+        category: 'all',
+        status: 'all',
+        type: 'all'
+    };
+
     function filterCategory(catClass, btn) {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        // Toggle active state for category buttons
+        btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        document.querySelectorAll('.category-group-item').forEach(card => {
-            card.style.display = (catClass === 'all' || card.classList.contains(catClass)) ? 'block' : 'none';
+        
+        currentFilters.category = catClass;
+        executeFilters();
+    }
+
+    function applyAdvancedFilter(filterType, filterVal, btn) {
+        // Toggle active state for status/type buttons
+        btn.parentElement.querySelectorAll(`[data-filter-type="${filterType}"]`).forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        currentFilters[filterType] = filterVal;
+        executeFilters();
+    }
+
+    function executeFilters() {
+        document.querySelectorAll('.category-group-item').forEach(group => {
+            // 1. Check if category matches
+            const catMatch = (currentFilters.category === 'all' || group.classList.contains(currentFilters.category));
+            if (!catMatch) {
+                group.style.display = 'none';
+                return;
+            }
+            
+            // 2. Filter individual test cards within the matching category
+            let visibleCards = 0;
+            const cards = group.querySelectorAll('.test-card');
+            cards.forEach(card => {
+                const statusMatch = (currentFilters.status === 'all' || card.dataset.status === currentFilters.status);
+                const typeMatch = (currentFilters.type === 'all' || card.dataset.type === currentFilters.type);
+                
+                if (statusMatch && typeMatch) {
+                    card.style.display = 'block';
+                    visibleCards++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // 3. Hide entire category if no cards match the active filters
+            group.style.display = visibleCards > 0 ? 'block' : 'none';
         });
     }
 
