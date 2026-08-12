@@ -8,6 +8,7 @@ import (
 
 	"github.com/tebeka/selenium"
 	"e2e-template/pkg/config"
+	"e2e-template/pkg/ui"
 	"e2e-template/pkg/ui/pages"
 )
 
@@ -20,6 +21,29 @@ type AdminActionsInterface interface {
 // GetAdminPersona implements AdminActionsInterface for AdminPersona.
 func (p *AdminPersona) GetAdminPersona() *AdminPersona {
 	return p
+}
+
+// Helper: captureScreenshot captures a PNG screenshot with a small render delay and appends it to evidence.
+func captureScreenshot(ap *AdminPersona, r *Result, name string) {
+	if ap == nil || ap.Page == nil {
+		return
+	}
+	time.Sleep(500 * time.Millisecond)
+	if scr, scrErr := ap.Page.CaptureScreenshot(name); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+}
+
+// Helper: captureNetworkEvidence retrieves monkey-patched fetch/XHR API errors from browser sessionStorage and appends formatted logs to Advice.
+func captureNetworkEvidence(ap *AdminPersona, r *Result) {
+	if ap == nil || ap.Page == nil || ap.Page.Driver == nil {
+		return
+	}
+	if raw := ap.Page.RetrieveNetworkErrors(); raw != "" {
+		if formatted := ui.FormatNetworkErrors(raw); formatted != "" {
+			r.Advice = append(r.Advice, formatted)
+		}
+	}
 }
 
 // LoginAsAdmin opens Admin login, populates credentials, submits, and verifies login.
@@ -39,6 +63,8 @@ func LoginAsAdmin(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		return
 	}
 
+	ap.Page.InjectNetworkInterceptor()
+
 	homePage := pages.NewHomePage(ap.Page)
 	loginPage := pages.NewLoginPage(ap.Page)
 
@@ -46,8 +72,12 @@ func LoginAsAdmin(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify 'adminLoginButtonTestID' button exists on Home Page")
+		captureScreenshot(ap, r, "Step_01_AdminLogin_OpenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
+
+	captureScreenshot(ap, r, "Step_01_AdminLogin_ModalOpen")
 
 	err := loginPage.FillAndSubmitLogin(
 		cfg.AdminLoginUsernameInputTestID,
@@ -61,18 +91,15 @@ func LoginAsAdmin(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify Admin credentials and submit button testIDs in config.json")
-		time.Sleep(1 * time.Second)
-		if scr, scrErr := ap.Page.CaptureScreenshot(r.TestName + "_Step01_AdminLogin_Failure"); scrErr == nil {
-			r.Evidence = append(r.Evidence, scr)
-		}
+		captureScreenshot(ap, r, r.TestName+"_Step01_AdminLogin_Failure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
 	// Wait for home page to fully render after login redirect
 	time.Sleep(3 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_01_AdminLogin_HomePage"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_01_AdminLogin_HomePage")
+	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Admin logged in successfully.")
 }
 
@@ -86,24 +113,22 @@ func OpenAdminPanel(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 	adminDashboard := pages.NewAdminDashboardPage(ap.Page)
 
 	if err := adminDashboard.OpenAdminPanel(cfg.AdminPanelButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Check if navbar 'adminPanelButtonTestID' is visible after Admin login")
-		time.Sleep(1 * time.Second)
-		if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_AdminPanel_Failure"); scrErr == nil {
-			r.Evidence = append(r.Evidence, scr)
-		}
+		captureScreenshot(ap, r, "Step_02_AdminPanel_Failure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
 	// Wait for admin panel table to fully render
 	time.Sleep(3 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_AdminPanel_Loaded"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_02_AdminPanel_Loaded")
+	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Admin Panel opened successfully.")
 }
 
@@ -117,46 +142,53 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 	adminDashboard := pages.NewAdminDashboardPage(ap.Page)
 
 	if err := adminDashboard.OpenAddMemberModal(cfg.AdminAddMemberButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify 'adminAddMemberButtonTestID' is clickable in Admin Dashboard")
+		captureScreenshot(ap, r, "Step_03_AddMember_OpenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
+	captureScreenshot(ap, r, "Step_03_AddMember_ModalOpen")
 
 	if err := adminDashboard.FillAddMemberForm(cfg, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify all 19 form input testIDs in config.json match the UI elements")
+		captureScreenshot(ap, r, "Step_03_AddMember_FillFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
 	// Screenshot: form fully filled, before submitting
 	time.Sleep(1 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_AddMember_FormFilled"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_03_AddMember_FormFilled")
 
 	if err := adminDashboard.SubmitAddMemberForm(cfg.AdminAddMemberSubmitButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify 'adminAddMemberSubmitButtonTestID' submit button")
+		captureScreenshot(ap, r, "Step_04_AddMember_SubmitFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
 	// Screenshot: success toast visible immediately after submit
 	time.Sleep(2 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_AddMember_SuccessToast"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_04_AddMember_SuccessToast")
+	captureNetworkEvidence(ap, r)
 
 	// Click OK on the success modal to close it
 	if err := ap.Page.ClickByTestID("testid-add-success-ok-button", ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click add success OK button: %w", err)
+		captureScreenshot(ap, r, "Step_04_AddMember_DismissFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -165,13 +197,12 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	_ = adminDashboard.RefreshMemberTable(cfg.MemberRefreshButtonTestID, ap.DefaultTimeout)
 	time.Sleep(2 * time.Second)
 
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_05_AdminPanel_AfterAddMember"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_05_AdminPanel_AfterAddMember")
+	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Member added successfully with all 19 fields populated.")
 }
 
-// SetPaymentStatusToPaid attempts to select the paid checkbox/button (which currently does not exist and will fail).
+// SetPaymentStatusToPaid attempts to select the paid checkbox/button.
 func SetPaymentStatusToPaid(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	actionName := "Set Member Payment Status to Paid"
 	r.Actions = append(r.Actions, actionName)
@@ -181,15 +212,22 @@ func SetPaymentStatusToPaid(aai AdminActionsInterface, cfg *config.Config, r *Re
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
+	captureScreenshot(ap, r, "Step_SetPaymentStatus_Attempt")
+
 	if err := ap.Page.ClickByTestID("testid-member-payment-paid-checkbox", 5*time.Second); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to select paid status: %w", err)
 		r.Advice = append(r.Advice, "Advice: Verify testid-member-payment-paid-checkbox exists on form")
+		captureScreenshot(ap, r, "Step_SetPaymentStatus_Failure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
+	captureScreenshot(ap, r, "Step_SetPaymentStatus_Success")
+	captureNetworkEvidence(ap, r)
 }
 
-// DeleteMemberByEmail searches for a member by email and confirms deletion.
+// DeleteMemberByEmail searches for a member by email and confirms deletion, capturing screenshots at each step.
 func DeleteMemberByEmail(aai AdminActionsInterface, cfg *config.Config, email string, r *Result) {
 	cleanEmail := strings.TrimSpace(email)
 	cleanEmail = strings.ReplaceAll(cleanEmail, " ", "")
@@ -202,6 +240,7 @@ func DeleteMemberByEmail(aai AdminActionsInterface, cfg *config.Config, email st
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 	adminDashboard := pages.NewAdminDashboardPage(ap.Page)
 
 	// Ensure we navigate to Admin Panel cleanly
@@ -214,33 +253,94 @@ func DeleteMemberByEmail(aai AdminActionsInterface, cfg *config.Config, email st
 	}
 	time.Sleep(1 * time.Second)
 
-	err := adminDashboard.DeleteMemberByEmail(
-		cfg.MemberSearchInputTestID,
-		cleanEmail,
-		cfg.MemberDeleteButtonTestID,
-		cfg.MemberConfirmDeleteButtonTestID,
-		ap.DefaultTimeout,
-	)
-	if err != nil {
+	// 1. Search for member by email
+	_ = ap.Page.SendKeysByTestID(cfg.MemberSearchInputTestID, "", ap.DefaultTimeout)
+	time.Sleep(500 * time.Millisecond)
+
+	if err := adminDashboard.SearchMember(cfg.MemberSearchInputTestID, cleanEmail, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
-		r.Error = err
-		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Check if member email '%s' exists in table and search input testID is correct", cleanEmail))
-		time.Sleep(1 * time.Second)
-		if scr, scrErr := ap.Page.CaptureScreenshot("Step_06_SearchMember_Failure"); scrErr == nil {
-			r.Evidence = append(r.Evidence, scr)
-		}
+		r.Error = fmt.Errorf("failed to search member by email '%s': %w", cleanEmail, err)
+		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Check search input testID '%s'", cfg.MemberSearchInputTestID))
+		captureScreenshot(ap, r, "Step_06_DeleteEmail_SearchInputFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
-
-	// Screenshot: delete toast confirmation visible
 	time.Sleep(2 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_07_DeleteMember_SuccessToast"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
+
+	// Screenshot 1: Search result in member table prior to deletion
+	captureScreenshot(ap, r, "Step_06_DeleteEmail_01_SearchResult")
+
+	// 2. Click View button on filtered row
+	var lastClickErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		if err := adminDashboard.ClickFirstTableRowViewButton(ap.DefaultTimeout); err == nil {
+			lastClickErr = nil
+			break
+		} else {
+			lastClickErr = err
+			time.Sleep(1 * time.Second)
+		}
 	}
+	if lastClickErr != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click View button for email '%s': %w", cleanEmail, lastClickErr)
+		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Check if member email '%s' exists in table", cleanEmail))
+		captureScreenshot(ap, r, "Step_06_DeleteEmail_SearchFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Screenshot 2: Member Details modal open showing View details and Delete button
+	captureScreenshot(ap, r, "Step_06_DeleteEmail_02_ViewDetailsModal")
+
+	// 3. Click Delete button inside View modal
+	if err := ap.Page.ClickByTestID(cfg.MemberDeleteButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click member delete button: %w", err)
+		r.Advice = append(r.Advice, "Advice: Verify delete button testID in view modal")
+		captureScreenshot(ap, r, "Step_06_DeleteEmail_DeleteClickFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Screenshot 3: Confirmation modal open asking to confirm member deletion
+	captureScreenshot(ap, r, "Step_06_DeleteEmail_03_ConfirmModal")
+
+	// 4. Click Confirm Delete button
+	if err := ap.Page.ClickByTestID(cfg.MemberConfirmDeleteButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click confirm delete button: %w", err)
+		r.Advice = append(r.Advice, "Advice: Verify confirm delete button testID")
+		captureScreenshot(ap, r, "Step_06_DeleteEmail_ConfirmClickFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	time.Sleep(2 * time.Second)
+
+	// Screenshot 4: Success toast / confirmation message visible after confirming deletion
+	captureScreenshot(ap, r, "Step_07_DeleteMember_SuccessToast")
+	captureNetworkEvidence(ap, r)
+
+	// Dismiss success modal if present
+	_ = ap.Page.ClickByTestID("testid-delete-success-ok-button", ap.DefaultTimeout)
+	time.Sleep(1 * time.Second)
+
+	// 5. Refresh table and search again to capture post-deletion empty state proving member is gone
+	_ = adminDashboard.RefreshMemberTable(cfg.MemberRefreshButtonTestID, ap.DefaultTimeout)
+	time.Sleep(2 * time.Second)
+	_ = adminDashboard.SearchMember(cfg.MemberSearchInputTestID, cleanEmail, ap.DefaultTimeout)
+	time.Sleep(2 * time.Second)
+
+	// Screenshot 5: Table view after deletion verifying member is no longer in list
+	captureScreenshot(ap, r, "Step_08_DeleteEmail_05_TableAfterDeletion")
+	captureNetworkEvidence(ap, r)
+
 	r.Advice = append(r.Advice, fmt.Sprintf("Member '%s' deleted successfully.", cleanEmail))
 }
 
-// DeleteMemberByMobile searches for a member by mobile number and confirms deletion.
+// DeleteMemberByMobile searches for a member by mobile number and confirms deletion, capturing screenshots at each step.
 func DeleteMemberByMobile(aai AdminActionsInterface, cfg *config.Config, mobile string, r *Result) {
 	cleanMobile := strings.TrimSpace(mobile)
 	cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
@@ -253,6 +353,7 @@ func DeleteMemberByMobile(aai AdminActionsInterface, cfg *config.Config, mobile 
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 	adminDashboard := pages.NewAdminDashboardPage(ap.Page)
 
 	// Ensure we navigate to Admin Panel cleanly
@@ -264,29 +365,91 @@ func DeleteMemberByMobile(aai AdminActionsInterface, cfg *config.Config, mobile 
 	}
 	time.Sleep(1 * time.Second)
 
-	err := adminDashboard.DeleteMemberByMobile(
-		cfg.MemberSearchInputTestID,
-		cleanMobile,
-		cfg.MemberDeleteButtonTestID,
-		cfg.MemberConfirmDeleteButtonTestID,
-		ap.DefaultTimeout,
-	)
-	if err != nil {
+	// 1. Search for member by mobile number
+	_ = ap.Page.SendKeysByTestID(cfg.MemberSearchInputTestID, "", ap.DefaultTimeout)
+	time.Sleep(500 * time.Millisecond)
+
+	if err := adminDashboard.SearchMember(cfg.MemberSearchInputTestID, cleanMobile, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
-		r.Error = err
-		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Check if member mobile '%s' exists in table and search input testID is correct", cleanMobile))
-		time.Sleep(1 * time.Second)
-		if scr, scrErr := ap.Page.CaptureScreenshot("Step_06_SearchByMobile_" + cleanMobile + "_Failure"); scrErr == nil {
-			r.Evidence = append(r.Evidence, scr)
-		}
+		r.Error = fmt.Errorf("failed to search member by mobile '%s': %w", cleanMobile, err)
+		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Check search input testID '%s'", cfg.MemberSearchInputTestID))
+		captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_SearchInputFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
-
-	// Screenshot: delete toast visible right after deletion
 	time.Sleep(2 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_06_DeleteMobile_" + cleanMobile + "_SuccessToast"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
+
+	// Screenshot 1: Search result in member table prior to deletion
+	captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_01_SearchResult")
+
+	// 2. Click View button on row matching mobile number
+	rowViewBtnXPath := fmt.Sprintf("//table//tbody//tr[contains(., '%s')]//button[contains(@data-testid, '-view-button') or contains(text(), 'View')]", cleanMobile)
+	var lastClickErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		if err := ap.Page.Click(rowViewBtnXPath, ap.DefaultTimeout); err == nil {
+			lastClickErr = nil
+			break
+		} else {
+			lastClickErr = err
+			time.Sleep(1 * time.Second)
+		}
 	}
+	if lastClickErr != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click View button for mobile '%s': %w", cleanMobile, lastClickErr)
+		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Check if member mobile '%s' exists in table", cleanMobile))
+		captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_SearchFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Screenshot 2: Member Details modal open showing View details and Delete button
+	captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_02_ViewDetailsModal")
+
+	// 3. Click Delete button inside View modal
+	if err := ap.Page.ClickByTestID(cfg.MemberDeleteButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click member delete button: %w", err)
+		r.Advice = append(r.Advice, "Advice: Verify delete button testID in view modal")
+		captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_DeleteClickFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Screenshot 3: Confirmation modal open asking to confirm member deletion
+	captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_03_ConfirmModal")
+
+	// 4. Click Confirm Delete button
+	if err := ap.Page.ClickByTestID(cfg.MemberConfirmDeleteButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click confirm delete button: %w", err)
+		r.Advice = append(r.Advice, "Advice: Verify confirm delete button testID")
+		captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_ConfirmClickFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	time.Sleep(2 * time.Second)
+
+	// Screenshot 4: Success toast / confirmation message visible after confirming deletion
+	captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_SuccessToast")
+	captureNetworkEvidence(ap, r)
+
+	// Dismiss success modal if present
+	_ = ap.Page.ClickByTestID("testid-delete-success-ok-button", ap.DefaultTimeout)
+	time.Sleep(1 * time.Second)
+
+	// 5. Refresh table and search again to capture post-deletion empty state proving member is gone
+	_ = adminDashboard.RefreshMemberTable(cfg.MemberRefreshButtonTestID, ap.DefaultTimeout)
+	time.Sleep(2 * time.Second)
+	_ = adminDashboard.SearchMember(cfg.MemberSearchInputTestID, cleanMobile, ap.DefaultTimeout)
+	time.Sleep(2 * time.Second)
+
+	// Screenshot 5: Table view after deletion verifying member is no longer in list
+	captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_05_TableAfterDeletion")
+	captureNetworkEvidence(ap, r)
+
 	r.Advice = append(r.Advice, fmt.Sprintf("Member with mobile '%s' deleted successfully.", cleanMobile))
 }
 
@@ -300,15 +463,19 @@ func BulkUploadMembers(aai AdminActionsInterface, cfg *config.Config, fixtureRel
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 	adminDashboard := pages.NewAdminDashboardPage(ap.Page)
 
 	if err := adminDashboard.OpenBulkUploadModal(cfg.AdminBulkUploadButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify 'adminBulkUploadButtonTestID' button exists on Admin Panel")
+		captureScreenshot(ap, r, "Step_03_BulkUpload_OpenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
+	captureScreenshot(ap, r, "Step_03_BulkUpload_ModalOpen")
 
 	absPath, err := filepath.Abs(fixtureRelPath)
 	if err != nil {
@@ -319,34 +486,34 @@ func BulkUploadMembers(aai AdminActionsInterface, cfg *config.Config, fixtureRel
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Ensure file '%s' exists and file input testID is correct", absPath))
+		captureScreenshot(ap, r, "Step_03_BulkUpload_FileFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
 	// Screenshot: CSV file selected in upload dialog
 	time.Sleep(1 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_BulkUpload_FileSelected"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_03_BulkUpload_FileSelected")
 
 	if err := adminDashboard.SubmitBulkUpload(cfg.AdminBulkUploadSubmitButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify bulk upload submit button testID")
+		captureScreenshot(ap, r, "Step_04_BulkUpload_SubmitFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
 	// Screenshot: upload success toast / result visible
 	time.Sleep(3 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_BulkUpload_SuccessToast"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_04_BulkUpload_SuccessToast")
+	captureNetworkEvidence(ap, r)
 
 	_ = adminDashboard.RefreshMemberTable(cfg.MemberRefreshButtonTestID, ap.DefaultTimeout)
 	time.Sleep(2 * time.Second)
 
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_05_AdminPanel_AfterBulkUpload"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_05_AdminPanel_AfterBulkUpload")
+	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Bulk CSV uploaded successfully.")
 }
 
@@ -360,52 +527,61 @@ func DownloadExcelReports(aai AdminActionsInterface, cfg *config.Config, r *Resu
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 
 	// 1. Generate Excel Report (Membership Report - All Time)
 	if err := ap.Page.ClickByTestID("testid-generate-excel-report-button", ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify 'testid-generate-excel-report-button' exists on Admin Panel")
+		captureScreenshot(ap, r, "Step_03_MembershipReport_OpenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
+	captureScreenshot(ap, r, "Step_03_MembershipReport_ModalOpen")
 
 	// Select 'All Time' from period dropdown
 	if err := ap.Page.SelectCustomDropdownByText("testid-report-period-select", "All Time", ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Failed to select 'All Time' from report period dropdown")
+		captureScreenshot(ap, r, "Step_03_MembershipReport_SelectFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
+	captureScreenshot(ap, r, "Step_03_MembershipReport_PeriodSelected")
 
 	// Click download
 	if err := ap.Page.ClickByTestID("testid-download-excel-report-button", ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify 'testid-download-excel-report-button' exists in the report modal")
+		captureScreenshot(ap, r, "Step_03_MembershipReport_DownloadFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	
 	// Screenshot: after triggering first download
 	time.Sleep(3 * time.Second) 
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_MembershipReport_Downloaded"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_03_MembershipReport_Downloaded")
+	captureNetworkEvidence(ap, r)
 
 	// 2. Export Member List Table Excel
 	if err := ap.Page.ClickByTestID("testid-export-excel-button", ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify 'testid-export-excel-button' exists above the member list table")
+		captureScreenshot(ap, r, "Step_04_MemberListTable_ExportFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	
 	// Screenshot: after triggering second download
 	time.Sleep(3 * time.Second) 
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_MemberListTable_Downloaded"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_04_MemberListTable_Downloaded")
+	captureNetworkEvidence(ap, r)
 
 	r.Advice = append(r.Advice, "Both excel reports generated and downloaded successfully.")
 }
@@ -420,20 +596,22 @@ func LogoutAdmin(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 	homePage := pages.NewHomePage(ap.Page)
 
 	if err := homePage.Logout(cfg.LogoutButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify 'logoutButtonTestID' element exists in header/navbar")
+		captureScreenshot(ap, r, "Step_07_AdminLogout_Failure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
 	// Wait for redirect back to home / login page to fully complete
 	time.Sleep(3 * time.Second)
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_07_AdminLogout_HomePage"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_07_AdminLogout_HomePage")
+	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Admin logged out successfully.")
 }
 
@@ -447,6 +625,7 @@ func AdminLoginAttempt(aai AdminActionsInterface, cfg *config.Config, username, 
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 	homePage := pages.NewHomePage(ap.Page)
 	loginPage := pages.NewLoginPage(ap.Page)
 
@@ -454,6 +633,8 @@ func AdminLoginAttempt(aai AdminActionsInterface, cfg *config.Config, username, 
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify 'adminLoginButtonTestID' button exists on Home Page")
+		captureScreenshot(ap, r, screenshotName+"_OpenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
@@ -462,6 +643,8 @@ func AdminLoginAttempt(aai AdminActionsInterface, cfg *config.Config, username, 
 		if err := loginPage.EnterUsername(cfg.AdminLoginUsernameInputTestID, username, ap.DefaultTimeout); err != nil {
 			r.Status = "failed"
 			r.Error = err
+			captureScreenshot(ap, r, screenshotName+"_UserFailure")
+			captureNetworkEvidence(ap, r)
 			return
 		}
 	}
@@ -469,6 +652,8 @@ func AdminLoginAttempt(aai AdminActionsInterface, cfg *config.Config, username, 
 		if err := loginPage.EnterPassword(cfg.AdminLoginPasswordInputTestID, password, ap.DefaultTimeout); err != nil {
 			r.Status = "failed"
 			r.Error = err
+			captureScreenshot(ap, r, screenshotName+"_PassFailure")
+			captureNetworkEvidence(ap, r)
 			return
 		}
 	}
@@ -476,14 +661,14 @@ func AdminLoginAttempt(aai AdminActionsInterface, cfg *config.Config, username, 
 	if err := loginPage.SubmitLogin(cfg.AdminLoginSubmitButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		captureScreenshot(ap, r, screenshotName+"_SubmitFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
 	time.Sleep(waitTime)
-
-	if scr, scrErr := ap.Page.CaptureScreenshot(screenshotName); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, screenshotName)
+	captureNetworkEvidence(ap, r)
 }
 
 // LogoutAdminCustom performs logout with a customized wait time and screenshot name.
@@ -496,19 +681,21 @@ func LogoutAdminCustom(aai AdminActionsInterface, cfg *config.Config, waitTime t
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 	homePage := pages.NewHomePage(ap.Page)
 
 	if err := homePage.Logout(cfg.LogoutButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		r.Advice = append(r.Advice, "Advice: Verify 'logoutButtonTestID' element exists in header/navbar")
+		captureScreenshot(ap, r, screenshotName+"_Failure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
 	time.Sleep(waitTime)
-	if scr, scrErr := ap.Page.CaptureScreenshot(screenshotName); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, screenshotName)
+	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Admin logged out successfully.")
 }
 
@@ -522,20 +709,26 @@ func SendAnnouncement(aai AdminActionsInterface, cfg *config.Config, title, mess
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 
 	// 1. Click Send Announcement button
 	if err := ap.Page.ClickByTestID(cfg.AdminSendAnnouncementButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click send announcement button: %w", err)
 		r.Advice = append(r.Advice, "Advice: Ensure Admin Panel is open and Send Announcement button is visible")
+		captureScreenshot(ap, r, "Step_01_Announcement_OpenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
+	captureScreenshot(ap, r, "Step_01_AnnouncementModal_Open")
 
 	// 2. Fill Title
 	if err := ap.Page.SendKeysByTestID(cfg.AdminAnnouncementTitleInputTestID, title, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to fill announcement title: %w", err)
+		captureScreenshot(ap, r, "Step_02_Announcement_TitleFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
@@ -543,6 +736,8 @@ func SendAnnouncement(aai AdminActionsInterface, cfg *config.Config, title, mess
 	if err := ap.Page.SendKeysByTestID(cfg.AdminAnnouncementMessageInputTestID, message, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to fill announcement message: %w", err)
+		captureScreenshot(ap, r, "Step_02_Announcement_MessageFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
@@ -555,23 +750,22 @@ func SendAnnouncement(aai AdminActionsInterface, cfg *config.Config, title, mess
 	}
 
 	// Screenshot 2: Announcement data form filled
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_AnnouncementForm_Filled"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_02_AnnouncementForm_Filled")
 
 	// 5. Submit Announcement
 	if err := ap.Page.ClickByTestID(cfg.AdminAnnouncementSubmitButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to submit announcement: %w", err)
+		captureScreenshot(ap, r, "Step_03_Announcement_SubmitFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
 	time.Sleep(2 * time.Second)
 
 	// Screenshot 3: Announcement sent confirmation
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_Announcement_Sent"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_03_Announcement_Sent")
+	captureNetworkEvidence(ap, r)
 
 	r.Advice = append(r.Advice, "Announcement created and sent successfully.")
 }
@@ -586,25 +780,33 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 
 	// 1. Click Manage District Office Bearers button in Admin Panel ("testid-manage-office-bearers-button")
 	if err := ap.Page.ClickByTestID(cfg.AdminManageOfficeBearersButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to open district office bearers modal: %w", err)
+		captureScreenshot(ap, r, "Step_01_DistrictBearers_OpenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
+	captureScreenshot(ap, r, "Step_01_DistrictBearers_ModalOpen")
 
 	// 2. Select District (e.g. Ariyalur) by dropdown field
 	if err := ap.Page.Click("//div[@data-testid='testid-office-bearers-modal']//button[contains(@role, 'combobox')]", ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click district dropdown combobox: %w", err)
+		captureScreenshot(ap, r, "Step_01_DistrictBearers_DropdownFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(500 * time.Millisecond)
 	if err := ap.Page.Click(fmt.Sprintf("//*[contains(@role, 'option') and (text()='%s' or .='%s')]", district, district), ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to select district '%s' from dropdown: %w", district, err)
+		captureScreenshot(ap, r, "Step_01_DistrictBearers_SelectFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -614,12 +816,16 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 	if err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to find Joint Secretary (Women) name input: %w", err)
+		captureScreenshot(ap, r, "Step_01_DistrictBearers_FindNameFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	contactElem, err := ap.Page.FindElementByTestID("testid-bearer-contact-3", ap.DefaultTimeout)
 	if err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to find Joint Secretary (Women) contact input: %w", err)
+		captureScreenshot(ap, r, "Step_01_DistrictBearers_FindContactFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
@@ -629,9 +835,7 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 	r.Advice = append(r.Advice, fmt.Sprintf("Backup data for Joint Secretary (Women) before edit: Name='%s', Mobile='%s'", originalName, originalContact))
 
 	// Screenshot 1: Before Edit
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_01_DistrictBearers_BeforeEdit"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_01_DistrictBearers_BeforeEdit")
 
 	// 4. Fill Joint Secretary (Women) test data (triggers React onChange via input events)
 	testName := "Test Officer Joint Sec Women"
@@ -658,9 +862,7 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 	time.Sleep(1 * time.Second)
 
 	// Screenshot 2: Form Filled
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_DistrictBearers_FormFilled"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_02_DistrictBearers_FormFilled")
 
 	confirmXpath := "//div[contains(@role, 'alertdialog') or contains(@class, 'max-w-sm')]//button[contains(text(), 'Confirm Save') or contains(., 'Confirm Save')]"
 
@@ -685,9 +887,8 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 	time.Sleep(2 * time.Second)
 
 	// Screenshot 3: Saved in Admin Panel
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_DistrictBearers_Saved"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_03_DistrictBearers_Saved")
+	captureNetworkEvidence(ap, r)
 
 	// Close Modal
 	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
@@ -703,6 +904,8 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 	if err := ap.Page.SelectCustomDropdownByText(cfg.OfficeBearersDistrictSelectTestID, district, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to select district '%s' on public page: %w", district, err)
+		captureScreenshot(ap, r, "Step_04_DistrictBearers_PublicSelectFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(2 * time.Second)
@@ -712,9 +915,7 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 	time.Sleep(1 * time.Second)
 
 	// Screenshot 4: Public Page Result Table (scrolled down)
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_OfficeBearers_PublicPage_Result"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_04_OfficeBearers_PublicPage_Result")
 
 	// 7. Return to Admin Panel
 	if err := ap.Page.ClickByTestID(cfg.AdminPanelButtonTestID, ap.DefaultTimeout); err != nil {
@@ -726,6 +927,8 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 	if err := ap.Page.ClickByTestID(cfg.AdminManageOfficeBearersButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to re-open district office bearers modal in admin panel: %w", err)
+		captureScreenshot(ap, r, "Step_05_DistrictBearers_ReopenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -734,12 +937,16 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 	if err := ap.Page.Click("//div[@data-testid='testid-office-bearers-modal']//button[contains(@role, 'combobox')]", ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click district dropdown combobox on restore step: %w", err)
+		captureScreenshot(ap, r, "Step_05_DistrictBearers_RestoreDropdownFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(500 * time.Millisecond)
 	if err := ap.Page.Click(fmt.Sprintf("//*[contains(@role, 'option') and (text()='%s' or .='%s')]", district, district), ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to re-select district '%s' on restore step: %w", district, err)
+		captureScreenshot(ap, r, "Step_05_DistrictBearers_RestoreSelectFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -773,9 +980,8 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 	}
 
 	// Screenshot 5: Restored to Default
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_05_DistrictBearers_RestoredToDefault"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_05_DistrictBearers_RestoredToDefault")
+	captureNetworkEvidence(ap, r)
 
 	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
 
@@ -792,6 +998,7 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 
 	// Resolve absolute path for fixture PDF
 	absPdfPath, err := filepath.Abs(relativePdfPath)
@@ -805,6 +1012,8 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click manage content button: %w", err)
+		captureScreenshot(ap, r, "Step_01_ResourceUpload_OpenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -815,11 +1024,14 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 		_ = ap.Page.ClickByTestID(cfg.AdminResourcesTabButtonTestID, ap.DefaultTimeout)
 	}
 	time.Sleep(500 * time.Millisecond)
+	captureScreenshot(ap, r, "Step_01_ResourceUpload_ModalOpen")
 
 	// 3. Select Category (Establishment)
 	if err := ap.Page.SelectCustomDropdownByText(cfg.AdminResourceCategorySelectTestID, categoryName, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to select category '%s': %w", categoryName, err)
+		captureScreenshot(ap, r, "Step_01_ResourceUpload_CategoryFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
@@ -828,31 +1040,34 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 	if err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to find resource file input: %w", err)
+		captureScreenshot(ap, r, "Step_01_ResourceUpload_InputFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	if err := fileElem.SendKeys(absPdfPath); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to upload PDF file: %w", err)
+		captureScreenshot(ap, r, "Step_01_ResourceUpload_SendKeysFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
 	// Screenshot Step 01: Form Filled
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_01_ResourceUpload_FormFilled"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_01_ResourceUpload_FormFilled")
 
 	// 6. Click Upload Resource Button
 	if err := ap.Page.ClickByTestID(cfg.AdminUploadResourceButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click upload resource button: %w", err)
+		captureScreenshot(ap, r, "Step_02_ResourceUpload_SubmitFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 02: Uploaded Confirmation Toast/List
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_ResourceUpload_Submitted"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_02_ResourceUpload_Submitted")
+	captureNetworkEvidence(ap, r)
 
 	// Close Content Management Modal
 	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
@@ -869,9 +1084,7 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 03: Resources Page Verification
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_ResourcesPage_Verification"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_03_ResourcesPage_Verification")
 
 	// 8. Return to Admin Panel
 	if err := ap.Page.ClickByTestID(cfg.AdminPanelButtonTestID, ap.DefaultTimeout); err != nil {
@@ -883,6 +1096,8 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to re-open manage content modal: %w", err)
+		captureScreenshot(ap, r, "Step_04_Resource_ReopenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -899,6 +1114,8 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 	if err := ap.Page.Click(deleteDocXPath, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to locate or click delete button for the uploaded resource 'a_test_resource_sample': %w", err)
+		captureScreenshot(ap, r, "Step_04_Resource_DeleteClickFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -911,9 +1128,8 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 04: Resource Deleted
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_Resource_Deleted"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_04_Resource_Deleted")
+	captureNetworkEvidence(ap, r)
 
 	// Verify the resource has actually disappeared from the list
 	err = ap.Page.Driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
@@ -931,6 +1147,8 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 	if err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("resource document was not deleted and is still present in the list: %w", err)
+		captureScreenshot(ap, r, "Step_04_Resource_StillPresentFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
@@ -950,11 +1168,14 @@ func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eve
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 
 	// 1. Click Manage Content button
 	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click manage content button: %w", err)
+		captureScreenshot(ap, r, "Step_01_EventCreate_OpenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -965,11 +1186,14 @@ func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eve
 		_ = ap.Page.ClickByTestID(cfg.AdminEventsTabButtonTestID, ap.DefaultTimeout)
 	}
 	time.Sleep(500 * time.Millisecond)
+	captureScreenshot(ap, r, "Step_01_EventCreate_ModalOpen")
 
 	// 3. Fill Event Title
 	if err := ap.Page.SendKeysByTestID(cfg.AdminEventTitleInputTestID, title, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to fill event title: %w", err)
+		captureScreenshot(ap, r, "Step_01_EventCreate_TitleFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
@@ -977,6 +1201,8 @@ func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eve
 	if err := ap.Page.SendKeysByTestID(cfg.AdminEventDateInputTestID, eventDate, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to fill event date: %w", err)
+		captureScreenshot(ap, r, "Step_01_EventCreate_DateFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
@@ -994,22 +1220,21 @@ func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eve
 	}
 
 	// Screenshot Step 01: Event Form Filled
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_01_EventCreate_FormFilled"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_01_EventCreate_FormFilled")
 
 	// 7. Click Publish Event Button
 	if err := ap.Page.ClickByTestID(cfg.AdminPublishEventButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click publish event button: %w", err)
+		captureScreenshot(ap, r, "Step_02_Event_PublishFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 02: Event Published
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_Event_Published"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_02_Event_Published")
+	captureNetworkEvidence(ap, r)
 
 	// Close Content Management Modal
 	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
@@ -1029,9 +1254,7 @@ func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eve
 	time.Sleep(1 * time.Second)
 
 	// Screenshot Step 03: Public Upcoming Events Verification
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_EventsPage_UpcomingEvents_Result"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_03_EventsPage_UpcomingEvents_Result")
 
 	// 9. Return to Admin Panel
 	if err := ap.Page.ClickByTestID(cfg.AdminPanelButtonTestID, ap.DefaultTimeout); err != nil {
@@ -1043,6 +1266,8 @@ func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eve
 	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to re-open manage content modal: %w", err)
+		captureScreenshot(ap, r, "Step_04_Event_ReopenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -1065,9 +1290,8 @@ func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eve
 	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 04: Event Deleted
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_Event_Deleted"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_04_Event_Deleted")
+	captureNetworkEvidence(ap, r)
 
 	// Close Modal
 	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
@@ -1085,6 +1309,7 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 
 	// Resolve absolute path for fixture image
 	absImagePath, err := filepath.Abs(relativeImagePath)
@@ -1098,6 +1323,8 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click manage content button: %w", err)
+		captureScreenshot(ap, r, "Step_01_GalleryUpload_OpenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -1108,11 +1335,14 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 		_ = ap.Page.ClickByTestID(cfg.AdminGalleryTabButtonTestID, ap.DefaultTimeout)
 	}
 	time.Sleep(500 * time.Millisecond)
+	captureScreenshot(ap, r, "Step_01_GalleryUpload_ModalOpen")
 
 	// 3. Fill Description
 	if err := ap.Page.SendKeysByTestID(cfg.AdminGalleryDescriptionInputTestID, description, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to fill gallery photo description: %w", err)
+		captureScreenshot(ap, r, "Step_01_GalleryUpload_DescFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
@@ -1135,31 +1365,34 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 	if err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to find gallery photo file input: %w", err)
+		captureScreenshot(ap, r, "Step_01_GalleryUpload_InputFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	if err := photoElem.SendKeys(absImagePath); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to upload gallery photo file: %w", err)
+		captureScreenshot(ap, r, "Step_01_GalleryUpload_SendKeysFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 
 	// Screenshot Step 01: Gallery Upload Form Filled
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_01_GalleryUpload_FormFilled"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_01_GalleryUpload_FormFilled")
 
 	// 6. Click Upload Photo Button
 	if err := ap.Page.ClickByTestID(cfg.AdminUploadPhotoButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click upload photo button: %w", err)
+		captureScreenshot(ap, r, "Step_02_GalleryPhoto_UploadFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 02: Gallery Photo Uploaded
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_GalleryPhoto_Uploaded"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_02_GalleryPhoto_Uploaded")
+	captureNetworkEvidence(ap, r)
 
 	// Close Content Management Modal
 	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
@@ -1197,9 +1430,7 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 	time.Sleep(1 * time.Second)
 
 	// Screenshot Step 03: Public Photo Gallery Verification
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_EventsPage_Gallery_Result"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_03_EventsPage_Gallery_Result")
 
 	// 8. Return to Admin Panel
 	if err := ap.Page.ClickByTestID(cfg.AdminPanelButtonTestID, ap.DefaultTimeout); err != nil {
@@ -1211,6 +1442,8 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to re-open manage content modal: %w", err)
+		captureScreenshot(ap, r, "Step_04_GalleryPhoto_ReopenFailure")
+		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -1233,6 +1466,8 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 		if err2 := ap.Page.Click(specificXPath, ap.DefaultTimeout); err2 != nil {
 			r.Status = "failed"
 			r.Error = fmt.Errorf("failed to find delete button for uploaded gallery photo '%s': %w", description, err2)
+			captureScreenshot(ap, r, "Step_04_GalleryPhoto_DeleteClickFailure")
+			captureNetworkEvidence(ap, r)
 			return
 		}
 	}
@@ -1246,9 +1481,8 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 04: Gallery Photo Deleted
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_GalleryPhoto_Deleted"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_04_GalleryPhoto_Deleted")
+	captureNetworkEvidence(ap, r)
 
 	// Close Modal
 	_ = ap.Page.Click("//button[contains(@class, 'absolute right-4') or text()='Close']", 2*time.Second)
@@ -1269,8 +1503,9 @@ func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetMobi
 	}
 
 	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
 
-	// 1. Search for target member by Mobile Number in Member Management table (dispatch JS event to prevent keypress API flooding)
+	// 1. Search for target member by Mobile Number in Member Management table
 	_ = ap.Page.SendKeysByTestID(cfg.MemberSearchInputTestID, cleanMobile, ap.DefaultTimeout)
 	jsSearchScript := fmt.Sprintf(`
 		const searchEl = document.querySelector('[data-testid="%s"]');
@@ -1286,9 +1521,7 @@ func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetMobi
 	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 01: Member Found in Table
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_01_EditMember_SearchTable"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_01_EditMember_SearchTable")
 
 	// 2. Click View Details button for member matching mobile
 	viewButtonXPath := fmt.Sprintf("//tr[contains(., %q)]//button[contains(., 'View')]", cleanMobile)
@@ -1302,19 +1535,20 @@ func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetMobi
 	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 02: Member View Details Panel Open
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_02_EditMember_ViewDetailsBeforeEdit"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_02_EditMember_ViewDetailsBeforeEdit")
 
 	// 3. Click Edit Button in View Details Modal
 	if err := ap.Page.ClickByTestID("testid-member-edit-button", ap.DefaultTimeout); err != nil {
 		if err2 := ap.Page.Click("//button[contains(., 'Edit')]", ap.DefaultTimeout); err2 != nil {
 			r.Status = "failed"
 			r.Error = fmt.Errorf("failed to click edit member button: %w", err2)
+			captureScreenshot(ap, r, "Step_02_EditMember_EditClickFailure")
+			captureNetworkEvidence(ap, r)
 			return
 		}
 	}
 	time.Sleep(1 * time.Second)
+	captureScreenshot(ap, r, "Step_02_EditMember_EditFormOpen")
 
 	// 4. Update Designation field
 	if updatedDesignation != "" {
@@ -1333,19 +1567,21 @@ func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetMobi
 	}
 
 	// Screenshot Step 03: Edit Form Filled
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_03_EditMember_FormUpdated"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_03_EditMember_FormUpdated")
 
 	// 6. Click Save Changes button
 	if err := ap.Page.ClickByTestID("testid-member-save-edit-button", ap.DefaultTimeout); err != nil {
 		if err2 := ap.Page.Click("//button[contains(., 'Save Changes') or contains(., 'Save')]", ap.DefaultTimeout); err2 != nil {
 			r.Status = "failed"
 			r.Error = fmt.Errorf("failed to click save changes on member edit: %w", err2)
+			captureScreenshot(ap, r, "Step_03_EditMember_SaveClickFailure")
+			captureNetworkEvidence(ap, r)
 			return
 		}
 	}
 	time.Sleep(2 * time.Second)
+	captureScreenshot(ap, r, "Step_03_EditMember_SaveToast")
+	captureNetworkEvidence(ap, r)
 
 	// 7. Re-open View Details to verify edited data and take screenshot
 	_, _ = ap.Page.Driver.ExecuteScript(jsSearchScript, nil)
@@ -1357,13 +1593,10 @@ func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetMobi
 	time.Sleep(2 * time.Second)
 
 	// Screenshot Step 04: View Details Panel showing Edited Data
-	if scr, scrErr := ap.Page.CaptureScreenshot("Step_04_EditMember_VerifiedEditedDetails"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	captureScreenshot(ap, r, "Step_04_EditMember_VerifiedEditedDetails")
 
 	// Close View Details Modal
 	_ = ap.Page.Click("//button[contains(text(), 'Close') or contains(@class, 'absolute right-4')]", 2*time.Second)
 
 	r.Advice = append(r.Advice, fmt.Sprintf("Member '%s' details updated to Designation='%s' and verified successfully.", cleanMobile, updatedDesignation))
 }
-
