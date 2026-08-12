@@ -9,13 +9,13 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_02_PublicJourneys(t *testing.T) {
+func TestUI_01_PublicJourneys(t *testing.T) {
 	tests.RunUITest(t, "Verify Public User Journeys", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 
 		// Setup the persona and the result collector in test setup
 		pubPersona := actions.NewPublicPersona(page, cfg.UiURL, 5*time.Second)
-		result := actions.NewResult("Public User Journeys Test")
+		result := actions.NewResult("TestUI_01_PublicJourneys")
 
 		// Run simple sequential action calls passing pointers
 		actions.GoToHome(pubPersona, result)

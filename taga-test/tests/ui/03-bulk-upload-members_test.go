@@ -10,7 +10,7 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_07_BulkUploadMembers(t *testing.T) {
+func TestUI_03_BulkUploadMembers(t *testing.T) {
 	tests.RunUITest(t, "Admin Bulk Member Upload and Automated Cleanup Workflow", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 

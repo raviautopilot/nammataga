@@ -9,7 +9,7 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_09_DistrictOfficeBearersManagement(t *testing.T) {
+func TestUI_05_DistrictOfficeBearersManagement(t *testing.T) {
 	tests.RunUITest(t, "District Office Bearers Management Workflow", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 

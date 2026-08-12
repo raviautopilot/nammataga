@@ -9,7 +9,7 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_12_ManageGallery(t *testing.T) {
+func TestUI_08_ManageGallery(t *testing.T) {
 	tests.RunUITest(t, "Admin Manage Gallery Photo Workflow", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 

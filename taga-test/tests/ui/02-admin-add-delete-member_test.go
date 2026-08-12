@@ -10,13 +10,13 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_06_AdminAddDeleteMember(t *testing.T) {
+func TestUI_02_AdminAddDeleteMember(t *testing.T) {
 	tests.RunUITest(t, "Admin Add and Delete Member Workflow", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 
 		// Initialize Admin Persona and Result collector
 		admin := actions.NewAdminPersona(page, cfg.UiURL, 5*time.Second)
-		result := actions.NewResult("TestUI_06_AdminAddDeleteMember")
+		result := actions.NewResult("TestUI_02_AdminAddDeleteMember")
 
 		// Declarative Persona Action Flow
 		actions.GoToHome(admin, result)

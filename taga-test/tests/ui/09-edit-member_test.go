@@ -9,7 +9,7 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_13_EditMemberDetails(t *testing.T) {
+func TestUI_09_EditMemberDetails(t *testing.T) {
 	tests.RunUITest(t, "Admin Edit Member Details Workflow", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 

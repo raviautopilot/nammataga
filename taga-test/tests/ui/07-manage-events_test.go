@@ -9,7 +9,7 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_11_ManageEvents(t *testing.T) {
+func TestUI_07_ManageEvents(t *testing.T) {
 	tests.RunUITest(t, "Admin Manage Events Workflow", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 
