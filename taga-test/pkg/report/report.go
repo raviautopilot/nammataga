@@ -140,7 +140,7 @@ func (r *Reporter) GenerateReports(outputDir string) error {
 	r.Summary.TotalDurationStr = r.Summary.TotalDuration.Round(time.Millisecond).String()
 	r.mu.Unlock()
 
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0777); err != nil {
 		return err
 	}
 

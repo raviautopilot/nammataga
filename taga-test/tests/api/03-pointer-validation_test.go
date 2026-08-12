@@ -7,33 +7,123 @@ import (
 	"e2e-template/tests"
 )
 
-// TestAPI_03_PointerValidation enforces client-side pointer type safety validation.
-func TestAPI_03_PointerValidation(t *testing.T) {
-	tests.RunAPITestWithDetails(
-		t,
-		"Enforce Pointer Type Safety Check",
-		"Verifies that passing a value struct instead of a pointer to SendHttpRequest returns a validation error.",
-		"Validation error: 'HTTP Error: status=0, err=request body must be a pointer to a struct/value'",
-		func(tc *tests.TestContext) {
-			valuePayload := GrievancePayload{
-				Name: "Passed by value struct",
-			}
-			var resp map[string]interface{}
+type PointerValidationTestCase struct {
+	Name        string
+	TargetURL   string
+	Body        interface{}
+	RespObj     interface{}
+	Description string
+	Expected    string
+	ValidateFn  func(tc *tests.TestContext)
+}
 
-			// Intentionally pass a value struct instead of pointer for request body
-			err := tc.Client.SendHttpRequest("POST", "/api/grievances", nil, valuePayload, &resp, nil)
-			if err == nil {
-				tc.FailureReason = "Expected SendHttpRequest to fail when passed a value struct argument"
-				tc.Fatalf("Expected SendHttpRequest to fail on value struct argument")
-			}
+// TestAPI_03_PointerValidation_TableDriven enforces client-side pointer type safety validation via parameterized test cases.
+func TestAPI_03_PointerValidation_TableDriven(t *testing.T) {
+	testCases := []PointerValidationTestCase{
+		{
+			Name:        "Enforce Non-Pointer Request Body Safety Check",
+			TargetURL:   "/api/grievances",
+			Body:        GrievancePayload{Name: "Passed by value struct"},
+			RespObj:     &map[string]interface{}{},
+			Description: "Verifies that passing a value struct instead of a pointer to SendHttpRequest returns a validation error.",
+			Expected:    "Validation error: 'HTTP Error: status=0, err=request body must be a pointer to a struct/value'",
+			ValidateFn: func(tc *tests.TestContext) {
+				var resp map[string]interface{}
+				valuePayload := GrievancePayload{Name: "Passed by value struct"}
 
-			expectedErr := "HTTP Error: status=0, err=request body must be a pointer to a struct/value"
-			tc.Actual = err.Error()
+				err := tc.Client.SendHttpRequest("POST", "/api/grievances", nil, valuePayload, &resp, nil)
+				if err == nil {
+					tc.FailureReason = "Expected SendHttpRequest to fail when passed a value struct argument"
+					tc.Fatalf("Expected SendHttpRequest to fail on value struct argument")
+				}
 
-			if err.Error() != expectedErr {
-				tc.FailureReason = fmt.Sprintf("Expected error '%s', got '%s'", expectedErr, err.Error())
-				tc.Errorf("Expected validation error '%s', got '%s'", expectedErr, err.Error())
-			}
+				expectedErr := "HTTP Error: status=0, err=request body must be a pointer to a struct/value"
+				tc.Actual = err.Error()
+
+				if err.Error() != expectedErr {
+					tc.FailureReason = fmt.Sprintf("Expected error '%s', got '%s'", expectedErr, err.Error())
+					tc.Errorf("Expected validation error '%s', got '%s'", expectedErr, err.Error())
+				}
+			},
 		},
-	)
+		{
+			Name:        "Enforce Non-Pointer Response Object Safety Check",
+			TargetURL:   "/api/public/about",
+			Body:        nil,
+			RespObj:     AboutResponse{}, // Passed by value instead of &AboutResponse{}!
+			Description: "Verifies that passing a non-pointer response object to SendHttpRequest returns a JSON unmarshal error.",
+			Expected:    "Validation or unmarshal error when response object is not a pointer",
+			ValidateFn: func(tc *tests.TestContext) {
+				var valueResp AboutResponse
+				err := tc.Client.SendHttpRequest("GET", "/api/public/about", nil, nil, valueResp, nil)
+				if err == nil {
+					tc.FailureReason = "Expected SendHttpRequest to fail when response object is passed by value"
+					tc.Fatalf("Expected SendHttpRequest to fail when response object is passed by value")
+				}
+				tc.Actual = fmt.Sprintf("Intercepted expected error: %v", err)
+			},
+		},
+		{
+			Name:        "Nil Request Body Safety Check",
+			TargetURL:   "/api/grievances",
+			Body:        nil,
+			RespObj:     &map[string]interface{}{},
+			Description: "Verifies handling of nil request body when endpoint expects payload.",
+			Expected:    "Validation error or Bad Request",
+			ValidateFn: func(tc *tests.TestContext) {
+				var resp map[string]interface{}
+				err := tc.Client.SendHttpRequest("POST", "/api/grievances", nil, nil, &resp, nil)
+				if err == nil {
+					tc.FailureReason = "Expected SendHttpRequest to fail or return 400 when body is nil"
+					tc.Fatalf("Expected SendHttpRequest to fail or return 400 when body is nil")
+				}
+				tc.Actual = fmt.Sprintf("Intercepted expected error: %v", err)
+			},
+		},
+		{
+			Name:        "Nil Response Object Safety Check",
+			TargetURL:   "/api/public/about",
+			Body:        nil,
+			RespObj:     nil,
+			Description: "Verifies handling of nil response object.",
+			Expected:    "Validation error or success if response body ignored",
+			ValidateFn: func(tc *tests.TestContext) {
+				err := tc.Client.SendHttpRequest("GET", "/api/public/about", nil, nil, nil, nil)
+				if err != nil {
+					tc.FailureReason = fmt.Sprintf("GET request failed: %v", err)
+					tc.Fatalf("GET request failed: %v", err)
+				}
+				tc.Actual = "Successfully ignored response body with nil response object"
+			},
+		},
+		{
+			Name:        "Business Logic - IDOR Pointer Validation Safety",
+			TargetURL:   "/api/member/profile?user_id=9999", // Trying to access another user's profile
+			Body:        nil,
+			RespObj:     &map[string]interface{}{},
+			Description: "Verifies that passing another user's ID (IDOR attempt) is rejected and doesn't crash pointer logic.",
+			Expected:    "HTTP 401/403 or pointer safely ignored",
+			ValidateFn: func(tc *tests.TestContext) {
+				var resp map[string]interface{}
+				// We do an unauthenticated call to a protected route with an IDOR payload
+				err := tc.Client.SendHttpRequest("GET", "/api/member/profile?user_id=9999", nil, nil, &resp, nil)
+				if err == nil {
+					tc.FailureReason = "Expected error for unauthenticated/IDOR request, got success"
+					tc.Fatalf("Expected error for unauthenticated/IDOR request, got success")
+				}
+				tc.Actual = fmt.Sprintf("Handled IDOR gracefully with error: %v", err)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		testCase := tc
+		tests.RunAPITestWithDetails(
+			t,
+			testCase.Name,
+			testCase.Description,
+			testCase.Expected,
+			testCase.ValidateFn,
+		)
+	}
 }
