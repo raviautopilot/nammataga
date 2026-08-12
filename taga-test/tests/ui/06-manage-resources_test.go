@@ -9,7 +9,7 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_10_ManageResources(t *testing.T) {
+func TestUI_06_ManageResources(t *testing.T) {
 	tests.RunUITest(t, "Admin Manage Resources Document Workflow", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 

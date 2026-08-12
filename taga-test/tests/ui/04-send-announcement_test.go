@@ -9,7 +9,7 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_08_SendAnnouncement(t *testing.T) {
+func TestUI_04_SendAnnouncement(t *testing.T) {
 	tests.RunUITest(t, "Admin Send Announcement Workflow", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 
