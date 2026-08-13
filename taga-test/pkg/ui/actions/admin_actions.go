@@ -132,13 +132,13 @@ func OpenAdminPanel(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	r.Advice = append(r.Advice, "Admin Panel opened successfully.")
 }
 
-// AddSingleMember opens the modal, fills all 19 form fields from config, and submits.
-func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
+// AddSingleMember opens the modal, fills all 19 form fields from config, and submits. Returns the temporary password if any.
+func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) string {
 	actionName := "Add Single Member with 19 Fields"
 	r.Actions = append(r.Actions, actionName)
 	if r.Failed() {
 		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
-		return
+		return ""
 	}
 
 	ap := aai.GetAdminPersona()
@@ -151,7 +151,7 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		r.Advice = append(r.Advice, "Advice: Verify 'adminAddMemberButtonTestID' is clickable in Admin Dashboard")
 		captureScreenshot(ap, r, "Step_03_AddMember_OpenFailure")
 		captureNetworkEvidence(ap, r)
-		return
+		return ""
 	}
 	time.Sleep(1 * time.Second)
 	captureScreenshot(ap, r, "Step_03_AddMember_ModalOpen")
@@ -162,7 +162,7 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		r.Advice = append(r.Advice, "Advice: Verify all 19 form input testIDs in config.json match the UI elements")
 		captureScreenshot(ap, r, "Step_03_AddMember_FillFailure")
 		captureNetworkEvidence(ap, r)
-		return
+		return ""
 	}
 
 	// Screenshot: form fully filled, before submitting
@@ -175,7 +175,7 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 		r.Advice = append(r.Advice, "Advice: Verify 'adminAddMemberSubmitButtonTestID' submit button")
 		captureScreenshot(ap, r, "Step_04_AddMember_SubmitFailure")
 		captureNetworkEvidence(ap, r)
-		return
+		return ""
 	}
 
 	// Screenshot: success toast visible immediately after submit
@@ -183,13 +183,16 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	captureScreenshot(ap, r, "Step_04_AddMember_SuccessToast")
 	captureNetworkEvidence(ap, r)
 
+	// Extract the temporary password
+	tempPassword, _ := ap.Page.GetTextByTestID("testid-temp-password", 2*time.Second)
+
 	// Click OK on the success modal to close it
 	if err := ap.Page.ClickByTestID("testid-add-success-ok-button", ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click add success OK button: %w", err)
 		captureScreenshot(ap, r, "Step_04_AddMember_DismissFailure")
 		captureNetworkEvidence(ap, r)
-		return
+		return ""
 	}
 	time.Sleep(1 * time.Second)
 
@@ -200,6 +203,8 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	captureScreenshot(ap, r, "Step_05_AdminPanel_AfterAddMember")
 	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Member added successfully with all 19 fields populated.")
+	
+	return tempPassword
 }
 
 // SetPaymentStatusToPaid attempts to select the paid checkbox/button.
@@ -341,7 +346,7 @@ func DeleteMemberByEmail(aai AdminActionsInterface, cfg *config.Config, email st
 }
 
 // DeleteMemberByMobile searches for a member by mobile number and confirms deletion, capturing screenshots at each step.
-func DeleteMemberByMobile(aai AdminActionsInterface, cfg *config.Config, mobile string, r *Result) {
+func DeleteMemberByMobile(aai AdminActionsInterface, cfg *config.Config, mobile string, stepPrefix string, r *Result) {
 	cleanMobile := strings.TrimSpace(mobile)
 	cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
 
@@ -373,14 +378,14 @@ func DeleteMemberByMobile(aai AdminActionsInterface, cfg *config.Config, mobile 
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to search member by mobile '%s': %w", cleanMobile, err)
 		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Check search input testID '%s'", cfg.MemberSearchInputTestID))
-		captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_SearchInputFailure")
+		captureScreenshot(ap, r, stepPrefix+"_DeleteMobile_"+cleanMobile+"_SearchInputFailure")
 		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(2 * time.Second)
 
 	// Screenshot 1: Search result in member table prior to deletion
-	captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_01_SearchResult")
+	captureScreenshot(ap, r, stepPrefix+"_DeleteMobile_"+cleanMobile+"_01_SearchResult")
 
 	// 2. Click View button on row matching mobile number
 	rowViewBtnXPath := fmt.Sprintf("//table//tbody//tr[contains(., '%s')]//button[contains(@data-testid, '-view-button') or contains(text(), 'View')]", cleanMobile)
@@ -398,42 +403,42 @@ func DeleteMemberByMobile(aai AdminActionsInterface, cfg *config.Config, mobile 
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click View button for mobile '%s': %w", cleanMobile, lastClickErr)
 		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Check if member mobile '%s' exists in table", cleanMobile))
-		captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_SearchFailure")
+		captureScreenshot(ap, r, stepPrefix+"_DeleteMobile_"+cleanMobile+"_SearchFailure")
 		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
 
 	// Screenshot 2: Member Details modal open showing View details and Delete button
-	captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_02_ViewDetailsModal")
+	captureScreenshot(ap, r, stepPrefix+"_DeleteMobile_"+cleanMobile+"_02_ViewDetailsModal")
 
 	// 3. Click Delete button inside View modal
 	if err := ap.Page.ClickByTestID(cfg.MemberDeleteButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click member delete button: %w", err)
 		r.Advice = append(r.Advice, "Advice: Verify delete button testID in view modal")
-		captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_DeleteClickFailure")
+		captureScreenshot(ap, r, stepPrefix+"_DeleteMobile_"+cleanMobile+"_DeleteClickFailure")
 		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(1 * time.Second)
 
 	// Screenshot 3: Confirmation modal open asking to confirm member deletion
-	captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_03_ConfirmModal")
+	captureScreenshot(ap, r, stepPrefix+"_DeleteMobile_"+cleanMobile+"_03_ConfirmModal")
 
 	// 4. Click Confirm Delete button
 	if err := ap.Page.ClickByTestID(cfg.MemberConfirmDeleteButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = fmt.Errorf("failed to click confirm delete button: %w", err)
 		r.Advice = append(r.Advice, "Advice: Verify confirm delete button testID")
-		captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_ConfirmClickFailure")
+		captureScreenshot(ap, r, stepPrefix+"_DeleteMobile_"+cleanMobile+"_ConfirmClickFailure")
 		captureNetworkEvidence(ap, r)
 		return
 	}
 	time.Sleep(2 * time.Second)
 
 	// Screenshot 4: Success toast / confirmation message visible after confirming deletion
-	captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_SuccessToast")
+	captureScreenshot(ap, r, stepPrefix+"_DeleteMobile_"+cleanMobile+"_SuccessToast")
 	captureNetworkEvidence(ap, r)
 
 	// Dismiss success modal if present
@@ -447,7 +452,7 @@ func DeleteMemberByMobile(aai AdminActionsInterface, cfg *config.Config, mobile 
 	time.Sleep(2 * time.Second)
 
 	// Screenshot 5: Table view after deletion verifying member is no longer in list
-	captureScreenshot(ap, r, "Step_06_DeleteMobile_"+cleanMobile+"_05_TableAfterDeletion")
+	captureScreenshot(ap, r, stepPrefix+"_DeleteMobile_"+cleanMobile+"_05_TableAfterDeletion")
 	captureNetworkEvidence(ap, r)
 
 	r.Advice = append(r.Advice, fmt.Sprintf("Member with mobile '%s' deleted successfully.", cleanMobile))

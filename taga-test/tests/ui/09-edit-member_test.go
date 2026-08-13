@@ -32,13 +32,13 @@ func TestUI_09_EditMemberDetails(t *testing.T) {
 		actions.OpenAdminPanel(admin, cfg, result)
 
 		// 1. Add Member (using sudhantest08@gmail.com config data)
-		actions.AddSingleMember(admin, cfg, result)
+		_ = actions.AddSingleMember(admin, cfg, result)
 
 		// 2. Edit Member Details & Verify in View panel (search by mobile number)
 		actions.EditMemberDetails(admin, cfg, cfg.NewMemberFormData.MobileNumber, updatedDesignation, updatedDistrict, result)
 
 		// 3. Delete Member Cleanup
-		actions.DeleteMemberByMobile(admin, cfg, cfg.NewMemberFormData.MobileNumber, result)
+		actions.DeleteMemberByMobile(admin, cfg, cfg.NewMemberFormData.MobileNumber, "Step_06", result)
 
 		// 4. Logout Admin
 		actions.LogoutAdmin(admin, cfg, result)
