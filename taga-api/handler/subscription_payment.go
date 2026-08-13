@@ -697,25 +697,20 @@ func GetMemberPaidSubscriptions(c *gin.Context) {
 	now := time.Now()
 
 	// 1. Determine if annual subscription is paid (active or grace period)
-	waiverEnd := time.Date(2027, 5, 31, 23, 59, 59, 0, now.Location())
 	isAnnualPaid := false
 
-	if now.Before(waiverEnd) || now.Equal(waiverEnd) {
+	// Check active annual subscription
+	sub, err := getActiveMemberSubscription(email)
+	if err == nil && sub.SubscriptionID == "annual-subscription" && sub.Status == "active" && now.Before(sub.EndDate) {
 		isAnnualPaid = true
-	} else {
-		// After waiver: check active annual subscription
-		sub, err := getActiveMemberSubscription(email)
-		if err == nil && sub.SubscriptionID == "annual-subscription" && sub.Status == "active" && now.Before(sub.EndDate) {
+	}
+	// Also consider grace period (April 1 – May 31) as paid
+	if !isAnnualPaid {
+		year := now.Year()
+		graceStart := time.Date(year, 4, 1, 0, 0, 0, 0, now.Location())
+		graceEnd := time.Date(year, 5, 31, 23, 59, 59, 0, now.Location())
+		if (now.Equal(graceStart) || now.After(graceStart)) && (now.Equal(graceEnd) || now.Before(graceEnd)) {
 			isAnnualPaid = true
-		}
-		// Also consider grace period (April 1 – May 31) as paid
-		if !isAnnualPaid {
-			year := now.Year()
-			graceStart := time.Date(year, 4, 1, 0, 0, 0, 0, now.Location())
-			graceEnd := time.Date(year, 5, 31, 23, 59, 59, 0, now.Location())
-			if (now.Equal(graceStart) || now.After(graceStart)) && (now.Equal(graceEnd) || now.Before(graceEnd)) {
-				isAnnualPaid = true
-			}
 		}
 	}
 	if isAnnualPaid {

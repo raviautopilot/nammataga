@@ -35,11 +35,7 @@ type MemberLoginResponse struct {
 
 func checkAnnualSubscriptionStatus(memberID string) bool {
 	now := time.Now()
-	firstYearGraceEnd := time.Date(2027, 5, 31, 23, 59, 59, 0, now.Location())
-	if now.Before(firstYearGraceEnd) || now.Equal(firstYearGraceEnd) {
-		return true
-	}
-
+	
 	if isInGracePeriod(now) {
 		return true
 	}

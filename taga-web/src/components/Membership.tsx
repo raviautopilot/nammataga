@@ -134,10 +134,6 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
 
   const isInGracePeriod = () => {
     const now = new Date();
-    // Grace period only applies from April 1, 2027 onwards
-    if (now < new Date(2027, 3, 1)) {
-      return false;
-    }
     const year = now.getFullYear();
     const graceStart = new Date(year, 3, 1); // April 1
     const graceEnd = new Date(year, 4, 31, 23, 59, 59); // May 31
