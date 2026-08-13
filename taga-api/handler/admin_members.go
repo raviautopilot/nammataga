@@ -1508,6 +1508,7 @@ func loadSubscriptionPaymentMap() map[string]bool {
 		return subscriptionMap
 	}
 
+	now := time.Now()
 	for _, sub := range subscriptions {
 		subID, _ := sub["subscription_id"].(string)
 		if subID != "annual-subscription" {
@@ -1515,7 +1516,11 @@ func loadSubscriptionPaymentMap() map[string]bool {
 		}
 		if email, ok := sub["member_email"].(string); ok {
 			if status, ok := sub["status"].(string); ok && status == "active" {
-				subscriptionMap[email] = true
+				if endDateStr, ok := sub["end_date"].(string); ok {
+					if endDate, err := time.Parse(time.RFC3339, endDateStr); err == nil && now.Before(endDate) {
+						subscriptionMap[email] = true
+					}
+				}
 			}
 		}
 	}

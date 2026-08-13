@@ -645,7 +645,7 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
                   );
                 }
                 // Annual subscription in grace period and not yet paid
-                else if (isAnnual && inGrace && !isPaid) {
+                else if (isAnnual && inGrace && isPaidMember && !isPaid) {
                   actionComponent = (
                     <div className="text-right">
                       <button

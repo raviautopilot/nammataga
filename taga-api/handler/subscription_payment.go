@@ -699,19 +699,10 @@ func GetMemberPaidSubscriptions(c *gin.Context) {
 	// 1. Determine if annual subscription is paid (active or grace period)
 	isAnnualPaid := false
 
-	// Check active annual subscription
+	// Check active annual subscription (strictly paid for current year, no grace period)
 	sub, err := getActiveMemberSubscription(email)
 	if err == nil && sub.SubscriptionID == "annual-subscription" && sub.Status == "active" && now.Before(sub.EndDate) {
 		isAnnualPaid = true
-	}
-	// Also consider grace period (April 1 – May 31) as paid
-	if !isAnnualPaid {
-		year := now.Year()
-		graceStart := time.Date(year, 4, 1, 0, 0, 0, 0, now.Location())
-		graceEnd := time.Date(year, 5, 31, 23, 59, 59, 0, now.Location())
-		if (now.Equal(graceStart) || now.After(graceStart)) && (now.Equal(graceEnd) || now.Before(graceEnd)) {
-			isAnnualPaid = true
-		}
 	}
 	if isAnnualPaid {
 		paidIDs = append(paidIDs, "annual-subscription")
