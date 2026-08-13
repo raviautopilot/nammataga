@@ -31,7 +31,7 @@ func TestUI_03_BulkUploadMembers(t *testing.T) {
 				for _, mobile := range cfg.BulkMemberMobiles {
 					cleanMobile := strings.TrimSpace(mobile)
 					cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
-					actions.DeleteMemberByMobile(admin, cfg, cleanMobile, cleanupResult)
+					actions.DeleteMemberByMobile(admin, cfg, cleanMobile, "Step_Cleanup", cleanupResult)
 				}
 			}()
 		}

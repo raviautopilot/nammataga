@@ -149,6 +149,69 @@ func LoginAsMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 	r.Advice = append(r.Advice, "Member logged in successfully.")
 }
 
+// ForceChangePassword handles the first-time login forced password change flow.
+func ForceChangePassword(mai MemberActionsInterface, cfg *config.Config, email, tempPassword, newPassword string, r *Result) {
+	actionName := "Force Change Password on First Login"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+	
+	// Open member login modal if not already open (assumes we are on home page)
+	homePage := pages.NewHomePage(mp.Page)
+	_ = homePage.OpenMemberLogin(cfg.MemberLoginButtonTestID, mp.DefaultTimeout)
+
+	// Click the explicit "Change Password" button on the login form
+	if err := mp.Page.ClickByTestID("testid-change-password-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+	
+	// Wait for change password dialog to appear
+	time.Sleep(1 * time.Second)
+	
+	if err := mp.Page.SendKeysByTestID("testid-change-password-email-input", email, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+	if err := mp.Page.SendKeysByTestID("testid-change-password-old-input", tempPassword, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+	if err := mp.Page.SendKeysByTestID("testid-change-password-new-input", newPassword, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+	if err := mp.Page.SendKeysByTestID("testid-change-password-confirm-input", newPassword, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	if scr, scrErr := mp.Page.CaptureScreenshot("Step_06_ChangePassword_Filled"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	if err := mp.Page.ClickByTestID("testid-change-password-submit-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	time.Sleep(3 * time.Second)
+	if scr, scrErr := mp.Page.CaptureScreenshot("Step_07_ChangePassword_Success"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+	r.Advice = append(r.Advice, "Password changed successfully.")
+}
+
 // VisitAllMemberPages navigates through all member-accessible pages and captures screenshots.
 func VisitAllMemberPages(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 	actionName := "Visit All Member Pages"
