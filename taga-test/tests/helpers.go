@@ -504,6 +504,12 @@ func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) 
 			errStr := ""
 			screenshotPath := ""
 
+			// Retrieve and save all intercepted network requests per test
+			if netReqs := page.RetrieveNetworkRequests(); len(netReqs) > 0 {
+				testRequestDir := filepath.Join(ExecutionLogDir, sanitizedTestDir)
+				saveTestNetworkLogs(testRequestDir, netReqs)
+			}
+
 			if subT.Failed() {
 				status = "failed"
 				errStr = "UI interaction or page assertion failure."
@@ -537,6 +543,7 @@ func RunUITest(t *testing.T, name string, fn func(t *testing.T, page *ui.Page)) 
 
 			rep.RecordWithCategoryAndScreenshots(name, "UI", category, status, duration, errStr, screenshotPath, screenshots)
 		}()
+
 
 		fn(subT, page)
 	})
@@ -598,5 +605,63 @@ func CleanupMemberByEmailOrMobile(cfg *config.Config, identifiers ...string) {
 		}
 	}
 }
+
+func saveTestNetworkLogs(testRequestDir string, requests []ui.InterceptedNetworkRequest) {
+	if len(requests) == 0 {
+		return
+	}
+	if err := os.MkdirAll(testRequestDir, 0777); err != nil {
+		logger.Error("Failed to create test request directory %s: %v", testRequestDir, err)
+		return
+	}
+
+	// Save consolidated JSON trace file
+	tracePath := filepath.Join(testRequestDir, "requests.json")
+	if data, err := json.MarshalIndent(requests, "", "  "); err == nil {
+		_ = os.WriteFile(tracePath, data, 0644)
+	}
+
+	// Save individual request/response JSON files
+	for i, req := range requests {
+		seq := i + 1
+
+		var reqBodyJSON interface{}
+		if req.RequestBody != "" {
+			_ = json.Unmarshal([]byte(req.RequestBody), &reqBodyJSON)
+			if reqBodyJSON == nil {
+				reqBodyJSON = req.RequestBody
+			}
+		}
+		reqLog := map[string]interface{}{
+			"timestamp": req.Timestamp,
+			"method":    req.Method,
+			"url":       req.URL,
+			"body":      reqBodyJSON,
+		}
+		reqFilePath := filepath.Join(testRequestDir, fmt.Sprintf("%03d-request.json", seq))
+		if data, err := json.MarshalIndent(reqLog, "", "  "); err == nil {
+			_ = os.WriteFile(reqFilePath, data, 0644)
+		}
+
+		var respBodyJSON interface{}
+		if req.ResponseBody != "" {
+			_ = json.Unmarshal([]byte(req.ResponseBody), &respBodyJSON)
+			if respBodyJSON == nil {
+				respBodyJSON = req.ResponseBody
+			}
+		}
+		respLog := map[string]interface{}{
+			"timestamp":   req.Timestamp,
+			"status_code": req.Status,
+			"latency_ms":  req.LatencyMs,
+			"body":        respBodyJSON,
+		}
+		respFilePath := filepath.Join(testRequestDir, fmt.Sprintf("%03d-response.json", seq))
+		if data, err := json.MarshalIndent(respLog, "", "  "); err == nil {
+			_ = os.WriteFile(respFilePath, data, 0644)
+		}
+	}
+}
+
 
 

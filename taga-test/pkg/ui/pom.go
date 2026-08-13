@@ -325,45 +325,70 @@ func (p *Page) VerifyElementsPresentConcurrently(testIDs []string, timeout time.
 	return nil
 }
 
+type InterceptedNetworkRequest struct {
+	Timestamp    string `json:"timestamp"`
+	URL          string `json:"url"`
+	Method       string `json:"method"`
+	Status       int    `json:"status"`
+	RequestBody  string `json:"requestBody"`
+	ResponseBody string `json:"responseBody"`
+	LatencyMs    int64  `json:"latencyMs"`
+}
+
 const NetworkInterceptorScript = `
 (function() {
     if (window.__network_monkey_patched) return;
     window.__network_monkey_patched = true;
 
-    function logError(url, method, status, requestBody, responseBody) {
-        var errors = [];
-        try {
-            errors = JSON.parse(sessionStorage.getItem('__networkErrors') || '[]');
-        } catch(e) {}
-        errors.push({
+    function logRequest(url, method, status, requestBody, responseBody, latencyMs) {
+        var reqStr = typeof requestBody === 'string' ? requestBody : JSON.stringify(requestBody);
+        var respStr = typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody);
+        var entry = {
             timestamp: new Date().toISOString(),
             url: url,
             method: method,
             status: status,
-            requestBody: typeof requestBody === 'string' ? requestBody : JSON.stringify(requestBody),
-            responseBody: typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody)
-        });
+            requestBody: reqStr,
+            responseBody: respStr,
+            latencyMs: latencyMs || 0
+        };
+
+        var requests = [];
         try {
-            sessionStorage.setItem('__networkErrors', JSON.stringify(errors));
+            requests = JSON.parse(sessionStorage.getItem('__networkRequests') || '[]');
         } catch(e) {}
+        requests.push(entry);
+        try {
+            sessionStorage.setItem('__networkRequests', JSON.stringify(requests));
+        } catch(e) {}
+
+        if (status >= 400 || status === 0) {
+            var errors = [];
+            try {
+                errors = JSON.parse(sessionStorage.getItem('__networkErrors') || '[]');
+            } catch(e) {}
+            errors.push(entry);
+            try {
+                sessionStorage.setItem('__networkErrors', JSON.stringify(errors));
+            } catch(e) {}
+        }
     }
 
     var originalFetch = window.fetch;
     window.fetch = function(input, init) {
+        var startTime = Date.now();
         var url = typeof input === 'string' ? input : (input && input.url) || '';
         var method = (init && init.method) || 'GET';
         var reqBody = (init && init.body) || '';
         return originalFetch.apply(this, arguments).then(function(response) {
-            if (!response.ok) {
-                response.clone().text().then(function(text) {
-                    logError(url, method, response.status, reqBody, text);
-                }).catch(function() {
-                    logError(url, method, response.status, reqBody, '[failed to parse response]');
-                });
-            }
+            response.clone().text().then(function(text) {
+                logRequest(url, method, response.status, reqBody, text, Date.now() - startTime);
+            }).catch(function() {
+                logRequest(url, method, response.status, reqBody, '[failed to parse response]', Date.now() - startTime);
+            });
             return response;
         }).catch(function(error) {
-            logError(url, method, 0, reqBody, error.message || error.toString());
+            logRequest(url, method, 0, reqBody, error.message || error.toString(), Date.now() - startTime);
             throw error;
         });
     };
@@ -379,13 +404,12 @@ const NetworkInterceptorScript = `
 
     XMLHttpRequest.prototype.send = function(body) {
         var xhr = this;
+        var startTime = Date.now();
         xhr.addEventListener('load', function() {
-            if (xhr.status >= 400 || xhr.status === 0) {
-                logError(xhr.__url, xhr.__method, xhr.status, body || '', xhr.responseText || '');
-            }
+            logRequest(xhr.__url, xhr.__method, xhr.status, body || '', xhr.responseText || '', Date.now() - startTime);
         });
         xhr.addEventListener('error', function() {
-            logError(xhr.__url, xhr.__method, xhr.status, body || '', '[network error]');
+            logRequest(xhr.__url, xhr.__method, xhr.status, body || '', '[network error]', Date.now() - startTime);
         });
         return originalSend.apply(this, arguments);
     };
@@ -395,6 +419,32 @@ const NetworkInterceptorScript = `
 // InjectNetworkInterceptor injects the fetch/XHR interceptor script into the browser page.
 func (p *Page) InjectNetworkInterceptor() {
 	_, _ = p.Driver.ExecuteScript(NetworkInterceptorScript, nil)
+}
+
+// RetrieveNetworkRequestsRaw retrieves the captured network requests JSON string from browser sessionStorage.
+func (p *Page) RetrieveNetworkRequestsRaw() string {
+	res, err := p.Driver.ExecuteScript("return sessionStorage.getItem('__networkRequests');", nil)
+	if err != nil || res == nil {
+		return ""
+	}
+	val, ok := res.(string)
+	if !ok {
+		return ""
+	}
+	return val
+}
+
+// RetrieveNetworkRequests retrieves and parses all captured network requests from browser sessionStorage.
+func (p *Page) RetrieveNetworkRequests() []InterceptedNetworkRequest {
+	jsonStr := p.RetrieveNetworkRequestsRaw()
+	if jsonStr == "" {
+		return nil
+	}
+	var requests []InterceptedNetworkRequest
+	if err := json.Unmarshal([]byte(jsonStr), &requests); err != nil {
+		return nil
+	}
+	return requests
 }
 
 // RetrieveNetworkErrors retrieves the captured network errors from the browser sessionStorage.
@@ -439,4 +489,5 @@ func FormatNetworkErrors(jsonStr string) string {
 	}
 	return buf.String()
 }
+
 
