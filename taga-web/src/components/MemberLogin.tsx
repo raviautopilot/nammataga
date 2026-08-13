@@ -431,6 +431,7 @@ Change Password
     <form onSubmit={handleChangePasswordSubmit} className="space-y-3">
 <Input
   placeholder="Email"
+  data-testid="testid-change-password-email-input"
   value={changePasswordForm.email}
   onChange={(e) =>
     handleChangePasswordFormChange("email", e.target.value)
@@ -442,6 +443,7 @@ Change Password
 <Input
   type={showOldPassword ? "text" : "password"}
   placeholder="Temporary Password"
+  data-testid="testid-change-password-old-input"
   value={changePasswordForm.oldPassword}
   onChange={(e) =>
     handleChangePasswordFormChange("oldPassword", e.target.value)
@@ -464,6 +466,7 @@ Change Password
   <Input
     type={showNewPassword ? "text" : "password"}
     placeholder="New Password"
+    data-testid="testid-change-password-new-input"
     value={changePasswordForm.newPassword}
     onChange={(e) =>
       handleChangePasswordFormChange('newPassword', e.target.value)
@@ -491,6 +494,7 @@ showConfirmPassword
 : "password"
 }
 placeholder="Confirm Password"
+data-testid="testid-change-password-confirm-input"
 value={changePasswordForm.confirmPassword}
 onChange={(e) =>
 handleChangePasswordFormChange(
@@ -520,7 +524,7 @@ showConfirmPassword
 
 </div>
 
-<Button type="submit">
+<Button type="submit" data-testid="testid-change-password-submit-button">
   Submit
 </Button>
     </form>

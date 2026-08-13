@@ -1190,7 +1190,7 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
                 {tempPassword && (
                   <div className="mt-4 p-3 bg-muted/50 rounded flex flex-col items-center border font-mono text-sm">
                     <div className="flex items-center gap-2">
-                      <span>Temporary password: <strong>{tempPassword}</strong></span>
+                      <span>Temporary password: <strong data-testid="testid-temp-password">{tempPassword}</strong></span>
                       <Button 
                         variant="ghost" 
                         size="icon" 
