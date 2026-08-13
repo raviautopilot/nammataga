@@ -31,6 +31,7 @@ type MemberFormData struct {
 	Email                    string `json:"email"`
 	TbfNumber                string `json:"tbfNumber"`
 	CpsGpfNumber             string `json:"cpsGpfNumber"`
+	PaymentStatus            string `json:"paymentStatus"`
 	ResidentialAddress       string `json:"residentialAddress"`
 	PermanentAddress         string `json:"permanentAddress"`
 }
@@ -75,6 +76,7 @@ type Config struct {
 	AdminAddMemberEmailInputTestID            string         `json:"adminAddMemberEmailInputTestID"`
 	AdminAddMemberTbfNumInputTestID           string         `json:"adminAddMemberTbfNumInputTestID"`
 	AdminAddMemberCpsGpfNumInputTestID        string         `json:"adminAddMemberCpsGpfNumInputTestID"`
+	AdminAddMemberPaymentStatusSelectTestID   string         `json:"adminAddMemberPaymentStatusSelectTestID"`
 	AdminAddMemberResAddressInputTestID       string         `json:"adminAddMemberResAddressInputTestID"`
 	AdminAddMemberPermAddressInputTestID      string         `json:"adminAddMemberPermAddressInputTestID"`
 	AdminAddMemberSubmitButtonTestID          string         `json:"adminAddMemberSubmitButtonTestID"`

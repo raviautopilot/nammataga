@@ -162,7 +162,8 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
     mobileNumber: '',
     email: '',
     tbfNumber: '',
-    cpsGpfNumber: ''
+    cpsGpfNumber: '',
+    paymentStatus: 'Unpaid'
   });
 
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
@@ -460,6 +461,7 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
         email: memberForm.email,
         tbfNumber: memberForm.tbfNumber,
         cpsGpfNumber: memberForm.cpsGpfNumber,
+        paymentStatus: memberForm.paymentStatus,
       });
       setAddSuccessMessage(`Member "${memberForm.name}" added successfully.`);
       setTempPassword(response.temp_password);
@@ -468,7 +470,7 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
         tagaId: '', name: '', initial: '', gender: '', fatherName: '', motherName: '',
         educationalQualification: '', designation: '', workingDistrict: '', nativeDistrict: '',
         recruitmentBatch: '', seniorityNumber: '', residentialAddress: '', permanentAddress: '',
-        dateOfBirth: '', mobileNumber: '', email: '', tbfNumber: '', cpsGpfNumber: ''
+        dateOfBirth: '', mobileNumber: '', email: '', tbfNumber: '', cpsGpfNumber: '', paymentStatus: 'Unpaid'
       });
       setAddMemberOpen(false);
     } catch (error) {
@@ -1144,6 +1146,18 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
                 <div className="space-y-2">
                   <Label htmlFor="cpsGpfNumber">CPS / GPF Number</Label>
                   <Input id="cpsGpfNumber" value={memberForm.cpsGpfNumber} onChange={(e) => setMemberForm({ ...memberForm, cpsGpfNumber: e.target.value })} placeholder="CPS or GPF number" data-testid="testid-add-member-cps-gpf-number-input" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="paymentStatus">Payment Status</Label>
+                  <Select value={memberForm.paymentStatus} onValueChange={(value: string) => setMemberForm({ ...memberForm, paymentStatus: value })}>
+                    <SelectTrigger data-testid="testid-add-member-payment-status-select">
+                      <SelectValue placeholder="Select payment status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Paid">Paid</SelectItem>
+                      <SelectItem value="Unpaid">Unpaid</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label htmlFor="residentialAddress">Residential Address</Label>

@@ -52,6 +52,7 @@
     "email": "sudhantemproraytest@gmail.com",
     "tbfNumber": "TBF999",
     "cpsGpfNumber": "CPS888",
+    "paymentStatus": "Unpaid",
     "residentialAddress": "123 Test Street, Chennai",
     "permanentAddress": "456 Native Street, Madurai"
   },
@@ -73,6 +74,7 @@
   "adminAddMemberEmailInputTestID": "testid-add-member-email-input",
   "adminAddMemberTbfNumInputTestID": "testid-add-member-tbf-number-input",
   "adminAddMemberCpsGpfNumInputTestID": "testid-add-member-cps-gpf-number-input",
+  "adminAddMemberPaymentStatusSelectTestID": "testid-add-member-payment-status-select",
   "adminAddMemberResAddressInputTestID": "testid-add-member-residential-address-input",
   "adminAddMemberPermAddressInputTestID": "testid-add-member-permanent-address-input",
   "adminAddMemberSubmitButtonTestID": "testid-add-member-submit-button",

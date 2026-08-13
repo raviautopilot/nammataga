@@ -19,6 +19,7 @@ func TestUI_02_AdminAddDeleteMember(t *testing.T) {
 		result := actions.NewResult("TestUI_02_AdminAddDeleteMember")
 
 		// Pre-test setup: Ensure target test member is deleted via API so test runs with a clean state
+		cfg.NewMemberFormData.PaymentStatus = "Unpaid"
 		cleanEmail := strings.TrimSpace(cfg.NewMemberFormData.Email)
 		cleanMobile := strings.TrimSpace(cfg.NewMemberFormData.MobileNumber)
 		cleanMobileNoSpace := strings.ReplaceAll(cleanMobile, " ", "")

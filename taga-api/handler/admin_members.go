@@ -77,6 +77,8 @@ type AddMemberRequest struct {
 	Email                    string `json:"email" binding:"required"`
 	TbfNumber                string `json:"tbfNumber"`
 	CpsGpfNumber             string `json:"cpsGpfNumber"`
+	PaymentStatus            string `json:"paymentStatus"`
+	PaymentStatusSnake       string `json:"payment_status"`
 }
 
 type UpdateMemberRequest struct {
@@ -98,6 +100,8 @@ type UpdateMemberRequest struct {
 	EmailId                  string `json:"emailId"`
 	TbfNumber                string `json:"tbf_number"`
 	CpsGpfNumber             string `json:"cps_gpf_number"`
+	PaymentStatus            string `json:"payment_status"`
+	PaymentStatusCamel       string `json:"paymentStatus"`
 }
 
 type MemberListItem struct {
@@ -264,6 +268,15 @@ func AddMember(c *gin.Context) {
 	tempPassword := generateTempPassword()
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(tempPassword), bcrypt.DefaultCost)
 
+	paymentStatus := req.PaymentStatus
+	if paymentStatus == "" {
+		paymentStatus = req.PaymentStatusSnake
+	}
+	if paymentStatus == "" {
+		paymentStatus = "Unpaid"
+	}
+	isPaid := strings.EqualFold(paymentStatus, "Paid")
+
 	newMember := model.Member{
 		ID:                       uuid.New().String(),
 		TagaID:                   req.TagaID,
@@ -289,8 +302,8 @@ func AddMember(c *gin.Context) {
 		Password:                 string(hashedPassword),
 		FirstLogin:               true,
 		CreatedAt:                time.Now().Format(time.RFC3339),
-		PaymentStatus:            "Unpaid",
-		SubscriptionActive:       false,
+		PaymentStatus:            paymentStatus,
+		SubscriptionActive:       isPaid,
 	}
 
 	if err := member.SaveMember(newMember); err != nil {
@@ -423,6 +436,14 @@ func UpdateMember(c *gin.Context) {
 		}
 		if req.CpsGpfNumber != "" {
 			members[i]["cps_gpf_number"] = req.CpsGpfNumber
+		}
+		pStatus := req.PaymentStatus
+		if pStatus == "" {
+			pStatus = req.PaymentStatusCamel
+		}
+		if pStatus != "" {
+			members[i]["payment_status"] = pStatus
+			members[i]["subscription_active"] = strings.EqualFold(pStatus, "Paid")
 		}
 
 		members[i]["updated_at"] = time.Now().Format(time.RFC3339)
