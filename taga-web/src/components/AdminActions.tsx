@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { UserPlus, FileText, MessageSquare, Download, Send, Plus, Upload, Calendar, Image as ImageIcon, Link as LinkIcon, Trash2, Pencil, ChevronDown, ChevronRight, Loader2, AlertTriangle, Users, CheckCircle } from 'lucide-react';
+import { UserPlus, FileText, MessageSquare, Download, Send, Plus, Upload, Calendar, Image as ImageIcon, Link as LinkIcon, Trash2, Pencil, ChevronDown, ChevronRight, Loader2, AlertTriangle, Users, CheckCircle, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   createEvent,
@@ -1188,8 +1188,22 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
                   {addSuccessMessage}
                 </DialogDescription>
                 {tempPassword && (
-                  <div className="mt-4 p-3 bg-muted/50 rounded text-center border font-mono text-sm">
-                    Temporary password: <strong>{tempPassword}</strong>
+                  <div className="mt-4 p-3 bg-muted/50 rounded flex flex-col items-center border font-mono text-sm">
+                    <div className="flex items-center gap-2">
+                      <span>Temporary password: <strong>{tempPassword}</strong></span>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6" 
+                        data-testid="testid-copy-password-button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(tempPassword);
+                          toast.success("Password copied to clipboard");
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <div className="text-xs text-muted-foreground mt-1 font-sans">
                       Please share with the member.
                     </div>
