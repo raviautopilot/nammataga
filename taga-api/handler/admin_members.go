@@ -963,10 +963,6 @@ func GetMemberStats(c *gin.Context) {
 		}
 	}
 
-	if isGracePeriod() {
-		unpaid = 0
-	}
-
 	respondOK(c, gin.H{
 		"totalMembers":  total,
 		"activeMembers": active,
@@ -1498,16 +1494,8 @@ func sendErrorEmailToAdmin(errors []map[string]interface{}) error {
 	return sendEmail(adminEmail, subject, body.String())
 }
 
-func isGracePeriod() bool {
-	graceEndDate := time.Date(2026, 12, 31, 23, 59, 59, 0, time.Local)
-	return time.Now().Before(graceEndDate)
-}
-
 func loadSubscriptionPaymentMap() map[string]bool {
 	subscriptionMap := make(map[string]bool)
-	if isGracePeriod() {
-		return subscriptionMap
-	}
 
 	filePath := filepath.Join("data", "subscriptions", "member_subscriptions.json")
 	data, err := os.ReadFile(filePath)
@@ -1520,6 +1508,7 @@ func loadSubscriptionPaymentMap() map[string]bool {
 		return subscriptionMap
 	}
 
+	now := time.Now()
 	for _, sub := range subscriptions {
 		subID, _ := sub["subscription_id"].(string)
 		if subID != "annual-subscription" {
@@ -1527,7 +1516,11 @@ func loadSubscriptionPaymentMap() map[string]bool {
 		}
 		if email, ok := sub["member_email"].(string); ok {
 			if status, ok := sub["status"].(string); ok && status == "active" {
-				subscriptionMap[email] = true
+				if endDateStr, ok := sub["end_date"].(string); ok {
+					if endDate, err := time.Parse(time.RFC3339, endDateStr); err == nil && now.Before(endDate) {
+						subscriptionMap[email] = true
+					}
+				}
 			}
 		}
 	}
@@ -1535,9 +1528,6 @@ func loadSubscriptionPaymentMap() map[string]bool {
 }
 
 func getPaymentStatusFromSubscription(email string, subscriptionMap map[string]bool) string {
-	if isGracePeriod() {
-		return "Paid"
-	}
 	if isPaid, exists := subscriptionMap[email]; exists && isPaid {
 		return "Paid"
 	}
@@ -1545,9 +1535,6 @@ func getPaymentStatusFromSubscription(email string, subscriptionMap map[string]b
 }
 
 func getMembershipStatus(member map[string]interface{}) string {
-	if isGracePeriod() {
-		return "Active"
-	}
 	email := getString(member, "emailId")
 	subscriptionMap := loadSubscriptionPaymentMap()
 	if isPaid, exists := subscriptionMap[email]; exists && isPaid {

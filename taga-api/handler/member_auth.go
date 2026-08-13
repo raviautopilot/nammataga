@@ -35,14 +35,7 @@ type MemberLoginResponse struct {
 
 func checkAnnualSubscriptionStatus(memberID string) bool {
 	now := time.Now()
-	firstYearGraceEnd := time.Date(2027, 5, 31, 23, 59, 59, 0, now.Location())
-	if now.Before(firstYearGraceEnd) || now.Equal(firstYearGraceEnd) {
-		return true
-	}
 
-	if isInGracePeriod(now) {
-		return true
-	}
 
 	tagaId := getMemberTagaIdByUUID(memberID)
 	cfg := config.GetConfig()
@@ -63,19 +56,14 @@ func checkAnnualSubscriptionStatus(memberID string) bool {
 	for _, sub := range subscriptions {
 		if sub.MemberID == tagaId &&
 			sub.SubscriptionID == "annual-subscription" &&
-			sub.Status == "active" &&
-			now.Before(sub.EndDate) {
-			return true
+			sub.Status == "active" {
+			graceEnd := sub.EndDate.AddDate(0, 2, 0)
+			if now.Before(graceEnd) || now.Equal(graceEnd) {
+				return true
+			}
 		}
 	}
 	return false
-}
-
-func isInGracePeriod(now time.Time) bool {
-	year := now.Year()
-	graceStart := time.Date(year, 4, 1, 0, 0, 0, 0, now.Location())
-	graceEnd := time.Date(year, 5, 31, 23, 59, 59, 0, now.Location())
-	return (now.Equal(graceStart) || now.After(graceStart)) && (now.Equal(graceEnd) || now.Before(graceEnd))
 }
 
 // ResetPasswordHandler handles password reset
