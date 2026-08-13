@@ -159,7 +159,7 @@ func ForceChangePassword(mai MemberActionsInterface, cfg *config.Config, email, 
 	}
 
 	mp := mai.GetMemberPersona()
-	
+
 	// Open member login modal if not already open (assumes we are on home page)
 	homePage := pages.NewHomePage(mp.Page)
 	_ = homePage.OpenMemberLogin(cfg.MemberLoginButtonTestID, mp.DefaultTimeout)
@@ -170,10 +170,10 @@ func ForceChangePassword(mai MemberActionsInterface, cfg *config.Config, email, 
 		r.Error = err
 		return
 	}
-	
+
 	// Wait for change password dialog to appear
 	time.Sleep(1 * time.Second)
-	
+
 	if err := mp.Page.SendKeysByTestID("testid-change-password-email-input", email, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
@@ -222,7 +222,7 @@ func VisitAllMemberPages(mai MemberActionsInterface, cfg *config.Config, r *Resu
 	}
 
 	mp := mai.GetMemberPersona()
-	
+
 	// Define navigation sequence
 	pages := []struct {
 		TestID         string
@@ -236,7 +236,7 @@ func VisitAllMemberPages(mai MemberActionsInterface, cfg *config.Config, r *Resu
 		{"testid-upcoming-events-button", "Step_07_Upcoming_Events_Page", 2 * time.Second}, // Sub-tab of Events
 		{"testid-taga-towers-button", "Step_08_TAGATowers_Page", 2 * time.Second},
 		{"testid-grievance-button", "Step_09_Grievance_Page", 2 * time.Second},
-		{"testid-membership-button", "Step_10_Member_Profile_Page", 2 * time.Second}, // Membership default is Profile
+		{"testid-membership-button", "Step_10_Member_Profile_Page", 2 * time.Second},          // Membership default is Profile
 		{"testid-member-subscriptions-button", "Step_11_Subscriptions_Page", 2 * time.Second}, // Sub-tab of Membership
 		{"testid-member-announcements-button", "Step_12_Announcements_Page", 2 * time.Second}, // Sub-tab of Membership
 	}
@@ -248,14 +248,14 @@ func VisitAllMemberPages(mai MemberActionsInterface, cfg *config.Config, r *Resu
 			r.Advice = append(r.Advice, fmt.Sprintf("Advice: Verify '%s' element exists", page.TestID))
 			return
 		}
-		
+
 		time.Sleep(page.WaitTime)
-		
+
 		if scr, scrErr := mp.Page.CaptureScreenshot(page.ScreenshotName); scrErr == nil {
 			r.Evidence = append(r.Evidence, scr)
 		}
 	}
-	
+
 	r.Advice = append(r.Advice, "Successfully visited all member pages.")
 }
 
@@ -287,7 +287,7 @@ func PayAnnualSubscription(mai MemberActionsInterface, cfg *config.Config, r *Re
 		return
 	}
 	time.Sleep(1 * time.Second)
-	
+
 	if scr, scrErr := mp.Page.CaptureScreenshot("Step_03_Subscription_Tab_Opened"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
@@ -300,7 +300,7 @@ func PayAnnualSubscription(mai MemberActionsInterface, cfg *config.Config, r *Re
 		return
 	}
 	time.Sleep(1 * time.Second)
-	
+
 	if scr, scrErr := mp.Page.CaptureScreenshot("Step_04_Payment_Modal_Opened"); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
@@ -432,7 +432,7 @@ func BookSimpleRoom(mai MemberActionsInterface, cfg *config.Config, r *Result, r
 		}
 		return false;
 	`, bookBtnID)
-	
+
 	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
 	if err != nil || clicked == false {
 		r.Status = "failed"
@@ -557,7 +557,7 @@ func BookRoomForGuest(mai MemberActionsInterface, cfg *config.Config, r *Result,
 		}
 		return false;
 	`, bookBtnID)
-	
+
 	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
 	if err != nil || clicked == false {
 		r.Status = "failed"
@@ -663,7 +663,7 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 		}
 		return false;
 	`, bookBtnID)
-	
+
 	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
 	if err != nil || clicked == false {
 		r.Status = "failed"
@@ -815,7 +815,7 @@ func TryBookRoomAsSelfMultibooking(mai MemberActionsInterface, cfg *config.Confi
 		}
 		return false;
 	`, bookBtnID)
-	
+
 	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
 	if err != nil || clicked == false {
 		r.Status = "failed"
@@ -1021,7 +1021,7 @@ func BookSingleBedWithGender(mai MemberActionsInterface, cfg *config.Config, r *
 		}
 		return false;
 	`, bookBtnID)
-	
+
 	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
 	if err != nil || clicked == false {
 		r.Status = "failed"
@@ -1124,7 +1124,7 @@ func TryBookSingleBedWithGenderOpposite(mai MemberActionsInterface, cfg *config.
 		}
 		return false;
 	`, bookBtnID)
-	
+
 	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
 	if err != nil || clicked == false {
 		r.Status = "failed"
@@ -1254,7 +1254,7 @@ func TryBookDormitoryWithOppositeGender(mai MemberActionsInterface, cfg *config.
 		}
 		return false;
 	`, bookBtnID)
-	
+
 	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
 	if err != nil || clicked == false {
 		r.Status = "failed"
@@ -1423,7 +1423,7 @@ func BookRoomForTenDays(mai MemberActionsInterface, cfg *config.Config, r *Resul
 		r.Error = fmt.Errorf("bug detected: room %s is not available or shown as full for a 10-day booking", roomID)
 		mp.Page.LastError = r.Error
 		r.Advice = append(r.Advice, "Advice: Fix the frontend room availability filter logic when handling 10-day bookings")
-		
+
 		// Capture failure screenshot
 		if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_10DaysBooking_FullBug_%s", roomID)); scrErr == nil {
 			r.Evidence = append(r.Evidence, scr)
@@ -1574,7 +1574,6 @@ func TryBookOverlappingRoom(mai MemberActionsInterface, cfg *config.Config, r *R
 	r.Advice = append(r.Advice, "Advice: Enforce strict backend validation to prevent overlapping bookings for the same room")
 }
 
-
 // ViewMemberSubscriptions navigates to the subscription page and takes a screenshot.
 func ViewMemberSubscriptions(mai MemberActionsInterface, cfg *config.Config, screenshotName string, r *Result) {
 	actionName := "View Member Subscriptions"
@@ -1603,7 +1602,7 @@ func ViewMemberSubscriptions(mai MemberActionsInterface, cfg *config.Config, scr
 		return
 	}
 	time.Sleep(1 * time.Second)
-	
+
 	if scr, scrErr := mp.Page.CaptureScreenshot(screenshotName); scrErr == nil {
 		r.Evidence = append(r.Evidence, scr)
 	}
