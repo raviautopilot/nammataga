@@ -65,7 +65,16 @@ func (a *AdminDashboardPage) FillAddMemberForm(cfg *config.Config, timeout time.
 		}
 	}
 
-	// Handle Custom Select Dropdowns (Gender, Working District, Native District)
+	// Handle Custom Select Dropdowns (Gender, Working District, Native District, Payment Status)
+	payStatusTestID := cfg.AdminAddMemberPaymentStatusSelectTestID
+	if payStatusTestID == "" {
+		payStatusTestID = "testid-add-member-payment-status-select"
+	}
+	payStatusVal := d.PaymentStatus
+	if payStatusVal == "" {
+		payStatusVal = "Unpaid"
+	}
+
 	dropdowns := []struct {
 		triggerTestID string
 		optionVal     string
@@ -74,6 +83,7 @@ func (a *AdminDashboardPage) FillAddMemberForm(cfg *config.Config, timeout time.
 		{cfg.AdminAddMemberGenderSelectTestID, d.Gender, "Gender"},
 		{cfg.AdminAddMemberWorkingDistrictSelectTestID, d.WorkingDistrict, "Working District"},
 		{cfg.AdminAddMemberNativeDistrictSelectTestID, d.NativeDistrict, "Native District"},
+		{payStatusTestID, payStatusVal, "Payment Status"},
 	}
 
 	for _, drop := range dropdowns {

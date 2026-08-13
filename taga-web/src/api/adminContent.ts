@@ -369,6 +369,7 @@ export interface AddMemberData {
   email: string;
   tbfNumber?: string;
   cpsGpfNumber?: string;
+  paymentStatus?: string;
 }
 
 export interface AddMemberResponse {
