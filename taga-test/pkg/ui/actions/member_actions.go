@@ -1574,3 +1574,37 @@ func TryBookOverlappingRoom(mai MemberActionsInterface, cfg *config.Config, r *R
 	r.Advice = append(r.Advice, "Advice: Enforce strict backend validation to prevent overlapping bookings for the same room")
 }
 
+
+// ViewMemberSubscriptions navigates to the subscription page and takes a screenshot.
+func ViewMemberSubscriptions(mai MemberActionsInterface, cfg *config.Config, screenshotName string, r *Result) {
+	actionName := "View Member Subscriptions"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// 1. Navigate to Profile / Membership Page
+	if err := mp.Page.ClickByTestID("testid-membership-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-membership-button' element exists")
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// 2. Switch to Subscriptions Tab
+	if err := mp.Page.ClickByTestID("testid-member-subscriptions-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-member-subscriptions-button' exists in Membership tabs")
+		return
+	}
+	time.Sleep(1 * time.Second)
+	
+	if scr, scrErr := mp.Page.CaptureScreenshot(screenshotName); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+}

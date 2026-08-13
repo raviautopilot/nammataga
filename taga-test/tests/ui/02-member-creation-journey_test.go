@@ -49,6 +49,9 @@ func TestUI_02_AdminAddDeleteMember(t *testing.T) {
 			// Login with new password
 			actions.MemberLoginAttempt(member, cfg, cleanEmail, "test123", 4*time.Second, "Step_08_MemberLogin_Success", result)
 			
+			// View subscriptions
+			actions.ViewMemberSubscriptions(member, cfg, "Step_08b_ViewSubscriptions", result)
+			
 			// Logout member
 			actions.LogoutMemberCustom(member, cfg, 2*time.Second, "Step_09_MemberLogout", result)
 		}
