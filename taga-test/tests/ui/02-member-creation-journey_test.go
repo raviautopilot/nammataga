@@ -35,26 +35,31 @@ func TestUI_02_AdminAddDeleteMember(t *testing.T) {
 		actions.GoToHome(admin, result)
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
-		tempPassword := actions.AddSingleMember(admin, cfg, result)
+		creds := actions.AddSingleMember(admin, cfg, result)
 
 		actions.LogoutAdminCustom(admin, cfg, 2*time.Second, "Step_05b_AdminLogout", result)
 
-		// Member Flow: Click change password, login with new password, and logout
-		if tempPassword != "" {
-			actions.GoToHome(member, result)
-
-			// Open change password dialog explicitly and change password
-			actions.ForceChangePassword(member, cfg, cleanEmail, tempPassword, "test123", result)
-
-			// Login with new password
-			actions.MemberLoginAttempt(member, cfg, cleanEmail, "test123", 4*time.Second, "Step_08_MemberLogin_Success", result)
-
-			// View subscriptions
-			actions.ViewMemberSubscriptions(member, cfg, "Step_08b_ViewSubscriptions", result)
-
-			// Logout member
-			actions.LogoutMemberCustom(member, cfg, 2*time.Second, "Step_09_MemberLogout", result)
+		if result.Failed() {
+			t.Fatalf("Member creation failed: %v", result.Error)
 		}
+
+		// Member Flow: Click change password, login with new password, and logout
+		actions.GoToHome(member, result)
+
+		// Open change password dialog explicitly and change password
+		actions.ForceChangePassword(member, cfg, creds.Email, creds.TempPassword, creds.NewPassword, result)
+
+		// Login with new password
+		actions.MemberLoginAttempt(member, cfg, creds.Email, creds.NewPassword, 4*time.Second, "Step_08_MemberLogin_Success", result)
+
+		// Validate unpaid member access restrictions
+		actions.ValidateUnpaidMemberAccess(member, cfg, result)
+
+		// View subscriptions
+		actions.ViewMemberSubscriptions(member, cfg, "Step_08b_ViewSubscriptions", result)
+
+		// Logout member
+		actions.LogoutMemberCustom(member, cfg, 2*time.Second, "Step_09_MemberLogout", result)
 
 		// Back to Admin: Login and delete the member
 		actions.GoToHome(admin, result)

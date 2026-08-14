@@ -1607,3 +1607,79 @@ func ViewMemberSubscriptions(mai MemberActionsInterface, cfg *config.Config, scr
 		r.Evidence = append(r.Evidence, scr)
 	}
 }
+
+// ValidateUnpaidMemberAccess verifies that an unpaid member can only access specific pages.
+func ValidateUnpaidMemberAccess(mai MemberActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Validate Unpaid Member Access"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// 1. Verify Home is accessible
+	_ = mp.Page.GoToHome(mp.BaseURL)
+	time.Sleep(1 * time.Second)
+	if scr, scrErr := mp.Page.CaptureScreenshot("Step_Unpaid_Access_Home"); scrErr == nil {
+		r.Evidence = append(r.Evidence, scr)
+	}
+
+	// 2. Verify Office Bearers is accessible
+	if err := mp.Page.ClickByTestID("testid-office-bearers-button", mp.DefaultTimeout); err == nil {
+		time.Sleep(1 * time.Second)
+		if scr, scrErr := mp.Page.CaptureScreenshot("Step_Unpaid_Access_OfficeBearers"); scrErr == nil {
+			r.Evidence = append(r.Evidence, scr)
+		}
+	} else {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("office bearers should be accessible: %v", err)
+		return
+	}
+
+	// 3. Verify Events is accessible
+	if err := mp.Page.ClickByTestID("testid-events-button", mp.DefaultTimeout); err == nil {
+		time.Sleep(1 * time.Second)
+		if scr, scrErr := mp.Page.CaptureScreenshot("Step_Unpaid_Access_Events"); scrErr == nil {
+			r.Evidence = append(r.Evidence, scr)
+		}
+	} else {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("events should be accessible: %v", err)
+		return
+	}
+
+	// 4. Verify Profile (Subscriptions/Announcements) is accessible
+	if err := mp.Page.ClickByTestID("testid-membership-button", mp.DefaultTimeout); err == nil {
+		time.Sleep(1 * time.Second)
+		if scr, scrErr := mp.Page.CaptureScreenshot("Step_Unpaid_Access_Profile"); scrErr == nil {
+			r.Evidence = append(r.Evidence, scr)
+		}
+		// Check Subscriptions tab
+		_ = mp.Page.ClickByTestID("testid-member-subscriptions-button", mp.DefaultTimeout)
+		time.Sleep(1 * time.Second)
+	} else {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("profile should be accessible: %v", err)
+		return
+	}
+
+	// 5. Verify Non-accessible pages are not in DOM
+	nonAccessible := []string{
+		"testid-resources-button",
+		"testid-taga-towers-button",
+		"testid-grievance-button",
+		"testid-members-button",
+	}
+
+	for _, testID := range nonAccessible {
+		_, err := mp.Page.WaitUntilVisible(fmt.Sprintf("css:[data-testid='%s']", testID), 1*time.Second)
+		if err == nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("page link %s should not be accessible for unpaid member", testID)
+			return
+		}
+	}
+	r.Advice = append(r.Advice, "Successfully validated unpaid member access constraints.")
+}

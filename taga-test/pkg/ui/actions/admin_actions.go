@@ -132,13 +132,22 @@ func OpenAdminPanel(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	r.Advice = append(r.Advice, "Admin Panel opened successfully.")
 }
 
-// AddSingleMember opens the modal, fills all 19 form fields from config, and submits. Returns the temporary password if any.
-func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) string {
+// MemberCredentials holds the necessary information for a member to log in and change their password.
+type MemberCredentials struct {
+	Username     string
+	TempPassword string
+	NewPassword  string
+	Email        string
+	MobileNumber string
+}
+
+// AddSingleMember opens the modal, fills all 19 form fields from config, and submits. Returns the member credentials.
+func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) *MemberCredentials {
 	actionName := "Add Single Member with 19 Fields"
 	r.Actions = append(r.Actions, actionName)
 	if r.Failed() {
 		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
-		return ""
+		return nil
 	}
 
 	ap := aai.GetAdminPersona()
@@ -151,7 +160,7 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) s
 		r.Advice = append(r.Advice, "Advice: Verify 'adminAddMemberButtonTestID' is clickable in Admin Dashboard")
 		captureScreenshot(ap, r, "Step_03_AddMember_OpenFailure")
 		captureNetworkEvidence(ap, r)
-		return ""
+		return nil
 	}
 	time.Sleep(1 * time.Second)
 	captureScreenshot(ap, r, "Step_03_AddMember_ModalOpen")
@@ -162,7 +171,7 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) s
 		r.Advice = append(r.Advice, "Advice: Verify all 19 form input testIDs in config.json match the UI elements")
 		captureScreenshot(ap, r, "Step_03_AddMember_FillFailure")
 		captureNetworkEvidence(ap, r)
-		return ""
+		return nil
 	}
 
 	// Screenshot: form fully filled, before submitting
@@ -175,7 +184,7 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) s
 		r.Advice = append(r.Advice, "Advice: Verify 'adminAddMemberSubmitButtonTestID' submit button")
 		captureScreenshot(ap, r, "Step_04_AddMember_SubmitFailure")
 		captureNetworkEvidence(ap, r)
-		return ""
+		return nil
 	}
 
 	// Screenshot: success toast visible immediately after submit
@@ -192,7 +201,7 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) s
 		r.Error = fmt.Errorf("failed to click add success OK button: %w", err)
 		captureScreenshot(ap, r, "Step_04_AddMember_DismissFailure")
 		captureNetworkEvidence(ap, r)
-		return ""
+		return nil
 	}
 	time.Sleep(1 * time.Second)
 
@@ -204,7 +213,13 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) s
 	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Member added successfully with all 19 fields populated.")
 	
-	return tempPassword
+	return &MemberCredentials{
+		Username:     strings.TrimSpace(cfg.NewMemberFormData.Email),
+		TempPassword: tempPassword,
+		NewPassword:  "test123",
+		Email:        strings.TrimSpace(cfg.NewMemberFormData.Email),
+		MobileNumber: strings.TrimSpace(cfg.NewMemberFormData.MobileNumber),
+	}
 }
 
 // SetPaymentStatusToPaid attempts to select the paid checkbox/button.
