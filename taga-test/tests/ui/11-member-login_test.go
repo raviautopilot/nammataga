@@ -18,14 +18,8 @@ func TestUI_11_MemberLoginHappyPath(t *testing.T) {
 
 		// Declarative Persona Action Flow
 		actions.GoToHome(member, result)
-		
-		// Login Member (using new persona action)
 		actions.LoginAsMember(member, cfg, result)
-
-		// Visit all accessible pages for member
-		actions.VisitAllMemberPages(member, cfg, result)
-
-		// Logout Member (using new persona action)
+		actions.ValidateUnpaidMemberAccess(member, cfg, result)
 		actions.LogoutMember(member, cfg, result)
 
 		// Assert Result

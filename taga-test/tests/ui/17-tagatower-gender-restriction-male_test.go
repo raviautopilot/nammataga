@@ -16,35 +16,22 @@ func TestUI_17_TAGATower_GenderRestriction_Male(t *testing.T) {
 		member := actions.NewMemberPersona(page, cfg.UiURL, 5*time.Second)
 		result := actions.NewResult("TestUI_17_TAGATower_GenderRestriction_Male")
 
-		// 1. Login as Member
+		// Declarative Persona Action Flow
 		actions.GoToHome(member, result)
 		actions.LoginAsMember(member, cfg, result)
-
-		// 2. Navigate to TAGA Towers
 		actions.NavigateToTAGATower(member, cfg, result)
-
-		// 3. Select future dates on the calendar to ensure all beds are available
 		actions.SelectFutureDates(member, result)
-
-		// 4. Book a single bed as Male
 		actions.BookSingleBedWithGender(member, cfg, result, "apex-1", "male")
-
-		// 5. Try to book a bed in the same room as Female (should fail/disallowed)
 		actions.TryBookSingleBedWithGenderOpposite(member, cfg, result, "apex-1", "female")
-
-		// 6. Cleanup: Cancel the original Male booking
 		actions.CancelLatestBooking(member, cfg, result)
-
-		// 7. Logout
 		actions.LogoutMember(member, cfg, result)
 
+		// Assert Result
 		if result.Failed() {
-			t.Errorf("=================================================================")
-			t.Errorf("🛑 TEST JOURNEY FAILED: %v", result.Error)
-			t.Errorf("🛑 Actions Attempted: %v", result.Actions)
-			t.Errorf("🛑 Evidence Captured: %v", result.Evidence)
-			t.Fatalf("🛑 Advice / Remediation: %v", result.Advice)
-			t.Errorf("=================================================================")
+			t.Errorf("Test Journey Failed: %v", result.Error)
+			t.Errorf("Actions Attempted: %v", result.Actions)
+			t.Errorf("Evidence Captured: %v", result.Evidence)
+			t.Fatalf("Advice / Remediation: %v", result.Advice)
 		}
 	})
 }

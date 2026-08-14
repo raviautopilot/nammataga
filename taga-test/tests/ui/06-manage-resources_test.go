@@ -21,7 +21,7 @@ func TestUI_06_ManageResources(t *testing.T) {
 		actions.GoToHome(admin, result)
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
-		actions.ManageResourceDocument(admin, cfg, "../../fixtures/a_test_resource_sample.pdf", "Establishment", result)
+		actions.ManageResourceDocument(admin, cfg, result)
 		actions.LogoutAdmin(admin, cfg, result)
 
 		// Assert Result

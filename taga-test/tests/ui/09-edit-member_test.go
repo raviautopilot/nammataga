@@ -1,7 +1,6 @@
 package ui_test
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -18,29 +17,18 @@ func TestUI_09_EditMemberDetails(t *testing.T) {
 		admin := actions.NewAdminPersona(page, cfg.UiURL, 5*time.Second)
 		result := actions.NewResult("TestUI_09_EditMemberDetails")
 
-		updatedDesignation := "Senior Agriculture Officer"
-		updatedDistrict := "Coimbatore"
+		// --- 1. Setup ---
+		creds, _ := actions.InitializeMemberTest(cfg)
+		defer actions.CleanupMemberTest(cfg, creds)
 
-		// Pre-test setup: Ensure target test member is deleted via API so test runs with a clean state
-		cleanEmail := strings.TrimSpace(cfg.NewMemberFormData.Email)
-		cleanMobile := strings.TrimSpace(cfg.NewMemberFormData.MobileNumber)
-		tests.CleanupMemberByEmailOrMobile(cfg, cleanEmail, cleanMobile)
-
-		// Declarative Persona Action Flow
+		// --- 2. Action Flow ---
 		actions.GoToHome(admin, result)
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
 
-		// 1. Add Member (using sudhantest08@gmail.com config data)
-		_ = actions.AddSingleMember(admin, cfg, result)
-
-		// 2. Edit Member Details & Verify in View panel (search by mobile number)
-		actions.EditMemberDetails(admin, cfg, cfg.NewMemberFormData.MobileNumber, updatedDesignation, updatedDistrict, result)
-
-		// 3. Delete Member Cleanup
-		actions.DeleteMemberByMobile(admin, cfg, cfg.NewMemberFormData.MobileNumber, "Step_06", result)
-
-		// 4. Logout Admin
+		actions.AddSingleMember(admin, cfg, creds, result)
+		actions.EditMemberDetails(admin, cfg, creds, result)
+		actions.DeleteMemberByMobile(admin, cfg, creds.MobileNumber, "Step_06", result)
 		actions.LogoutAdmin(admin, cfg, result)
 
 		// Assert Result

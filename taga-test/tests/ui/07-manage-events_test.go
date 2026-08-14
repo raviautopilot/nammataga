@@ -17,23 +17,11 @@ func TestUI_07_ManageEvents(t *testing.T) {
 		admin := actions.NewAdminPersona(page, cfg.UiURL, 5*time.Second)
 		result := actions.NewResult("TestUI_07_ManageEvents")
 
-		// Calculate tomorrow's date to ensure valid upcoming event date (YYYY-MM-DD)
-		tomorrowDate := time.Now().Add(24 * time.Hour).Format("2006-01-02")
-
 		// Declarative Persona Action Flow
 		actions.GoToHome(admin, result)
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
-		actions.ManageEventAction(
-			admin,
-			cfg,
-			"AA Test Annual Conference 2026",
-			tomorrowDate,
-			"10:00",
-			"Chennai Convention Hall",
-			"Annual state level agriculture officers conference and workshop.",
-			result,
-		)
+		actions.ManageEventAction(admin, cfg, result)
 		actions.LogoutAdmin(admin, cfg, result)
 
 		// Assert Result

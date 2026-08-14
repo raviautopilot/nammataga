@@ -60,11 +60,7 @@ func MemberLoginAttempt(mai MemberActionsInterface, cfg *config.Config, username
 		return
 	}
 
-	time.Sleep(waitTime)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot(screenshotName); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:[data-testid='testid-member-profile-card'], [data-testid='testid-member-subscriptions-button']", 5 * time.Second, screenshotName)
 }
 
 // LogoutMemberCustom logouts the member persona with customized wait time and screenshot.
@@ -87,11 +83,7 @@ func LogoutMemberCustom(mai MemberActionsInterface, cfg *config.Config, waitTime
 
 	time.Sleep(waitTime)
 	_ = homePage.GoToHome(mp.BaseURL)
-	time.Sleep(waitTime)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot(screenshotName); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:[data-testid='testid-member-profile-card'], [data-testid='testid-member-subscriptions-button']", 5 * time.Second, screenshotName)
 }
 
 // LoginAsMember logs in the member persona using credentials from the config.
@@ -129,10 +121,7 @@ func LoginAsMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 	}
 
 	// Take screenshot before submitting the form
-	time.Sleep(1 * time.Second)
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_01_MemberLogin_Filled_Form"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:[role='dialog']", 5 * time.Second, "MemberLogin_Filled_Form")
 
 	if err := loginPage.SubmitLogin(cfg.MemberLoginSubmitButtonTestID, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
@@ -142,10 +131,7 @@ func LoginAsMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 	}
 
 	// Wait for dashboard to fully render after login redirect
-	time.Sleep(3 * time.Second)
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_02_MemberLogin_Dashboard"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:[data-testid='testid-logout-button']", 5 * time.Second, "MemberLogin_Dashboard")
 	r.Advice = append(r.Advice, "Member logged in successfully.")
 }
 
@@ -195,9 +181,7 @@ func ForceChangePassword(mai MemberActionsInterface, cfg *config.Config, email, 
 		return
 	}
 
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_06_ChangePassword_Filled"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.CaptureScreenshot(mp.Page, "ChangePassword_Filled")
 
 	if err := mp.Page.ClickByTestID("testid-change-password-submit-button", mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
@@ -205,16 +189,13 @@ func ForceChangePassword(mai MemberActionsInterface, cfg *config.Config, email, 
 		return
 	}
 
-	time.Sleep(3 * time.Second)
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_07_ChangePassword_Success"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:li[data-sonner-toast]", 5 * time.Second, "ChangePassword_Success")
 	r.Advice = append(r.Advice, "Password changed successfully.")
 }
 
-// VisitAllMemberPages navigates through all member-accessible pages and captures screenshots.
-func VisitAllMemberPages(mai MemberActionsInterface, cfg *config.Config, r *Result) {
-	actionName := "Visit All Member Pages"
+// ValidateUnpaidMemberAccess verifies that an unpaid member can only access specific pages.
+func ValidateUnpaidMemberAccess(mai MemberActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Validate Unpaid Member Access"
 	r.Actions = append(r.Actions, actionName)
 	if r.Failed() {
 		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
@@ -223,22 +204,18 @@ func VisitAllMemberPages(mai MemberActionsInterface, cfg *config.Config, r *Resu
 
 	mp := mai.GetMemberPersona()
 
-	// Define navigation sequence
+	// 1. Visit allowed pages
 	pages := []struct {
 		TestID         string
 		ScreenshotName string
-		WaitTime       time.Duration
+		Locator        string
 	}{
-		{"testid-home-button", "Step_03_Home_Page", 2 * time.Second},
-		{"testid-office-bearers-button", "Step_04_Office_Bearers_Page", 2 * time.Second},
-		{"testid-resources-button", "Step_05_Resources_Page", 2 * time.Second},
-		{"testid-events-button", "Step_06_Events_Gallery_Page", 2 * time.Second},
-		{"testid-upcoming-events-button", "Step_07_Upcoming_Events_Page", 2 * time.Second}, // Sub-tab of Events
-		{"testid-taga-towers-button", "Step_08_TAGATowers_Page", 2 * time.Second},
-		{"testid-grievance-button", "Step_09_Grievance_Page", 2 * time.Second},
-		{"testid-membership-button", "Step_10_Member_Profile_Page", 2 * time.Second},          // Membership default is Profile
-		{"testid-member-subscriptions-button", "Step_11_Subscriptions_Page", 2 * time.Second}, // Sub-tab of Membership
-		{"testid-member-announcements-button", "Step_12_Announcements_Page", 2 * time.Second}, // Sub-tab of Membership
+		{"testid-home-button", "Home_Page", "css:[data-testid='home-link']"},
+		{"testid-office-bearers-button", "Office_Bearers_Page", "css:[data-testid='testid-office-bearers-district-select']"},
+		{"testid-membership-button", "Member_Profile_Page", "css:body"},
+		{"testid-member-subscriptions-button", "Subscriptions_Page", "css:body"},
+		{"testid-member-announcements-button", "Announcements_Page", "css:body"},
+		{"testid-events-button", "Events_Gallery_Page", "css:body"},
 	}
 
 	for _, page := range pages {
@@ -249,14 +226,30 @@ func VisitAllMemberPages(mai MemberActionsInterface, cfg *config.Config, r *Resu
 			return
 		}
 
-		time.Sleep(page.WaitTime)
-
-		if scr, scrErr := mp.Page.CaptureScreenshot(page.ScreenshotName); scrErr == nil {
-			r.Evidence = append(r.Evidence, scr)
-		}
+		r.WaitForElementAndCapture(mp.Page, page.Locator, 5 * time.Second, page.ScreenshotName)
 	}
 
-	r.Advice = append(r.Advice, "Successfully visited all member pages.")
+	// 2. Verify restricted pages are NOT accessible (buttons should not be in DOM)
+	restrictedButtons := []string{
+		"testid-resources-button",
+		"testid-taga-towers-button",
+		"testid-grievance-button",
+		"testid-admin-panel-button",
+	}
+
+	for _, btn := range restrictedButtons {
+		// Attempt to find it, should timeout because it doesn't exist
+		_, err := mp.Page.WaitUntilClickable(fmt.Sprintf("css:[data-testid='%s']", btn), 2*time.Second)
+		if err == nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("unpaid member should NOT see the restricted button: %s", btn)
+			r.Advice = append(r.Advice, fmt.Sprintf("Advice: Ensure unpaid members cannot access %s", btn))
+			return
+		}
+	}
+	r.CaptureScreenshot(mp.Page, "UnpaidMember_RestrictedAccess_Validated")
+
+	r.Advice = append(r.Advice, "Successfully validated unpaid member access.")
 }
 
 // PayAnnualSubscription navigates to the subscription page and mocks an annual subscription payment.
@@ -286,11 +279,7 @@ func PayAnnualSubscription(mai MemberActionsInterface, cfg *config.Config, r *Re
 		r.Advice = append(r.Advice, "Advice: Verify 'testid-member-subscriptions-button' exists in Membership tabs")
 		return
 	}
-	time.Sleep(1 * time.Second)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_03_Subscription_Tab_Opened"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:[data-testid='testid-member-subscriptions-button']", 5 * time.Second, "Subscription_Tab_Opened")
 
 	// 3. Click 'Pay Now' for Annual Subscription
 	if err := mp.Page.ClickByTestID("testid-pay-now-annual-subscription-button", mp.DefaultTimeout); err != nil {
@@ -299,11 +288,7 @@ func PayAnnualSubscription(mai MemberActionsInterface, cfg *config.Config, r *Re
 		r.Advice = append(r.Advice, "Advice: Verify 'testid-pay-now-annual-subscription-button' exists. It might already be paid.")
 		return
 	}
-	time.Sleep(1 * time.Second)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_04_Payment_Modal_Opened"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:[role='dialog']", 5 * time.Second, "Payment_Modal_Opened")
 
 	// 4. Inject Mock Razorpay
 	mockScript := `
@@ -342,9 +327,7 @@ func PayAnnualSubscription(mai MemberActionsInterface, cfg *config.Config, r *Re
 		return
 	}
 
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_05_Annual_Subscription_Paid"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.CaptureScreenshot(mp.Page, "Annual_Subscription_Paid")
 
 	r.Advice = append(r.Advice, "Successfully completed mock annual subscription payment.")
 }
@@ -370,11 +353,7 @@ func LogoutMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 
 	time.Sleep(2 * time.Second)
 	_ = homePage.GoToHome(mp.BaseURL)
-	time.Sleep(2 * time.Second)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_13_MemberLogout_HomePage"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:[data-testid='testid-member-login-button']", 5 * time.Second, "MemberLogout_HomePage")
 	r.Advice = append(r.Advice, "Member logged out successfully.")
 }
 
@@ -395,11 +374,7 @@ func NavigateToTAGATower(mai MemberActionsInterface, cfg *config.Config, r *Resu
 		r.Advice = append(r.Advice, "Advice: Verify 'testid-taga-towers-button' exists on the sidebar")
 		return
 	}
-	time.Sleep(2 * time.Second)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_03_TAGATower_Dashboard"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:[data-testid='testid-taga-towers-page']", 5 * time.Second, "TAGATower_Dashboard")
 }
 
 // BookSimpleRoom performs a straightforward booking for the logged-in member.
@@ -451,9 +426,7 @@ func BookSimpleRoom(mai MemberActionsInterface, cfg *config.Config, r *Result, r
 	}
 
 	// Capture modal state
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_Booking_Modal_%s", roomID)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_Booking_Modal_%s", roomID))
 
 	// Mocking Razorpay
 	mockScript := `
@@ -475,11 +448,7 @@ func BookSimpleRoom(mai MemberActionsInterface, cfg *config.Config, r *Result, r
 		r.Advice = append(r.Advice, "Advice: Verify payment button exists")
 		return
 	}
-	time.Sleep(3 * time.Second)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_Booking_Complete_%s", roomID)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "xpath://li[@data-sonner-toast and contains(., 'Booking Successful')]", 5 * time.Second, fmt.Sprintf("TAGATower_Booking_Complete_%s", roomID))
 }
 
 // CancelLatestBooking cancels the most recently created booking by clicking the first cancel button.
@@ -520,11 +489,7 @@ func CancelLatestBooking(mai MemberActionsInterface, cfg *config.Config, r *Resu
 		r.Advice = append(r.Advice, "Advice: Verify 'testid-confirm-booking-cancel-button' exists in modal")
 		return
 	}
-	time.Sleep(3 * time.Second)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_06_TAGATower_Booking_Cancelled"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:li[data-sonner-toast]", 5 * time.Second, "TAGATower_Booking_Cancelled")
 }
 
 // BookRoomForGuest performs a booking for a guest rather than the logged-in member.
@@ -602,9 +567,7 @@ func BookRoomForGuest(mai MemberActionsInterface, cfg *config.Config, r *Result,
 	}
 
 	// Capture modal state
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_GuestBooking_Modal_%s", roomID)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_GuestBooking_Modal_%s", roomID))
 
 	// Mocking Razorpay
 	mockScript := `
@@ -626,11 +589,7 @@ func BookRoomForGuest(mai MemberActionsInterface, cfg *config.Config, r *Result,
 		r.Advice = append(r.Advice, "Advice: Verify payment button exists")
 		return
 	}
-	time.Sleep(3 * time.Second)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_GuestBooking_Complete_%s", roomID)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "xpath://li[@data-sonner-toast and contains(., 'Booking Successful')]", 5 * time.Second, fmt.Sprintf("TAGATower_Guest_Booking_Complete_%s", roomID))
 }
 
 // BookAllBedsInRoom performs a booking for all beds in a dormitory or regular room.
@@ -753,9 +712,7 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 	}
 
 	// Capture modal state
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_AllRoomBooking_Modal_%s", roomID)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_AllRoomBooking_Modal_%s", roomID))
 
 	// Mocking Razorpay
 	mockScript := `
@@ -776,11 +733,7 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 		r.Error = err
 		return
 	}
-	time.Sleep(3 * time.Second)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_AllRoomBooking_Complete_%s", roomID)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:li[data-sonner-toast]", 5 * time.Second, fmt.Sprintf("TAGATower_AllRoomBooking_Complete_%s", roomID))
 }
 
 // TryBookRoomAsSelfMultibooking tries to book multiple beds for Self, which should be disallowed.
@@ -876,9 +829,7 @@ func TryBookRoomAsSelfMultibooking(mai MemberActionsInterface, cfg *config.Confi
 	time.Sleep(1 * time.Second)
 
 	// Capture modal state before proceeding
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_04_TAGATower_SelfMultibooking_Attempt"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.CaptureScreenshot(mp.Page, "TAGATower_SelfMultibooking_Attempt")
 
 	// Mocking Razorpay
 	mockScript := `
@@ -898,11 +849,7 @@ func TryBookRoomAsSelfMultibooking(mai MemberActionsInterface, cfg *config.Confi
 		r.Advice = append(r.Advice, "System prevented proceeding to payment for self multibooking.")
 		return
 	}
-	time.Sleep(3 * time.Second)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot("Step_05_TAGATower_SelfMultibooking_Allowed_Failure"); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:li[data-sonner-toast]", 5 * time.Second, "TAGATower_SelfMultibooking_Allowed_Failure")
 
 	// Clean up the created booking immediately
 	cleanActionName := "Cleanup Stale Booking"
@@ -923,10 +870,7 @@ func TryBookRoomAsSelfMultibooking(mai MemberActionsInterface, cfg *config.Confi
 	if cErr == nil && clickedCancel == true {
 		time.Sleep(1 * time.Second)
 		if err := mp.Page.ClickByTestID("testid-confirm-booking-cancel-button", mp.DefaultTimeout); err == nil {
-			time.Sleep(3 * time.Second)
-			if scr, scrErr := mp.Page.CaptureScreenshot("Step_06_TAGATower_SelfMultibooking_Cancelled_Cleanup"); scrErr == nil {
-				r.Evidence = append(r.Evidence, scr)
-			}
+			r.WaitForElementAndCapture(mp.Page, "css:li[data-sonner-toast]", 5 * time.Second, "TAGATower_SelfMultibooking_Cancelled_Cleanup")
 			r.Advice = append(r.Advice, "Cleanup: Cancelled the allowed self-multibooking.")
 		}
 	}
@@ -1068,9 +1012,7 @@ func BookSingleBedWithGender(mai MemberActionsInterface, cfg *config.Config, r *
 	time.Sleep(1 * time.Second)
 
 	// Capture modal state
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_GenderBooking_%s_%s", roomID, gender)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_GenderBooking_%s_%s", roomID, gender))
 
 	// Mocking Razorpay
 	mockScript := `
@@ -1192,9 +1134,7 @@ func TryBookSingleBedWithGenderOpposite(mai MemberActionsInterface, cfg *config.
 	time.Sleep(3 * time.Second)
 
 	// Capture modal state of the allowed (but should be disallowed) booking
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_GenderMix_Allowed_Failure_%s_%s", roomID, gender)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_GenderMix_Allowed_Failure_%s_%s", roomID, gender))
 
 	// Clean up both the allowed opposite-gender booking and the original booking
 	clickCancelScript := `
@@ -1301,9 +1241,7 @@ func TryBookDormitoryWithOppositeGender(mai MemberActionsInterface, cfg *config.
 	time.Sleep(1 * time.Second)
 
 	// Capture modal state
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_Dormitory_%s_%s_Attempt", roomID, prohibitedGender)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_Dormitory_%s_%s_Attempt", roomID, prohibitedGender))
 
 	// Mocking Razorpay
 	mockScript := `
@@ -1326,9 +1264,7 @@ func TryBookDormitoryWithOppositeGender(mai MemberActionsInterface, cfg *config.
 	time.Sleep(3 * time.Second)
 
 	// Capture modal state of the allowed (but should be disallowed) booking
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_Dormitory_%s_%s_Allowed_Failure", roomID, prohibitedGender)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_Dormitory_%s_%s_Allowed_Failure", roomID, prohibitedGender))
 
 	// Clean up the booking immediately
 	clickCancelScript := `
@@ -1425,9 +1361,7 @@ func BookRoomForTenDays(mai MemberActionsInterface, cfg *config.Config, r *Resul
 		r.Advice = append(r.Advice, "Advice: Fix the frontend room availability filter logic when handling 10-day bookings")
 
 		// Capture failure screenshot
-		if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_10DaysBooking_FullBug_%s", roomID)); scrErr == nil {
-			r.Evidence = append(r.Evidence, scr)
-		}
+		r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_10DaysBooking_FullBug_%s", roomID))
 		return
 	}
 
@@ -1457,9 +1391,7 @@ func BookRoomForTenDays(mai MemberActionsInterface, cfg *config.Config, r *Resul
 	}
 
 	// Capture modal state
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_04_TAGATower_10DaysBooking_Modal_%s", roomID)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_10DaysBooking_Modal_%s", roomID))
 
 	// Mocking Razorpay
 	mockScript := `
@@ -1480,11 +1412,7 @@ func BookRoomForTenDays(mai MemberActionsInterface, cfg *config.Config, r *Resul
 		r.Error = err
 		return
 	}
-	time.Sleep(3 * time.Second)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_10DaysBooking_Complete_%s", roomID)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:li[data-sonner-toast]", 5 * time.Second, fmt.Sprintf("TAGATower_10DaysBooking_Complete_%s", roomID))
 }
 
 // TryBookOverlappingRoom attempts to book the same room for overlapping dates and expects it to be blocked.
@@ -1514,9 +1442,7 @@ func TryBookOverlappingRoom(mai MemberActionsInterface, cfg *config.Config, r *R
 	}
 
 	// Capture modal state of the allowed (but should be disallowed) booking
-	if scr, scrErr := mp.Page.CaptureScreenshot(fmt.Sprintf("Step_05_TAGATower_Overlapping_Allowed_Failure_%s", roomID)); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_Overlapping_Allowed_Failure_%s", roomID))
 
 	// Try clicking Book just to see if we can open payment modal
 	jsClickScript := fmt.Sprintf(`
@@ -1601,9 +1527,6 @@ func ViewMemberSubscriptions(mai MemberActionsInterface, cfg *config.Config, scr
 		r.Advice = append(r.Advice, "Advice: Verify 'testid-member-subscriptions-button' exists in Membership tabs")
 		return
 	}
-	time.Sleep(1 * time.Second)
-
-	if scr, scrErr := mp.Page.CaptureScreenshot(screenshotName); scrErr == nil {
-		r.Evidence = append(r.Evidence, scr)
-	}
+	r.WaitForElementAndCapture(mp.Page, "css:[data-testid='testid-member-profile-card'], [data-testid='testid-member-subscriptions-button']", 5 * time.Second, screenshotName)
 }
+
