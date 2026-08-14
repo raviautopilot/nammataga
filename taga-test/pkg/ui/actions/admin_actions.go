@@ -68,18 +68,29 @@ func LoginAsAdmin(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 
 	r.CaptureScreenshot(ap.Page, "AdminLogin_ModalOpen")
 
-	err := loginPage.FillAndSubmitLogin(
-		cfg.AdminLoginUsernameInputTestID,
-		cfg.AdminLoginPasswordInputTestID,
-		cfg.AdminLoginSubmitButtonTestID,
-		cfg.AdminCredentials.Username,
-		cfg.AdminCredentials.Password,
-		ap.DefaultTimeout,
-	)
-	if err != nil {
+	if err := loginPage.EnterUsername(cfg.AdminLoginUsernameInputTestID, cfg.AdminCredentials.Username, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
-		r.Advice = append(r.Advice, "Advice: Verify Admin credentials and submit button testIDs in config.json")
+		r.Advice = append(r.Advice, "Advice: Verify Admin username input exists")
+		r.CaptureScreenshot(ap.Page, "AdminLogin_Failure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	if err := loginPage.EnterPassword(cfg.AdminLoginPasswordInputTestID, cfg.AdminCredentials.Password, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify Admin password input exists")
+		r.CaptureScreenshot(ap.Page, "AdminLogin_Failure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+
+	r.CaptureScreenshot(ap.Page, "AdminLogin_FormFilled")
+
+	if err := loginPage.SubmitLogin(cfg.AdminLoginSubmitButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify Admin submit button exists")
 		r.CaptureScreenshot(ap.Page, "AdminLogin_Failure")
 		captureNetworkEvidence(ap, r)
 		return

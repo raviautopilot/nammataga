@@ -58,11 +58,8 @@ func TestUI_02_AdminAddDeleteMember(t *testing.T) {
 		// Login with new password
 		actions.MemberLoginAttempt(member, cfg, creds.Email, creds.NewPassword, 4*time.Second, "Step_08_MemberLogin_Success", result)
 
-		// Validate unpaid member access restrictions
+		// Validate unpaid member access restrictions (this also visits the Subscriptions page and takes screenshots)
 		actions.ValidateUnpaidMemberAccess(member, cfg, result)
-
-		// View subscriptions
-		actions.ViewMemberSubscriptions(member, cfg, "Step_08b_ViewSubscriptions", result)
 
 		// Logout member
 		actions.LogoutMemberCustom(member, cfg, 2*time.Second, "Step_09_MemberLogout", result)
