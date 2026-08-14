@@ -26,16 +26,9 @@ func TestUI_09_EditMemberDetails(t *testing.T) {
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
 
-		// 1. Add Member
 		actions.AddSingleMember(admin, cfg, creds, result)
-
-		// 2. Edit Member Details & Verify in View panel
 		actions.EditMemberDetails(admin, cfg, creds, result)
-
-		// 3. Delete Member Cleanup
 		actions.DeleteMemberByMobile(admin, cfg, creds.MobileNumber, "Step_06", result)
-
-		// 4. Logout Admin
 		actions.LogoutAdmin(admin, cfg, result)
 
 		// Assert Result

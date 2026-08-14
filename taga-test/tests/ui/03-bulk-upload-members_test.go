@@ -21,7 +21,7 @@ func TestUI_03_BulkUploadMembers(t *testing.T) {
 		actions.GoToHome(admin, result)
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
-		actions.BulkUploadMembers(admin, cfg, "../../fixtures/bulk_members_sample.csv", result)
+		actions.BulkUploadMembers(admin, cfg, result)
 		
 		// Defer automated UI cleanup of uploaded members
 		defer actions.BulkCleanupMembers(admin, cfg)

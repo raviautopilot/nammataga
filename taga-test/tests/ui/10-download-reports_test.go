@@ -21,10 +21,7 @@ func TestUI_10_DownloadReports(t *testing.T) {
 		actions.GoToHome(admin, result)
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
-
-		// Download Excel Reports (Membership Report & Member List)
 		actions.DownloadExcelReports(admin, cfg, result)
-
 		actions.LogoutAdmin(admin, cfg, result)
 
 		// Assert Result
