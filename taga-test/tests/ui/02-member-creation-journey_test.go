@@ -19,7 +19,7 @@ func TestUI_02_AdminAddDeleteMember(t *testing.T) {
 		result := actions.NewResult("TestUI_02_AdminAddDeleteMember")
 
 		// --- 1. Admin Flow: Add a new member ---
-		creds, cleanMobileNoSpace := actions.InitializeMemberTest(cfg)
+		creds, _ := actions.InitializeMemberTest(cfg)
 		defer actions.CleanupMemberTest(cfg, creds)
 
 		actions.GoToHome(admin, result)
@@ -39,7 +39,7 @@ func TestUI_02_AdminAddDeleteMember(t *testing.T) {
 		actions.GoToHome(admin, result)
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
-		actions.DeleteMemberByMobile(admin, cfg, cleanMobileNoSpace, "Step_10", result)
+		actions.DeleteMemberByMobile(admin, cfg, creds.MobileNumber, "Step_10", result)
 		actions.LogoutAdminCustom(admin, cfg, 2*time.Second, "Step_11_AdminLogout", result)
 
 		// Assert Result

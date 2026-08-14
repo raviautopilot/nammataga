@@ -503,8 +503,9 @@ func DeleteMemberByMobile(aai AdminActionsInterface, cfg *config.Config, mobile 
 	r.Advice = append(r.Advice, fmt.Sprintf("Member with mobile '%s' deleted successfully.", cleanMobile))
 }
 
-// BulkUploadMembers uploads CSV from fixtures and submits.
-func BulkUploadMembers(aai AdminActionsInterface, cfg *config.Config, fixtureRelPath string, r *Result) {
+// BulkUploadMembers opens the bulk upload modal, uploads the csv file, and verifies success toast.
+func BulkUploadMembers(aai AdminActionsInterface, cfg *config.Config, r *Result) {
+	fixtureRelPath := "../../fixtures/bulk_members_sample.csv"
 	actionName := "Bulk Member Upload from CSV"
 	r.Actions = append(r.Actions, actionName)
 	if r.Failed() {
@@ -1026,8 +1027,10 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 	r.Advice = append(r.Advice, fmt.Sprintf("Restored Joint Secretary (Women) back to original state: Name='%s', Mobile='%s'", originalName, originalContact))
 }
 
-// ManageResourceDocument handles uploading a resource document, verifying on resources page, deleting it, and taking screenshots.
-func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relativePdfPath, categoryName string, r *Result) {
+// ManageResourceDocument handles uploading, verifying, and deleting a resource document.
+func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, r *Result) {
+	relativePdfPath := "../../fixtures/a_test_resource_sample.pdf"
+	categoryName := "Establishment"
 	actionName := fmt.Sprintf("Manage Resource Document (%s)", categoryName)
 	r.Actions = append(r.Actions, actionName)
 	if r.Failed() {
@@ -1196,7 +1199,12 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 }
 
 // ManageEventAction handles creating an event, verifying on upcoming events page, deleting it, and taking screenshots.
-func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eventDate, eventTime, location, description string, r *Result) {
+func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, r *Result) {
+	title := "AA Test Annual Conference 2026"
+	eventDate := time.Now().Add(24 * time.Hour).Format("2006-01-02")
+	eventTime := "10:00"
+	location := "Chennai Convention Hall"
+	description := "Annual state level agriculture officers conference and workshop."
 	actionName := fmt.Sprintf("Manage Event (%s)", title)
 	r.Actions = append(r.Actions, actionName)
 	if r.Failed() {
@@ -1335,8 +1343,11 @@ func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eve
 	r.Advice = append(r.Advice, "Event created, verified on Upcoming Events tab, and cleaned up successfully.")
 }
 
-// ManageGalleryAction handles uploading a photo to gallery, verifying on public gallery page, deleting it, and taking screenshots.
-func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relativeImagePath, description, photoDate string, r *Result) {
+// ManageGalleryAction handles uploading a gallery photo, verifying it, and deleting it.
+func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, r *Result) {
+	relativeImagePath := "../../fixtures/a_test_gallery_sample.jpg"
+	description := "Field visit and workshop on organic farming techniques"
+	photoDate := time.Now().Format("2006-01-02")
 	actionName := fmt.Sprintf("Manage Gallery Photo (%s)", description)
 	r.Actions = append(r.Actions, actionName)
 	if r.Failed() {
@@ -1525,10 +1536,17 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 	r.Advice = append(r.Advice, "Gallery photo uploaded, verified on Photo Gallery page, and cleaned up successfully.")
 }
 
-// EditMemberDetails handles searching for a member by mobile number, editing member details, verifying the edit in the view panel, and cleaning up.
-func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetMobile, updatedDesignation, updatedDistrict string, r *Result) {
-	cleanMobile := strings.TrimSpace(targetMobile)
-	cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
+// EditMemberDetails searches for a member by mobile number, edits their details (designation and district), and verifies the update.
+func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, creds *MemberCredentials, r *Result) {
+	updatedDesignation := "Senior Agriculture Officer"
+	updatedDistrict := "Coimbatore"
+	
+	if creds == nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("EditMemberDetails requires valid MemberCredentials")
+		return
+	}
+	cleanMobile := strings.ReplaceAll(strings.TrimSpace(creds.MobileNumber), " ", "")
 
 	actionName := fmt.Sprintf("Edit Member Details (%s)", cleanMobile)
 	r.Actions = append(r.Actions, actionName)

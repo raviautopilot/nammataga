@@ -17,20 +17,11 @@ func TestUI_08_ManageGallery(t *testing.T) {
 		admin := actions.NewAdminPersona(page, cfg.UiURL, 5*time.Second)
 		result := actions.NewResult("TestUI_08_ManageGallery")
 
-		todayDate := time.Now().Format("2006-01-02")
-
 		// Declarative Persona Action Flow
 		actions.GoToHome(admin, result)
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
-		actions.ManageGalleryAction(
-			admin,
-			cfg,
-			"../../fixtures/gallery test image.png",
-			"AA Test Gallery Photo Event 2026",
-			todayDate,
-			result,
-		)
+		actions.ManageGalleryAction(admin, cfg, result)
 		actions.LogoutAdmin(admin, cfg, result)
 
 		// Assert Result

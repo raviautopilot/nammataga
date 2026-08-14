@@ -18,11 +18,8 @@ func TestUI_09_EditMemberDetails(t *testing.T) {
 		result := actions.NewResult("TestUI_09_EditMemberDetails")
 
 		// --- 1. Setup ---
-		creds, cleanMobileNoSpace := actions.InitializeMemberTest(cfg)
+		creds, _ := actions.InitializeMemberTest(cfg)
 		defer actions.CleanupMemberTest(cfg, creds)
-
-		updatedDesignation := "Senior Agriculture Officer"
-		updatedDistrict := "Coimbatore"
 
 		// --- 2. Action Flow ---
 		actions.GoToHome(admin, result)
@@ -32,11 +29,11 @@ func TestUI_09_EditMemberDetails(t *testing.T) {
 		// 1. Add Member
 		actions.AddSingleMember(admin, cfg, creds, result)
 
-		// 2. Edit Member Details & Verify in View panel (search by mobile number)
-		actions.EditMemberDetails(admin, cfg, cleanMobileNoSpace, updatedDesignation, updatedDistrict, result)
+		// 2. Edit Member Details & Verify in View panel
+		actions.EditMemberDetails(admin, cfg, creds, result)
 
 		// 3. Delete Member Cleanup
-		actions.DeleteMemberByMobile(admin, cfg, cleanMobileNoSpace, "Step_06", result)
+		actions.DeleteMemberByMobile(admin, cfg, creds.MobileNumber, "Step_06", result)
 
 		// 4. Logout Admin
 		actions.LogoutAdmin(admin, cfg, result)
