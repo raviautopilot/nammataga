@@ -10,6 +10,7 @@ import (
 	"e2e-template/pkg/config"
 	"e2e-template/pkg/ui"
 	"e2e-template/pkg/ui/pages"
+	"e2e-template/tests"
 )
 
 // AdminActionsInterface allows AdminPersona to execute admin-specific actions.
@@ -137,6 +138,37 @@ type MemberCredentials struct {
 	NewPassword  string
 	Email        string
 	MobileNumber string
+}
+
+// NewMemberCredentials creates a new MemberCredentials struct initialized from the config.
+func NewMemberCredentials(cfg *config.Config) *MemberCredentials {
+	return &MemberCredentials{
+		Username:     strings.TrimSpace(cfg.NewMemberFormData.Email),
+		Email:        strings.TrimSpace(cfg.NewMemberFormData.Email),
+		MobileNumber: strings.TrimSpace(cfg.NewMemberFormData.MobileNumber),
+		NewPassword:  "test123",
+	}
+}
+
+// InitializeMemberTest sets up the member data and clears any previous state.
+func InitializeMemberTest(cfg *config.Config) (*MemberCredentials, string) {
+	cfg.NewMemberFormData.PaymentStatus = "Unpaid"
+	cleanEmail := strings.TrimSpace(cfg.NewMemberFormData.Email)
+	cleanMobile := strings.TrimSpace(cfg.NewMemberFormData.MobileNumber)
+	cleanMobileNoSpace := strings.ReplaceAll(cleanMobile, " ", "")
+
+	tests.CleanupMemberByEmailOrMobile(cfg, cleanEmail, cleanMobile)
+
+	creds := NewMemberCredentials(cfg)
+	return creds, cleanMobileNoSpace
+}
+
+// CleanupMemberTest provides a deferred cleanup method.
+func CleanupMemberTest(cfg *config.Config, creds *MemberCredentials) {
+	if creds == nil {
+		return
+	}
+	tests.CleanupMemberByEmailOrMobile(cfg, creds.Email, creds.MobileNumber)
 }
 
 // AddSingleMember opens the modal, fills all 19 form fields from config, and submits. Modifies the creds struct with the returned TempPassword.
