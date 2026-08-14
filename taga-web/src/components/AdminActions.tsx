@@ -1235,7 +1235,8 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                   <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-100 mb-2">Excel File Format Requirements:</h4>
                   <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-                    <li>Column headers: TAGA ID, Name, Initial, Gender, Father Name, Mother Name, Educational Qualification, Designation, Working District, Native District, Recruitment Batch, Seniority Number, Residential Address, Permanent Address, Date of Birth, Mobile Number, Email ID, TBF Number, CPS/GPF Number</li>
+                    <li>Column headers: TAGA ID, Name, Initial, Gender, Father Name, Mother Name, Educational Qualification, Designation, Working District, Native District, Recruitment Batch, Seniority Number, Residential Address, Permanent Address, Date of Birth, Mobile Number, Email ID, TBF Number, CPS/GPF Number, Payment Status</li>
+                    <li>Payment Status value must be <strong>Paid</strong> or <strong>Unpaid</strong></li>
                     <li>Supported formats: .xlsx, .csv</li>
                     <li>Maximum 500 members per upload</li>
                   </ul>
@@ -1246,7 +1247,7 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
                   {bulkUploadFile && <p className="text-sm text-muted-foreground">Selected: {bulkUploadFile.name}</p>}
                 </div>
                 <Button variant="outline" className="w-full" data-testid="testid-download-sample-template-button" onClick={() => {
-                  const csvContent = 'Taga ID,Name,Initial,Gender,Father Name,Mother Name,Educational Qualification,Designation,Working District,Native District,Recruitment Batch,Seniority Number,Residential Address,Permanent Address,Date of Birth,Mobile Number,Email ID,TBF Number,CPS/GPF Number\nTAGA001,John,S,Male,Father Name,Mother Name,B.Sc Agriculture,Agriculture Officer,Chennai,Coimbatore,2020,1001,123 Main St,456 Oak Ave,1990-01-01,9876543210,john@example.com,TBF001,GPF001';
+                  const csvContent = 'Taga ID,Name,Initial,Gender,Father Name,Mother Name,Educational Qualification,Designation,Working District,Native District,Recruitment Batch,Seniority Number,Residential Address,Permanent Address,Date of Birth,Mobile Number,Email ID,TBF Number,CPS/GPF Number,Payment Status\nTAGA001,John,S,Male,Father Name,Mother Name,B.Sc Agriculture,Agriculture Officer,Chennai,Coimbatore,2020,1001,123 Main St,456 Oak Ave,1990-01-01,9876543210,john@example.com,TBF001,GPF001,Paid\nTAGA002,Jane,M,Female,Father Name,Mother Name,M.Sc Agriculture,Agriculture Inspector,Salem,Chennai,2021,1002,456 Park St,789 Lake Ave,1992-06-15,9876543211,jane@example.com,TBF002,GPF002,Unpaid';
                   const blob = new Blob([csvContent], { type: 'text/csv' });
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');

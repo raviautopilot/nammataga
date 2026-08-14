@@ -49,6 +49,7 @@ type RegistrationRequest struct {
 	EmailId                  string `json:"email_id"`
 	TBFNumber                string `json:"tbf_number"`
 	CPSGPFNumber             string `json:"cps_gpf_number"`
+	PaymentStatus            string `json:"payment_status"`
 }
 
 type RegistrationError struct {
@@ -705,6 +706,13 @@ func BulkUploadMembers(c *gin.Context) {
 		tempPassword := generateTempPassword()
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(tempPassword), bcrypt.DefaultCost)
 
+		// Derive payment status from the uploaded file value (mirrors AddMember logic).
+		paymentStatus := strings.TrimSpace(reg.PaymentStatus)
+		if paymentStatus == "" {
+			paymentStatus = "Unpaid"
+		}
+		isPaid := strings.EqualFold(paymentStatus, "Paid")
+
 		newMember := map[string]interface{}{
 			"id":                        uuid.New().String(),
 			"tagaId":                    reg.TagaID,
@@ -731,8 +739,8 @@ func BulkUploadMembers(c *gin.Context) {
 			"password":                  string(hashedPassword),
 			"first_login":               true,
 			"created_at":                time.Now().Format(time.RFC3339),
-			"payment_status":            "Unpaid",
-			"subscription_active":       false,
+			"payment_status":            paymentStatus,
+			"subscription_active":       isPaid,
 			"subscription_end_date":     nil,
 			"subscription_updated_at":   nil,
 		}
@@ -808,7 +816,7 @@ func GetMembersList(c *gin.Context) {
 			}
 		}
 
-		paymentStatus := getPaymentStatusFromSubscription(email, subscriptionMap)
+		paymentStatus := getPaymentStatusFromMember(m, subscriptionMap)
 		if paymentFilter != "" && paymentFilter != "all" {
 			if !strings.EqualFold(paymentStatus, paymentFilter) {
 				continue
@@ -844,7 +852,7 @@ func GetMembersList(c *gin.Context) {
 			MobileNumber:     getString(m, "mobile_number"),
 			Email:            email,
 			PaymentStatus:    paymentStatus,
-			MembershipStatus: getMembershipStatus(m),
+			MembershipStatus: getMembershipStatus(m, subscriptionMap),
 		}
 		memberList = append(memberList, memberListItem)
 	}
@@ -937,10 +945,9 @@ func GetMemberStats(c *gin.Context) {
 		}
 		total++
 
-		email := getString(m, "emailId")
-		paymentStatus := getPaymentStatusFromSubscription(email, subscriptionMap)
+		paymentStatus := getPaymentStatusFromMember(m, subscriptionMap)
 
-		if getMembershipStatus(m) == "Active" {
+		if getMembershipStatus(m, subscriptionMap) == "Active" {
 			active++
 		}
 		if paymentStatus == "Unpaid" {
@@ -1263,6 +1270,7 @@ func parseCSVFile(reader io.Reader) ([]RegistrationRequest, error) {
 			EmailId:                  getField(records[i], 16),
 			TBFNumber:                getField(records[i], 17),
 			CPSGPFNumber:             getField(records[i], 18),
+			PaymentStatus:            getField(records[i], 19),
 		})
 	}
 
@@ -1334,6 +1342,7 @@ func parseExcelFileForBulk(filePath string) ([]RegistrationRequest, error) {
 			EmailId:                  getField(row, 16),
 			TBFNumber:                getField(row, 17),
 			CPSGPFNumber:             getField(row, 18),
+			PaymentStatus:            getField(row, 19),
 		})
 	}
 
@@ -1527,17 +1536,27 @@ func loadSubscriptionPaymentMap() map[string]bool {
 	return subscriptionMap
 }
 
-func getPaymentStatusFromSubscription(email string, subscriptionMap map[string]bool) string {
+func getPaymentStatusFromMember(m map[string]interface{}, subscriptionMap map[string]bool) string {
+	if pStatus, ok := m["payment_status"].(string); ok && pStatus != "" {
+		if strings.EqualFold(pStatus, "Paid") {
+			return "Paid"
+		}
+		if strings.EqualFold(pStatus, "Unpaid") {
+			return "Unpaid"
+		}
+	}
+	if subActive, ok := m["subscription_active"].(bool); ok && subActive {
+		return "Paid"
+	}
+	email := getString(m, "emailId")
 	if isPaid, exists := subscriptionMap[email]; exists && isPaid {
 		return "Paid"
 	}
 	return "Unpaid"
 }
 
-func getMembershipStatus(member map[string]interface{}) string {
-	email := getString(member, "emailId")
-	subscriptionMap := loadSubscriptionPaymentMap()
-	if isPaid, exists := subscriptionMap[email]; exists && isPaid {
+func getMembershipStatus(member map[string]interface{}, subscriptionMap map[string]bool) string {
+	if getPaymentStatusFromMember(member, subscriptionMap) == "Paid" {
 		return "Active"
 	}
 	return "Inactive"

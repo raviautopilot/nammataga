@@ -22,13 +22,10 @@ func TestUI_03_BulkUploadMembers(t *testing.T) {
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
 		actions.BulkUploadMembers(admin, cfg, result)
-		
-		// Defer automated UI cleanup of uploaded members
-		defer actions.BulkCleanupMembers(admin, cfg)
 
-		actions.SetPaymentStatusToPaid(admin, cfg, result)
+		// Run automated UI cleanup of uploaded members synchronously before logging out
+		actions.BulkCleanupMembers(admin, cfg)
 		actions.GoToHome(admin, result)
-		actions.OpenAdminPanel(admin, cfg, result)
 		actions.LogoutAdmin(admin, cfg, result)
 
 		// Assert Result

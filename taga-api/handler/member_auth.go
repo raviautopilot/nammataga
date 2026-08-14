@@ -235,6 +235,13 @@ func MemberLoginHandler(c *gin.Context) {
 	}
 
 	isPaid := checkAnnualSubscriptionStatus(memberID)
+	if !isPaid {
+		if subActive, ok := foundMember["subscription_active"].(bool); ok && subActive {
+			isPaid = true
+		} else if pStatus, ok := foundMember["payment_status"].(string); ok && strings.EqualFold(pStatus, "Paid") {
+			isPaid = true
+		}
+	}
 
 	userResponse := map[string]interface{}{
 		"id":                       foundMember["id"],
