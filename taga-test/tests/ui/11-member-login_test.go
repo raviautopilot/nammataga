@@ -23,7 +23,7 @@ func TestUI_11_MemberLoginHappyPath(t *testing.T) {
 		actions.LoginAsMember(member, cfg, result)
 
 		// Visit all accessible pages for member
-		actions.VisitAllMemberPages(member, cfg, result)
+		actions.ValidateUnpaidMemberAccess(member, cfg, result)
 
 		// Logout Member (using new persona action)
 		actions.LogoutMember(member, cfg, result)

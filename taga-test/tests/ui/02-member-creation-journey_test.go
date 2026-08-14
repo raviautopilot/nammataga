@@ -35,7 +35,13 @@ func TestUI_02_AdminAddDeleteMember(t *testing.T) {
 		actions.GoToHome(admin, result)
 		actions.LoginAsAdmin(admin, cfg, result)
 		actions.OpenAdminPanel(admin, cfg, result)
-		creds := actions.AddSingleMember(admin, cfg, result)
+		creds := &actions.MemberCredentials{
+			Username:     strings.TrimSpace(cfg.NewMemberFormData.Email),
+			Email:        strings.TrimSpace(cfg.NewMemberFormData.Email),
+			MobileNumber: strings.TrimSpace(cfg.NewMemberFormData.MobileNumber),
+			NewPassword:  "test123",
+		}
+		actions.AddSingleMember(admin, cfg, creds, result)
 
 		actions.LogoutAdminCustom(admin, cfg, 2*time.Second, "Step_05b_AdminLogout", result)
 

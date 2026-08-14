@@ -32,7 +32,7 @@ func TestUI_09_EditMemberDetails(t *testing.T) {
 		actions.OpenAdminPanel(admin, cfg, result)
 
 		// 1. Add Member (using sudhantest08@gmail.com config data)
-		_ = actions.AddSingleMember(admin, cfg, result)
+		actions.AddSingleMember(admin, cfg, nil, result)
 
 		// 2. Edit Member Details & Verify in View panel (search by mobile number)
 		actions.EditMemberDetails(admin, cfg, cfg.NewMemberFormData.MobileNumber, updatedDesignation, updatedDistrict, result)

@@ -86,8 +86,7 @@ func LoginAsAdmin(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	}
 
 	// Wait for home page to fully render after login redirect
-	time.Sleep(3 * time.Second)
-	r.CaptureScreenshot(ap.Page, "AdminLogin_HomePage")
+	r.WaitForElementAndCapture(ap.Page, "css:[data-testid='testid-admin-panel-button']", 5 * time.Second, "AdminLogin_HomePage")
 	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Admin logged in successfully.")
 }
@@ -115,8 +114,7 @@ func OpenAdminPanel(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	}
 
 	// Wait for admin panel table to fully render
-	time.Sleep(3 * time.Second)
-	r.CaptureScreenshot(ap.Page, "AdminPanel_Loaded")
+	r.WaitForElementAndCapture(ap.Page, "css:[data-testid='testid-manage-content-button']", 5 * time.Second, "AdminPanel_Loaded")
 	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Admin Panel opened successfully.")
 }
@@ -130,13 +128,13 @@ type MemberCredentials struct {
 	MobileNumber string
 }
 
-// AddSingleMember opens the modal, fills all 19 form fields from config, and submits. Returns the member credentials.
-func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) *MemberCredentials {
+// AddSingleMember opens the modal, fills all 19 form fields from config, and submits. Modifies the creds struct with the returned TempPassword.
+func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, creds *MemberCredentials, r *Result) {
 	actionName := "Add Single Member with 19 Fields"
 	r.Actions = append(r.Actions, actionName)
 	if r.Failed() {
 		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
-		return nil
+		return
 	}
 
 	ap := aai.GetAdminPersona()
@@ -149,10 +147,9 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) *
 		r.Advice = append(r.Advice, "Advice: Verify 'adminAddMemberButtonTestID' is clickable in Admin Dashboard")
 		r.CaptureScreenshot(ap.Page, "AddMember_OpenFailure")
 		captureNetworkEvidence(ap, r)
-		return nil
+		return
 	}
-	time.Sleep(1 * time.Second)
-	r.CaptureScreenshot(ap.Page, "AddMember_ModalOpen")
+	r.WaitForElementAndCapture(ap.Page, "css:[role='dialog']", 5 * time.Second, "AddMember_ModalOpen")
 
 	if err := adminDashboard.FillAddMemberForm(cfg, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
@@ -160,12 +157,11 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) *
 		r.Advice = append(r.Advice, "Advice: Verify all 19 form input testIDs in config.json match the UI elements")
 		r.CaptureScreenshot(ap.Page, "AddMember_FillFailure")
 		captureNetworkEvidence(ap, r)
-		return nil
+		return
 	}
 
 	// Screenshot: form fully filled, before submitting
-	time.Sleep(1 * time.Second)
-	r.CaptureScreenshot(ap.Page, "AddMember_FormFilled")
+	r.WaitForElementAndCapture(ap.Page, "css:[data-testid='testid-add-member-name-input']", 5 * time.Second, "AddMember_FormFilled")
 
 	if err := adminDashboard.SubmitAddMemberForm(cfg.AdminAddMemberSubmitButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
@@ -173,16 +169,18 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) *
 		r.Advice = append(r.Advice, "Advice: Verify 'adminAddMemberSubmitButtonTestID' submit button")
 		r.CaptureScreenshot(ap.Page, "AddMember_SubmitFailure")
 		captureNetworkEvidence(ap, r)
-		return nil
+		return
 	}
 
 	// Screenshot: success toast visible immediately after submit
-	time.Sleep(2 * time.Second)
-	r.CaptureScreenshot(ap.Page, "AddMember_SuccessToast")
+	r.WaitForElementAndCapture(ap.Page, "css:li[data-sonner-toast]", 5 * time.Second, "AddMember_SuccessToast")
 	captureNetworkEvidence(ap, r)
 
 	// Extract the temporary password
 	tempPassword, _ := ap.Page.GetTextByTestID("testid-temp-password", 2*time.Second)
+	if creds != nil {
+		creds.TempPassword = tempPassword
+	}
 
 	// Click OK on the success modal to close it
 	if err := ap.Page.ClickByTestID("testid-add-success-ok-button", ap.DefaultTimeout); err != nil {
@@ -190,25 +188,15 @@ func AddSingleMember(aai AdminActionsInterface, cfg *config.Config, r *Result) *
 		r.Error = fmt.Errorf("failed to click add success OK button: %w", err)
 		r.CaptureScreenshot(ap.Page, "AddMember_DismissFailure")
 		captureNetworkEvidence(ap, r)
-		return nil
+		return
 	}
 	time.Sleep(1 * time.Second)
 
 	// Refresh table so new member appears
 	_ = adminDashboard.RefreshMemberTable(cfg.MemberRefreshButtonTestID, ap.DefaultTimeout)
-	time.Sleep(2 * time.Second)
-
-	r.CaptureScreenshot(ap.Page, "AdminPanel_AfterAddMember")
+	r.WaitForElementAndCapture(ap.Page, "css:[data-testid='testid-manage-content-button']", 5 * time.Second, "AdminPanel_AfterAddMember")
 	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Member added successfully with all 19 fields populated.")
-	
-	return &MemberCredentials{
-		Username:     strings.TrimSpace(cfg.NewMemberFormData.Email),
-		TempPassword: tempPassword,
-		NewPassword:  "test123",
-		Email:        strings.TrimSpace(cfg.NewMemberFormData.Email),
-		MobileNumber: strings.TrimSpace(cfg.NewMemberFormData.MobileNumber),
-	}
 }
 
 // SetPaymentStatusToPaid attempts to select the paid checkbox/button.
@@ -483,8 +471,7 @@ func BulkUploadMembers(aai AdminActionsInterface, cfg *config.Config, fixtureRel
 		captureNetworkEvidence(ap, r)
 		return
 	}
-	time.Sleep(1 * time.Second)
-	r.CaptureScreenshot(ap.Page, "BulkUpload_ModalOpen")
+	r.WaitForElementAndCapture(ap.Page, "css:[role='dialog']", 5 * time.Second, "BulkUpload_ModalOpen")
 
 	absPath, err := filepath.Abs(fixtureRelPath)
 	if err != nil {
@@ -501,8 +488,7 @@ func BulkUploadMembers(aai AdminActionsInterface, cfg *config.Config, fixtureRel
 	}
 
 	// Screenshot: CSV file selected in upload dialog
-	time.Sleep(1 * time.Second)
-	r.CaptureScreenshot(ap.Page, "BulkUpload_FileSelected")
+	r.WaitForElementAndCapture(ap.Page, "css:[data-testid='testid-bulk-upload-submit-button']", 5 * time.Second, "BulkUpload_FileSelected")
 
 	if err := adminDashboard.SubmitBulkUpload(cfg.AdminBulkUploadSubmitButtonTestID, ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
@@ -514,14 +500,11 @@ func BulkUploadMembers(aai AdminActionsInterface, cfg *config.Config, fixtureRel
 	}
 
 	// Screenshot: upload success toast / result visible
-	time.Sleep(3 * time.Second)
-	r.CaptureScreenshot(ap.Page, "BulkUpload_SuccessToast")
+	r.WaitForElementAndCapture(ap.Page, "css:li[data-sonner-toast]", 5 * time.Second, "BulkUpload_SuccessToast")
 	captureNetworkEvidence(ap, r)
 
 	_ = adminDashboard.RefreshMemberTable(cfg.MemberRefreshButtonTestID, ap.DefaultTimeout)
-	time.Sleep(2 * time.Second)
-
-	r.CaptureScreenshot(ap.Page, "AdminPanel_AfterBulkUpload")
+	r.WaitForElementAndCapture(ap.Page, "css:[data-testid='testid-manage-content-button']", 5 * time.Second, "AdminPanel_AfterBulkUpload")
 	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Bulk CSV uploaded successfully.")
 }
@@ -547,8 +530,7 @@ func DownloadExcelReports(aai AdminActionsInterface, cfg *config.Config, r *Resu
 		captureNetworkEvidence(ap, r)
 		return
 	}
-	time.Sleep(1 * time.Second)
-	r.CaptureScreenshot(ap.Page, "MembershipReport_ModalOpen")
+	r.WaitForElementAndCapture(ap.Page, "css:[role='dialog']", 5 * time.Second, "MembershipReport_ModalOpen")
 
 	// Select 'All Time' from period dropdown
 	if err := ap.Page.SelectCustomDropdownByText("testid-report-period-select", "All Time", ap.DefaultTimeout); err != nil {
@@ -559,8 +541,7 @@ func DownloadExcelReports(aai AdminActionsInterface, cfg *config.Config, r *Resu
 		captureNetworkEvidence(ap, r)
 		return
 	}
-	time.Sleep(1 * time.Second)
-	r.CaptureScreenshot(ap.Page, "MembershipReport_PeriodSelected")
+	r.WaitForElementAndCapture(ap.Page, "css:[data-testid='testid-membership-report-download-button']", 5 * time.Second, "MembershipReport_PeriodSelected")
 
 	// Click download
 	if err := ap.Page.ClickByTestID("testid-download-excel-report-button", ap.DefaultTimeout); err != nil {
@@ -618,8 +599,7 @@ func LogoutAdmin(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	}
 
 	// Wait for redirect back to home / login page to fully complete
-	time.Sleep(3 * time.Second)
-	r.CaptureScreenshot(ap.Page, "AdminLogout_HomePage")
+	r.WaitForElementAndCapture(ap.Page, "css:[data-testid='testid-admin-login-button']", 5 * time.Second, "AdminLogout_HomePage")
 	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Admin logged out successfully.")
 }
@@ -675,8 +655,7 @@ func AdminLoginAttempt(aai AdminActionsInterface, cfg *config.Config, username, 
 		return
 	}
 
-	time.Sleep(waitTime)
-	r.CaptureScreenshot(ap.Page, screenshotName)
+	r.WaitForElementAndCapture(ap.Page, "css:[data-testid='testid-manage-content-button']", 5 * time.Second, screenshotName)
 	captureNetworkEvidence(ap, r)
 }
 
@@ -702,8 +681,7 @@ func LogoutAdminCustom(aai AdminActionsInterface, cfg *config.Config, waitTime t
 		return
 	}
 
-	time.Sleep(waitTime)
-	r.CaptureScreenshot(ap.Page, screenshotName)
+	r.WaitForElementAndCapture(ap.Page, "css:[data-testid='testid-manage-content-button']", 5 * time.Second, screenshotName)
 	captureNetworkEvidence(ap, r)
 	r.Advice = append(r.Advice, "Admin logged out successfully.")
 }
@@ -729,8 +707,7 @@ func SendAnnouncement(aai AdminActionsInterface, cfg *config.Config, title, mess
 		captureNetworkEvidence(ap, r)
 		return
 	}
-	time.Sleep(1 * time.Second)
-	r.CaptureScreenshot(ap.Page, "AnnouncementModal_Open")
+	r.WaitForElementAndCapture(ap.Page, "css:[role='dialog']", 5 * time.Second, "AnnouncementModal_Open")
 
 	// 2. Fill Title
 	if err := ap.Page.SendKeysByTestID(cfg.AdminAnnouncementTitleInputTestID, title, ap.DefaultTimeout); err != nil {
@@ -799,8 +776,7 @@ func ManageDistrictOfficeBearers(aai AdminActionsInterface, cfg *config.Config, 
 		captureNetworkEvidence(ap, r)
 		return
 	}
-	time.Sleep(1 * time.Second)
-	r.CaptureScreenshot(ap.Page, "DistrictBearers_ModalOpen")
+	r.WaitForElementAndCapture(ap.Page, "css:[role='dialog']", 5 * time.Second, "DistrictBearers_ModalOpen")
 
 	// 2. Select District (e.g. Ariyalur) by dropdown field
 	if err := ap.Page.Click("//div[@data-testid='testid-office-bearers-modal']//button[contains(@role, 'combobox')]", ap.DefaultTimeout); err != nil {
@@ -1032,8 +1008,7 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, relat
 	if err := ap.Page.Click(tabXPath, ap.DefaultTimeout); err != nil {
 		_ = ap.Page.ClickByTestID(cfg.AdminResourcesTabButtonTestID, ap.DefaultTimeout)
 	}
-	time.Sleep(500 * time.Millisecond)
-	r.CaptureScreenshot(ap.Page, "ResourceUpload_ModalOpen")
+	r.WaitForElementAndCapture(ap.Page, "css:[role='dialog']", 5 * time.Second, "ResourceUpload_ModalOpen")
 
 	// 3. Select Category (Establishment)
 	if err := ap.Page.SelectCustomDropdownByText(cfg.AdminResourceCategorySelectTestID, categoryName, ap.DefaultTimeout); err != nil {
@@ -1194,8 +1169,7 @@ func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, title, eve
 	if err := ap.Page.Click(eventsTabXPath, ap.DefaultTimeout); err != nil {
 		_ = ap.Page.ClickByTestID(cfg.AdminEventsTabButtonTestID, ap.DefaultTimeout)
 	}
-	time.Sleep(500 * time.Millisecond)
-	r.CaptureScreenshot(ap.Page, "EventCreate_ModalOpen")
+	r.WaitForElementAndCapture(ap.Page, "css:[role='dialog']", 5 * time.Second, "EventCreate_ModalOpen")
 
 	// 3. Fill Event Title
 	if err := ap.Page.SendKeysByTestID(cfg.AdminEventTitleInputTestID, title, ap.DefaultTimeout); err != nil {
@@ -1343,8 +1317,7 @@ func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, relative
 	if err := ap.Page.Click(galleryTabXPath, ap.DefaultTimeout); err != nil {
 		_ = ap.Page.ClickByTestID(cfg.AdminGalleryTabButtonTestID, ap.DefaultTimeout)
 	}
-	time.Sleep(500 * time.Millisecond)
-	r.CaptureScreenshot(ap.Page, "GalleryUpload_ModalOpen")
+	r.WaitForElementAndCapture(ap.Page, "css:[role='dialog']", 5 * time.Second, "GalleryUpload_ModalOpen")
 
 	// 3. Fill Description
 	if err := ap.Page.SendKeysByTestID(cfg.AdminGalleryDescriptionInputTestID, description, ap.DefaultTimeout); err != nil {
@@ -1556,8 +1529,7 @@ func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetMobi
 			return
 		}
 	}
-	time.Sleep(1 * time.Second)
-	r.CaptureScreenshot(ap.Page, "EditMember_EditFormOpen")
+	r.WaitForElementAndCapture(ap.Page, "css:[role='dialog']", 5 * time.Second, "EditMember_EditFormOpen")
 
 	// 4. Update Designation field
 	if updatedDesignation != "" {
@@ -1588,8 +1560,7 @@ func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, targetMobi
 			return
 		}
 	}
-	time.Sleep(2 * time.Second)
-	r.CaptureScreenshot(ap.Page, "EditMember_SaveToast")
+	r.WaitForElementAndCapture(ap.Page, "css:li[data-sonner-toast]", 5 * time.Second, "EditMember_SaveToast")
 	captureNetworkEvidence(ap, r)
 
 	// 7. Re-open View Details to verify edited data and take screenshot
