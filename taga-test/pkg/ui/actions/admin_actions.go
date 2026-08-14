@@ -150,6 +150,16 @@ func NewMemberCredentials(cfg *config.Config) *MemberCredentials {
 	}
 }
 
+// BulkCleanupMembers performs UI deletion for all bulk uploaded members.
+func BulkCleanupMembers(aai AdminActionsInterface, cfg *config.Config) {
+	cleanupResult := NewResult("Cleanup")
+	for _, mobile := range cfg.BulkMemberMobiles {
+		cleanMobile := strings.TrimSpace(mobile)
+		cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
+		DeleteMemberByMobile(aai, cfg, cleanMobile, "Step_Cleanup", cleanupResult)
+	}
+}
+
 // InitializeMemberTest sets up the member data and clears any previous state.
 func InitializeMemberTest(cfg *config.Config) (*MemberCredentials, string) {
 	cfg.NewMemberFormData.PaymentStatus = "Unpaid"
