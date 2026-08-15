@@ -208,6 +208,10 @@ func SetupRouter() *gin.Engine {
 
 	// ==================== ADMIN ROUTES ====================
 
+	// E2E Test Hooks
+	r.GET("/api/admin/mock-emails", handler.GetMockEmails)
+	r.DELETE("/api/admin/mock-emails", handler.ClearMockEmails)
+
 	// Admin Login (No Auth)
 	r.POST("/api/admin/login", handler.AdminLoginHandler)
 

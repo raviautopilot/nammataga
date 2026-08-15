@@ -3,6 +3,7 @@ package actions
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"e2e-template/pkg/config"
+	"e2e-template/pkg/ui"
 	"e2e-template/pkg/ui/pages"
 )
 
@@ -1620,5 +1622,49 @@ func VerifyMemberSubscriptionStatus(mai MemberActionsInterface, cfg *config.Conf
 
 	// Log out safely
 	LogoutMember(mai, cfg, r)
+}
+
+// ClearMockEmails sends a request to the API backend to clear the mock emails file.
+func ClearMockEmails(cfg *config.Config) {
+	req, err := http.NewRequest(http.MethodDelete, cfg.BaseURL+"api/admin/mock-emails", nil)
+	if err == nil {
+		client := &http.Client{Timeout: 5 * time.Second}
+		client.Do(req)
+	}
+}
+
+// FetchTempPasswordFromMockEmail reads the mock_emails.json file via the API backend to get the temporary password.
+func FetchTempPasswordFromMockEmail(cfg *config.Config, email string) string {
+	client := &http.Client{Timeout: 5 * time.Second}
+	
+	for i := 0; i < 5; i++ {
+		time.Sleep(1 * time.Second)
+		resp, err := client.Get(cfg.BaseURL + "api/admin/mock-emails")
+		if err != nil || resp.StatusCode != http.StatusOK {
+			continue
+		}
+		
+		var mockEmails map[string]string
+		if err := json.NewDecoder(resp.Body).Decode(&mockEmails); err != nil {
+			resp.Body.Close()
+			continue
+		}
+		resp.Body.Close()
+		
+		if pass, ok := mockEmails[email]; ok && pass != "" {
+			return pass
+		}
+	}
+	return ""
+}
+
+// VerifyBulkUploadedMember performs the full password change and subscription validation for a bulk-uploaded member.
+func VerifyBulkUploadedMember(page *ui.Page, cfg *config.Config, email, stepPrefix string, result *Result) {
+	member := NewMemberPersona(page, cfg.UiURL, 5*time.Second)
+	tempPass := FetchTempPasswordFromMockEmail(cfg, email)
+	
+	GoToHome(member, result)
+	ForceChangePassword(member, cfg, email, tempPass, cfg.MemberCredentials.Password, result)
+	VerifyMemberSubscriptionStatus(member, cfg, email, cfg.MemberCredentials.Password, stepPrefix, result)
 }
 

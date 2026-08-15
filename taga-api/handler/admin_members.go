@@ -312,6 +312,10 @@ func AddMember(c *gin.Context) {
 		return
 	}
 
+	if isPaid {
+		go createManualAnnualSubscription(newMember.ID, newMember.EmailId, newMember.Name)
+	}
+
 	go sendSuccessEmail(req.Email, tempPassword)
 
 	// Audit member creation — do not include the temp password
@@ -747,6 +751,10 @@ func BulkUploadMembers(c *gin.Context) {
 		existingMembers = append(existingMembers, newMember)
 		existingEmailMap[strings.ToLower(reg.EmailId)] = true
 		existingMobileMap[reg.MobileNumber] = true
+
+		if isPaid {
+			go createManualAnnualSubscription(newMember["id"].(string), reg.EmailId, reg.Name)
+		}
 
 		mu.Lock()
 		result.SuccessCount++
@@ -1618,4 +1626,72 @@ func getMapString(m map[string]interface{}, key string) string {
 		}
 	}
 	return ""
+}
+
+// createManualAnnualSubscription creates an active annual subscription record for a paid member
+func createManualAnnualSubscription(memberID, memberEmail, memberName string) {
+	startDate := time.Now()
+	endDate := getMembershipYearEnd(startDate)
+	nextDueDate := endDate.AddDate(0, 0, 1)
+
+	// Expire any existing active annual subscription
+	expireExistingAnnualSubscriptions(memberEmail)
+
+	memberSub := model.MemberSubscription{
+		ID:               uuid.New().String(),
+		MemberID:         memberID,
+		MemberEmail:      memberEmail,
+		MemberName:       memberName,
+		SubscriptionID:   "annual-subscription",
+		SubscriptionName: "Annual Subscription",
+		Amount:           0, // Admin override
+		OrderID:          "admin_override_" + uuid.New().String()[:8],
+		PaymentID:        "admin_override_" + uuid.New().String()[:8],
+		Status:           "active",
+		StartDate:        startDate,
+		EndDate:          endDate,
+		LastPaidDate:     startDate,
+		NextDueDate:      nextDueDate,
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+	}
+	saveMemberSubscription(memberSub)
+}
+
+// GetMockEmails godoc
+// @Summary Get mock emails for E2E testing
+// @Tags Admin Members
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]string
+// @Router /api/admin/mock-emails [get]
+func GetMockEmails(c *gin.Context) {
+	// WARNING: In a real production environment, this endpoint should be disabled or strictly secured!
+	mockEmailFile := "data/emails/mock_emails.json"
+	data, err := os.ReadFile(mockEmailFile)
+	if err != nil {
+		c.JSON(http.StatusOK, make(map[string]string))
+		return
+	}
+	
+	var mockEmails map[string]string
+	if err := json.Unmarshal(data, &mockEmails); err != nil {
+		c.JSON(http.StatusOK, make(map[string]string))
+		return
+	}
+	
+	c.JSON(http.StatusOK, mockEmails)
+}
+
+// ClearMockEmails godoc
+// @Summary Clear mock emails for E2E testing
+// @Tags Admin Members
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]string
+// @Router /api/admin/mock-emails [delete]
+func ClearMockEmails(c *gin.Context) {
+	mockEmailFile := "data/emails/mock_emails.json"
+	os.Remove(mockEmailFile)
+	c.JSON(http.StatusOK, gin.H{"status": "cleared"})
 }

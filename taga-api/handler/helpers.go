@@ -10,6 +10,7 @@ import (
 	"net/smtp"
 	"os"
 	"strings"
+	"sync"
 	"taga-api/config"
 
 	"github.com/gin-gonic/gin"
@@ -59,6 +60,8 @@ func generateTempPassword() string {
 	return string(password)
 }
 
+var emailMockMutex sync.Mutex
+
 // sendSuccessEmail sends welcome email with temporary password to a new member
 func sendSuccessEmail(memberEmail, tempPassword string) error {
 	cfg := config.GetConfig()
@@ -81,6 +84,24 @@ func sendSuccessEmail(memberEmail, tempPassword string) error {
 	body.WriteString(fmt.Sprintf("<p><a href='%s'>Click here to login</a></p>", loginURL))
 	body.WriteString("<p>If you did not register for this account, please contact our support team.</p>")
 	body.WriteString("<br><p>Best regards,<br>TAGA Team</p>")
+
+	// For E2E testing: Save the temporary password to a mock emails file
+	mockEmailFile := "data/emails/mock_emails.json"
+	
+	emailMockMutex.Lock()
+	var mockEmails map[string]string
+	data, err := os.ReadFile(mockEmailFile)
+	if err == nil {
+		json.Unmarshal(data, &mockEmails)
+	}
+	if mockEmails == nil {
+		mockEmails = make(map[string]string)
+	}
+	mockEmails[memberEmail] = tempPassword
+	if updatedData, err := json.MarshalIndent(mockEmails, "", "  "); err == nil {
+		os.WriteFile(mockEmailFile, updatedData, 0644)
+	}
+	emailMockMutex.Unlock()
 
 	return sendEmail(memberEmail, subject, body.String())
 }

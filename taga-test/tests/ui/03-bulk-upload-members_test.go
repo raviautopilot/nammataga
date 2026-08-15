@@ -16,6 +16,9 @@ func TestUI_03_BulkUploadMembers(t *testing.T) {
 		// Initialize Admin Persona and Result collector
 		admin := actions.NewAdminPersona(page, cfg.UiURL, 5*time.Second)
 		result := actions.NewResult("TestUI_03_BulkUploadMembers")
+		
+		// Clear mock emails to prevent reading stale temporary passwords
+		actions.ClearMockEmails(cfg)
 
 		// Declarative Persona Action Flow
 		actions.GoToHome(admin, result)
@@ -25,16 +28,14 @@ func TestUI_03_BulkUploadMembers(t *testing.T) {
 		actions.GoToHome(admin, result)
 		actions.LogoutAdmin(admin, cfg, result)
 
-		// Overriding the hashed DB passwords directly because fetching them from the API is impossible (BUG).
-		actions.ForceMemberPasswords(cfg.BulkMemberEmails, cfg.MemberCredentials.Password)
+		// Wait a brief moment for background emails to be processed and written
+		time.Sleep(2 * time.Second)
 
 		// Test Paid Member
-		member1 := actions.NewMemberPersona(page, cfg.UiURL, 5*time.Second)
-		actions.VerifyMemberSubscriptionStatus(member1, cfg, cfg.BulkMemberEmails[0], cfg.MemberCredentials.Password, "Step_Member1_Paid", result)
+		actions.VerifyBulkUploadedMember(page, cfg, cfg.BulkMemberEmails[0], "Step_Member1_Paid", result)
 
 		// Test Unpaid Member
-		member2 := actions.NewMemberPersona(page, cfg.UiURL, 5*time.Second)
-		actions.VerifyMemberSubscriptionStatus(member2, cfg, cfg.BulkMemberEmails[1], cfg.MemberCredentials.Password, "Step_Member2_Unpaid", result)
+		actions.VerifyBulkUploadedMember(page, cfg, cfg.BulkMemberEmails[1], "Step_Member2_Unpaid", result)
 
 		// Run automated UI cleanup of uploaded members synchronously before logging out
 		actions.LoginAsAdmin(admin, cfg, result)
