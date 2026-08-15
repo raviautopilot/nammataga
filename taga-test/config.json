@@ -1,6 +1,6 @@
 {
-  "baseUrl": "https://devapi.nammataga.com",
-  "uiUrl": "https://dev.nammataga.com",
+  "baseUrl": "http://localhost:1801/",
+  "uiUrl": "http://localhost:1701/",
   "seleniumUrl": "http://localhost:9515",
   "headless": false,
   "timeout": 10,

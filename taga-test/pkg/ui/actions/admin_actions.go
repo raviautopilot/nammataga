@@ -151,12 +151,11 @@ func NewMemberCredentials(cfg *config.Config) *MemberCredentials {
 }
 
 // BulkCleanupMembers performs UI deletion for all bulk uploaded members.
-func BulkCleanupMembers(aai AdminActionsInterface, cfg *config.Config) {
-	cleanupResult := NewResult("Cleanup")
+func BulkCleanupMembers(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	for _, mobile := range cfg.BulkMemberMobiles {
 		cleanMobile := strings.TrimSpace(mobile)
 		cleanMobile = strings.ReplaceAll(cleanMobile, " ", "")
-		DeleteMemberByMobile(aai, cfg, cleanMobile, "Step_Cleanup", cleanupResult)
+		DeleteMemberByMobile(aai, cfg, cleanMobile, "Step_Cleanup", r)
 	}
 }
 

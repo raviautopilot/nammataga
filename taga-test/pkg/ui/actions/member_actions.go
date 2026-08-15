@@ -1,8 +1,13 @@
 package actions
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"e2e-template/pkg/config"
 	"e2e-template/pkg/ui/pages"
@@ -1528,5 +1533,92 @@ func ViewMemberSubscriptions(mai MemberActionsInterface, cfg *config.Config, scr
 		return
 	}
 	r.WaitForElementAndCapture(mp.Page, "css:[data-testid='testid-member-profile-card'], [data-testid='testid-member-subscriptions-button']", 5 * time.Second, screenshotName)
+}
+
+// ForceMemberPasswords is a test utility that bypasses the lack of API exposure for temp passwords.
+// It directly overrides the password hash in the members database file and unsets the first_login flag.
+func ForceMemberPasswords(emails []string, newPassword string) {
+	membersFile := "/home/sudhan_dev/Downloads/code/nammataga/taga-api/data/member/members.json"
+	data, err := os.ReadFile(membersFile)
+	if err != nil {
+		fmt.Printf("WARNING: Failed to read members file %s: %v\n", membersFile, err)
+		return
+	}
+
+	var members []map[string]interface{}
+	if err := json.Unmarshal(data, &members); err != nil {
+		fmt.Printf("WARNING: Failed to parse members file: %v\n", err)
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		fmt.Printf("WARNING: Failed to hash password: %v\n", err)
+		return
+	}
+
+	emailMap := make(map[string]bool)
+	for _, e := range emails {
+		emailMap[strings.ToLower(strings.TrimSpace(e))] = true
+	}
+
+	changed := false
+	for i, m := range members {
+		if mEmail, ok := m["emailId"].(string); ok {
+			if emailMap[strings.ToLower(strings.TrimSpace(mEmail))] {
+				members[i]["password"] = string(hashedPassword)
+				members[i]["first_login"] = false
+				changed = true
+			}
+		}
+	}
+
+	if changed {
+		updatedData, _ := json.MarshalIndent(members, "", "  ")
+		_ = os.WriteFile(membersFile, updatedData, 0644)
+	}
+}
+
+// VerifyMemberSubscriptionStatus logs in as a member, checks their subscription status, and logs out.
+func VerifyMemberSubscriptionStatus(mai MemberActionsInterface, cfg *config.Config, username, password, stepPrefix string, r *Result) {
+	mp := mai.GetMemberPersona()
+	actionName := fmt.Sprintf("Verify Subscription Status (%s)", username)
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	MemberLoginAttempt(mai, cfg, username, password, 4*time.Second, stepPrefix+"_Login", r)
+	if r.Failed() {
+		return
+	}
+
+	GoToHome(mai, r)
+	if r.Failed() {
+		return
+	}
+
+	// Wait for home page to render, click Membership, then Subscriptions
+	if err := mp.Page.ClickByTestID("testid-membership-button", 5*time.Second); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-membership-button' exists on member dashboard")
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	if err := mp.Page.ClickByTestID("testid-member-subscriptions-button", 5*time.Second); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-member-subscriptions-button' exists in Membership dropdown")
+		return
+	}
+
+	// Capture the subscription status
+	r.WaitForElementAndCapture(mp.Page, "css:[data-testid='testid-member-subscriptions-button']", 5*time.Second, stepPrefix+"_Subscription_Status")
+
+	// Log out safely
+	LogoutMember(mai, cfg, r)
 }
 
