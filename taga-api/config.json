@@ -14,6 +14,8 @@
   "admin_password": "admin123",
   "office_dir": "data/office",
   "members_file": "data/member/members.json",
+  "deleted_members_file": "data/member/deleted_member.json",
+  "processed_payments_file": "data/payments/processed_payments.json",
   "about_file": "data/about/about.json",
   "contact_file": "data/about/contact.json",
   "objectives_file": "data/about/objectives.json",

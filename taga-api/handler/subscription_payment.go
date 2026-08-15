@@ -95,7 +95,7 @@ func CreateSubscriptionOrder(c *gin.Context) {
 
 	// Load subscription metadata to know if it's one‑time and get subscription name
 	var subscriptionsMeta []map[string]interface{}
-	subsFile := filepath.Join("data", "subscriptions", "subscriptions.json")
+	subsFile := config.Config.Data.Config.SubscriptionType
 	metaData, err := os.ReadFile(subsFile)
 	if err == nil {
 		json.Unmarshal(metaData, &subscriptionsMeta)
@@ -260,7 +260,7 @@ func VerifySubscriptionPayment(c *gin.Context) {
 
 	// Load subscription metadata to determine type (one‑time, need‑based, annual)
 	var subscriptionsMeta []map[string]interface{}
-	subsFile := filepath.Join("data", "subscriptions", "subscriptions.json")
+	subsFile := config.Config.Data.Config.SubscriptionType
 	metaData, err := os.ReadFile(subsFile)
 	if err != nil {
 		config.Logger.Error("Failed to read subscriptions metadata", zap.Error(err))
@@ -657,7 +657,7 @@ func getMemberNameByEmail(email string) string {
 }
 
 func getSubscriptionName(subscriptionID string) string {
-	filePath := filepath.Join("data", "subscriptions", "subscriptions.json")
+	filePath := config.Config.Data.Config.SubscriptionType
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return subscriptionID
@@ -709,7 +709,7 @@ func GetMemberPaidSubscriptions(c *gin.Context) {
 	}
 
 	// 2. Load all subscriptions metadata to identify one‑time subscription IDs
-	metaFile := filepath.Join("data", "subscriptions", "subscriptions.json")
+	metaFile := config.Config.Data.Config.SubscriptionType
 	metaData, err := os.ReadFile(metaFile)
 	if err != nil {
 		config.Logger.Warn("Failed to read subscriptions metadata for paid list", zap.Error(err))

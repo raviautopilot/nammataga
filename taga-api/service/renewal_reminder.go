@@ -140,7 +140,7 @@ func getUnpaidMembers() ([]string, error) {
 
 // getAnnualSubscriptionAmount fetches the current annual subscription fee from subscriptions.json
 func getAnnualSubscriptionAmount() int {
-	subsFile := filepath.Join("data", "subscriptions", "subscriptions.json")
+	subsFile := config.Config.Data.Config.SubscriptionType
 	data, err := os.ReadFile(subsFile)
 	if err != nil {
 		return 3500 // Fallback default

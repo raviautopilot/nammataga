@@ -564,11 +564,152 @@ func DeleteMember(c *gin.Context) {
 		fmt.Sprintf("Admin deleted member '%s' (tagaId: %s)", deletedName, resourceTagaID),
 		audit.Sanitize(deletedMember), nil)
 
-	go cleanupMemberSubscriptions(memberID)
+	// Cleanups and backups
+	memberEmail := getString(deletedMember, "emailId")
+	if memberEmail == "" {
+		memberEmail = getString(deletedMember, "email") // fallback
+	}
+	
+	memberTagaID := getString(deletedMember, "tagaId")
+	
+	go cleanupMemberSubscriptions(memberID, memberTagaID)
+	go cleanupPaymentTransactions(memberID, memberTagaID)
+	go cleanupMemberPayments(memberEmail)
+	go cleanupMemberNotifications(memberID, memberTagaID)
+	go cleanupMembershipApplications(memberEmail)
+	go saveDeletedMember(deletedMember)
+	
 	respondMessage(c, fmt.Sprintf("Member '%s' deleted permanently", deletedName))
 }
 
-func cleanupMemberSubscriptions(memberID string) {
+func cleanupMemberNotifications(memberID, memberTagaID string) {
+	if memberID == "" && memberTagaID == "" {
+		return
+	}
+	notificationsFile := filepath.Join("data", "notifications", "member_notifications.json")
+	data, err := os.ReadFile(notificationsFile)
+	if err != nil {
+		return
+	}
+
+	var notifs []map[string]interface{}
+	if err := json.Unmarshal(data, &notifs); err != nil {
+		return
+	}
+
+	filtered := make([]map[string]interface{}, 0, len(notifs))
+	for _, n := range notifs {
+		id, _ := n["member_id"].(string)
+		if id != memberID && id != memberTagaID {
+			filtered = append(filtered, n)
+		}
+	}
+
+	updatedData, _ := json.MarshalIndent(filtered, "", "  ")
+	os.WriteFile(notificationsFile, updatedData, 0644)
+}
+
+func cleanupMembershipApplications(memberEmail string) {
+	if memberEmail == "" {
+		return
+	}
+	membershipFile := filepath.Join("data", "memberlogin", "membership.json")
+	data, err := os.ReadFile(membershipFile)
+	if err != nil {
+		return
+	}
+
+	var apps []map[string]interface{}
+	if err := json.Unmarshal(data, &apps); err != nil {
+		return
+	}
+
+	filtered := make([]map[string]interface{}, 0, len(apps))
+	for _, a := range apps {
+		email, _ := a["email"].(string)
+		if email != memberEmail {
+			filtered = append(filtered, a)
+		}
+	}
+
+	updatedData, _ := json.MarshalIndent(filtered, "", "  ")
+	os.WriteFile(membershipFile, updatedData, 0644)
+}
+
+func saveDeletedMember(member map[string]interface{}) {
+	if member == nil {
+		return
+	}
+	deletedFile := config.Config.DeletedMembersFile
+	var deletedMembers []map[string]interface{}
+
+	data, err := os.ReadFile(deletedFile)
+	if err == nil {
+		json.Unmarshal(data, &deletedMembers)
+	}
+
+	member["deleted_at"] = time.Now().Format(time.RFC3339)
+	deletedMembers = append(deletedMembers, member)
+
+	updatedData, _ := json.MarshalIndent(deletedMembers, "", "  ")
+	os.WriteFile(deletedFile, updatedData, 0644)
+}
+
+func cleanupMemberPayments(memberEmail string) {
+	if memberEmail == "" {
+		return
+	}
+	paymentsFile := config.Config.ProcessedPaymentsFile
+	data, err := os.ReadFile(paymentsFile)
+	if err != nil {
+		return
+	}
+
+	var payments []map[string]interface{}
+	if err := json.Unmarshal(data, &payments); err != nil {
+		return
+	}
+
+	filtered := make([]map[string]interface{}, 0, len(payments))
+	for _, p := range payments {
+		email, _ := p["member_email"].(string)
+		if email != memberEmail {
+			filtered = append(filtered, p)
+		}
+	}
+
+	updatedData, _ := json.MarshalIndent(filtered, "", "  ")
+	os.WriteFile(paymentsFile, updatedData, 0644)
+}
+
+func cleanupPaymentTransactions(memberID, memberTagaID string) {
+	if memberID == "" && memberTagaID == "" {
+		return
+	}
+	txnsPath := filepath.Join("data", "subscriptions", "payment_transactions.json")
+	data, err := os.ReadFile(txnsPath)
+	if err != nil {
+		return
+	}
+
+	var txns []map[string]interface{}
+	if err := json.Unmarshal(data, &txns); err != nil {
+		return
+	}
+
+	filtered := make([]map[string]interface{}, 0, len(txns))
+	for _, t := range txns {
+		id, _ := t["member_id"].(string)
+		if id != memberID && id != memberTagaID {
+			filtered = append(filtered, t)
+		}
+	}
+
+	updatedData, _ := json.MarshalIndent(filtered, "", "  ")
+	os.WriteFile(txnsPath, updatedData, 0644)
+}
+
+func cleanupMemberSubscriptions(memberID, memberTagaID string) {
 	subsPath := filepath.Join("data", "subscriptions", "member_subscriptions.json")
 	data, err := os.ReadFile(subsPath)
 	if err != nil {
@@ -583,7 +724,7 @@ func cleanupMemberSubscriptions(memberID string) {
 	filtered := make([]map[string]interface{}, 0, len(subs))
 	for _, s := range subs {
 		id, _ := s["member_id"].(string)
-		if id != memberID {
+		if id != memberID && id != memberTagaID {
 			filtered = append(filtered, s)
 		}
 	}
