@@ -195,14 +195,14 @@ export default function App() {
     }, []);
 
     // ==================== LOGIN HANDLER ====================
-    const handleLogin = (isAdminLogin: boolean = false, isPaid: boolean = true) => {
+    const handleLogin = (isAdminLogin: boolean = false, isPaid: boolean = false) => {
         setIsLoggedIn(true);
         setIsAdmin(isAdminLogin);
         setUserType(isPaid ? 'subscriber' : 'member');
 
         const lastPage = sessionStorage.getItem('lastPage') as Page;
 
-        if (lastPage && lastPage !== 'member-login' && lastPage !== 'admin-login') {
+        if (lastPage && lastPage !== 'member-login' && lastPage !== 'admin-login' && (isAdminLogin || (lastPage !== 'members' && lastPage !== 'audit-log'))) {
             setCurrentPage(lastPage);
         } else {
             setCurrentPage('home');
@@ -213,10 +213,7 @@ export default function App() {
 
     // ==================== LOGOUT HANDLER ====================
     const handleLogout = () => {
-        const currentPageToSave = currentPage;
-        if (currentPageToSave !== 'member-login' && currentPageToSave !== 'admin-login') {
-            sessionStorage.setItem('lastPage', currentPageToSave);
-        }
+        sessionStorage.removeItem('lastPage');
 
         localStorage.removeItem('admin_token');
         localStorage.removeItem('admin_token_expiry');
@@ -309,7 +306,7 @@ export default function App() {
             case 'office-bearers':
                 return <OfficeBearers />;
             case 'member-login':
-                return <MemberLogin onLogin={(paid) => handleLogin(false, paid ?? isPaid)} />;
+                return <MemberLogin onLogin={(paid) => handleLogin(false, paid !== undefined ? paid : getIsPaidFromStorage())} />;
             case 'admin-login':
                 return <AdminLogin onLogin={() => handleLogin(true)} />;
             case 'members':

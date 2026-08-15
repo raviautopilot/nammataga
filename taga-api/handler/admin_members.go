@@ -49,6 +49,7 @@ type RegistrationRequest struct {
 	EmailId                  string `json:"email_id"`
 	TBFNumber                string `json:"tbf_number"`
 	CPSGPFNumber             string `json:"cps_gpf_number"`
+	PaymentStatus            string `json:"payment_status"`
 }
 
 type RegistrationError struct {
@@ -309,6 +310,10 @@ func AddMember(c *gin.Context) {
 	if err := member.SaveMember(newMember); err != nil {
 		respondError(c, http.StatusInternalServerError, "Failed to save member")
 		return
+	}
+
+	if isPaid {
+		go createManualAnnualSubscription(newMember.ID, newMember.EmailId, newMember.Name)
 	}
 
 	go sendSuccessEmail(req.Email, tempPassword)
@@ -705,6 +710,13 @@ func BulkUploadMembers(c *gin.Context) {
 		tempPassword := generateTempPassword()
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(tempPassword), bcrypt.DefaultCost)
 
+		// Derive payment status from the uploaded file value (mirrors AddMember logic).
+		paymentStatus := strings.TrimSpace(reg.PaymentStatus)
+		if paymentStatus == "" {
+			paymentStatus = "Unpaid"
+		}
+		isPaid := strings.EqualFold(paymentStatus, "Paid")
+
 		newMember := map[string]interface{}{
 			"id":                        uuid.New().String(),
 			"tagaId":                    reg.TagaID,
@@ -731,14 +743,18 @@ func BulkUploadMembers(c *gin.Context) {
 			"password":                  string(hashedPassword),
 			"first_login":               true,
 			"created_at":                time.Now().Format(time.RFC3339),
-			"payment_status":            "Unpaid",
-			"subscription_active":       false,
+			"payment_status":            paymentStatus,
+			"subscription_active":       isPaid,
 			"subscription_end_date":     nil,
 			"subscription_updated_at":   nil,
 		}
 		existingMembers = append(existingMembers, newMember)
 		existingEmailMap[strings.ToLower(reg.EmailId)] = true
 		existingMobileMap[reg.MobileNumber] = true
+
+		if isPaid {
+			go createManualAnnualSubscription(newMember["id"].(string), reg.EmailId, reg.Name)
+		}
 
 		mu.Lock()
 		result.SuccessCount++
@@ -808,7 +824,7 @@ func GetMembersList(c *gin.Context) {
 			}
 		}
 
-		paymentStatus := getPaymentStatusFromSubscription(email, subscriptionMap)
+		paymentStatus := getPaymentStatusFromMember(m, subscriptionMap)
 		if paymentFilter != "" && paymentFilter != "all" {
 			if !strings.EqualFold(paymentStatus, paymentFilter) {
 				continue
@@ -844,7 +860,7 @@ func GetMembersList(c *gin.Context) {
 			MobileNumber:     getString(m, "mobile_number"),
 			Email:            email,
 			PaymentStatus:    paymentStatus,
-			MembershipStatus: getMembershipStatus(m),
+			MembershipStatus: getMembershipStatus(m, subscriptionMap),
 		}
 		memberList = append(memberList, memberListItem)
 	}
@@ -937,10 +953,9 @@ func GetMemberStats(c *gin.Context) {
 		}
 		total++
 
-		email := getString(m, "emailId")
-		paymentStatus := getPaymentStatusFromSubscription(email, subscriptionMap)
+		paymentStatus := getPaymentStatusFromMember(m, subscriptionMap)
 
-		if getMembershipStatus(m) == "Active" {
+		if getMembershipStatus(m, subscriptionMap) == "Active" {
 			active++
 		}
 		if paymentStatus == "Unpaid" {
@@ -1263,6 +1278,7 @@ func parseCSVFile(reader io.Reader) ([]RegistrationRequest, error) {
 			EmailId:                  getField(records[i], 16),
 			TBFNumber:                getField(records[i], 17),
 			CPSGPFNumber:             getField(records[i], 18),
+			PaymentStatus:            getField(records[i], 19),
 		})
 	}
 
@@ -1334,6 +1350,7 @@ func parseExcelFileForBulk(filePath string) ([]RegistrationRequest, error) {
 			EmailId:                  getField(row, 16),
 			TBFNumber:                getField(row, 17),
 			CPSGPFNumber:             getField(row, 18),
+			PaymentStatus:            getField(row, 19),
 		})
 	}
 
@@ -1527,17 +1544,27 @@ func loadSubscriptionPaymentMap() map[string]bool {
 	return subscriptionMap
 }
 
-func getPaymentStatusFromSubscription(email string, subscriptionMap map[string]bool) string {
+func getPaymentStatusFromMember(m map[string]interface{}, subscriptionMap map[string]bool) string {
+	if pStatus, ok := m["payment_status"].(string); ok && pStatus != "" {
+		if strings.EqualFold(pStatus, "Paid") {
+			return "Paid"
+		}
+		if strings.EqualFold(pStatus, "Unpaid") {
+			return "Unpaid"
+		}
+	}
+	if subActive, ok := m["subscription_active"].(bool); ok && subActive {
+		return "Paid"
+	}
+	email := getString(m, "emailId")
 	if isPaid, exists := subscriptionMap[email]; exists && isPaid {
 		return "Paid"
 	}
 	return "Unpaid"
 }
 
-func getMembershipStatus(member map[string]interface{}) string {
-	email := getString(member, "emailId")
-	subscriptionMap := loadSubscriptionPaymentMap()
-	if isPaid, exists := subscriptionMap[email]; exists && isPaid {
+func getMembershipStatus(member map[string]interface{}, subscriptionMap map[string]bool) string {
+	if getPaymentStatusFromMember(member, subscriptionMap) == "Paid" {
 		return "Active"
 	}
 	return "Inactive"
@@ -1599,4 +1626,72 @@ func getMapString(m map[string]interface{}, key string) string {
 		}
 	}
 	return ""
+}
+
+// createManualAnnualSubscription creates an active annual subscription record for a paid member
+func createManualAnnualSubscription(memberID, memberEmail, memberName string) {
+	startDate := time.Now()
+	endDate := getMembershipYearEnd(startDate)
+	nextDueDate := endDate.AddDate(0, 0, 1)
+
+	// Expire any existing active annual subscription
+	expireExistingAnnualSubscriptions(memberEmail)
+
+	memberSub := model.MemberSubscription{
+		ID:               uuid.New().String(),
+		MemberID:         memberID,
+		MemberEmail:      memberEmail,
+		MemberName:       memberName,
+		SubscriptionID:   "annual-subscription",
+		SubscriptionName: "Annual Subscription",
+		Amount:           0, // Admin override
+		OrderID:          "admin_override_" + uuid.New().String()[:8],
+		PaymentID:        "admin_override_" + uuid.New().String()[:8],
+		Status:           "active",
+		StartDate:        startDate,
+		EndDate:          endDate,
+		LastPaidDate:     startDate,
+		NextDueDate:      nextDueDate,
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+	}
+	saveMemberSubscription(memberSub)
+}
+
+// GetMockEmails godoc
+// @Summary Get mock emails for E2E testing
+// @Tags Admin Members
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]string
+// @Router /api/admin/mock-emails [get]
+func GetMockEmails(c *gin.Context) {
+	// WARNING: In a real production environment, this endpoint should be disabled or strictly secured!
+	mockEmailFile := "data/emails/mock_emails.json"
+	data, err := os.ReadFile(mockEmailFile)
+	if err != nil {
+		c.JSON(http.StatusOK, make(map[string]string))
+		return
+	}
+	
+	var mockEmails map[string]string
+	if err := json.Unmarshal(data, &mockEmails); err != nil {
+		c.JSON(http.StatusOK, make(map[string]string))
+		return
+	}
+	
+	c.JSON(http.StatusOK, mockEmails)
+}
+
+// ClearMockEmails godoc
+// @Summary Clear mock emails for E2E testing
+// @Tags Admin Members
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]string
+// @Router /api/admin/mock-emails [delete]
+func ClearMockEmails(c *gin.Context) {
+	mockEmailFile := "data/emails/mock_emails.json"
+	os.Remove(mockEmailFile)
+	c.JSON(http.StatusOK, gin.H{"status": "cleared"})
 }

@@ -1,6 +1,6 @@
 {
-  "baseUrl": "https://devapi.nammataga.com",
-  "uiUrl": "https://dev.nammataga.com",
+  "baseUrl": "https://devapi.nammataga.com/",
+  "uiUrl": "https://dev.nammataga.com/",
   "seleniumUrl": "http://localhost:9515",
   "headless": false,
   "timeout": 10,
@@ -89,10 +89,12 @@
   "adminBulkUploadFileInputTestID": "testid-bulk-upload-file-input",
   "adminBulkUploadSubmitButtonTestID": "testid-bulk-upload-submit-button",
   "bulkMemberEmails": [
-    "raviautopilot1@gmail.com"
+    "raviautopilot1@gmail.com",
+    "raviautopilot2@gmail.com"
   ],
   "bulkMemberMobiles": [
-    "9800000001"
+    "9800000001",
+    "9800000002"
   ],
   "adminSendAnnouncementButtonTestID": "testid-send-announcement-button",
   "adminAnnouncementTitleInputTestID": "testid-announcement-title-input",

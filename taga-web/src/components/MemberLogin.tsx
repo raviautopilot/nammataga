@@ -151,7 +151,8 @@ setIsLoading(false);
 
     //toast.success(res.message || "Login successful");
 
-    onLogin(true);
+    const isUserPaid = res.user?.isPaid === true || res.user?.subscription_active === true;
+    onLogin(isUserPaid);
 
   } catch (err: any) {
 
