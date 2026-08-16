@@ -205,6 +205,14 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 		}
 	}
 
+	// ── VALIDATION 1.5: Strict gender check for Dormitories ──
+	if room.Type == "gents-dorm" && req.Gender != "male" {
+		return nil, fmt.Errorf("this room is strictly for male guests only")
+	}
+	if room.Type == "ladies-dorm" && req.Gender != "female" {
+		return nil, fmt.Errorf("this room is strictly for female guests only")
+	}
+
 	// ── VALIDATION 2: Gender restriction check for AC rooms with partial booking ──
 	if room.AllowSingleBed {
 		// Find existing confirmed bookings for this room that overlap our date range

@@ -21,7 +21,7 @@ func TestUI_19_TAGATower_GentsDormRestriction(t *testing.T) {
 		actions.LoginAsMember(member, cfg, result)
 		actions.NavigateToTAGATower(member, cfg, result)
 		actions.SelectFutureDates(member, result)
-		actions.TryBookDormitoryWithOppositeGender(member, cfg, result, "gents-dorm", "female")
+		actions.VerifyDormitoryGenderRestrictionUI(member, cfg, result, "gents-dorm", "Male Only")
 		actions.LogoutMember(member, cfg, result)
 
 		// Assert Result

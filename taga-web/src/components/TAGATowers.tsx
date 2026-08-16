@@ -570,6 +570,11 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
     }
 
     try {
+      const finalGender = 
+        selectedRoom.type === 'gents-dorm' ? 'male' :
+        selectedRoom.type === 'ladies-dorm' ? 'female' :
+        bookingGender;
+
       const response = await createBooking(
         {
           roomId: selectedRoom.id,
@@ -578,7 +583,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
           bookerPhone,
           bookingFor,
           bedCount: selectedRoom.allowSingleBed ? bedCount : selectedRoom.capacity,
-          ...(selectedRoom.type === 'ac-room' && { gender: bookingGender }),
+          ...(selectedRoom.allowSingleBed && bedCount < selectedRoom.capacity && { gender: finalGender }),
           ...(bookingFor === 'guest' && { guestDetails }),
         },
         BOOKER_ID
@@ -1546,22 +1551,33 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
               bedCount < selectedRoom.capacity && (
                 <div className="space-y-3">
                   <Label>Gender</Label>
-                  <RadioGroup
-                    value={bookingGender}
-                    data-testid="testid-booking-gender-radio-group"
-                    onValueChange={(value: string) =>
-                      setBookingGender(value as 'male' | 'female')
-                    }
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="male" id="male" />
-                      <Label htmlFor="male">Male</Label>
+                  
+                  {selectedRoom.type === 'gents-dorm' ? (
+                    <div className="inline-flex items-center px-3 py-1 rounded-md bg-blue-50 text-blue-700 font-medium text-sm border border-blue-200">
+                      Male Only
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="female" id="female" />
-                      <Label htmlFor="female">Female</Label>
+                  ) : selectedRoom.type === 'ladies-dorm' ? (
+                    <div className="inline-flex items-center px-3 py-1 rounded-md bg-pink-50 text-pink-700 font-medium text-sm border border-pink-200">
+                      Female Only
                     </div>
-                  </RadioGroup>
+                  ) : (
+                    <RadioGroup
+                      value={bookingGender}
+                      data-testid="testid-booking-gender-radio-group"
+                      onValueChange={(value: string) =>
+                        setBookingGender(value as 'male' | 'female')
+                      }
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="male" id="male" />
+                        <Label htmlFor="male">Male</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="female" id="female" />
+                        <Label htmlFor="female">Female</Label>
+                      </div>
+                    </RadioGroup>
+                  )}
                 </div>
               )}
 

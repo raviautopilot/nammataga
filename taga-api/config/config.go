@@ -38,33 +38,33 @@ type DataConfig struct {
 }
 
 type AppConfig struct {
-	Port             int        `json:"port"`
-	Environment      string     `json:"environment"`
-	LogLevel         string     `json:"log_level"`
-	LogFile          string     `json:"log_file"`
-	DisablePayment   bool       `json:"disable_payment"`
-	SMTPHost         string     `json:"smtp_host"`
-	SMTPPort         int        `json:"smtp_port"`
-	SMTPUsername     string     `json:"smtp_username"`
-	SMTPPassword     string     `json:"smtp_password"`
-	ResetPasswordURL string     `json:"reset_password_url"`
-	FromEmail        string     `json:"from_email"`
-	AdminEmail       string     `json:"admin_email"`
-	AdminPassword    string     `json:"admin_password"`
-	OfficeDir        string     `json:"office_dir"`
+	Port                  int        `json:"port"`
+	Environment           string     `json:"environment"`
+	LogLevel              string     `json:"log_level"`
+	LogFile               string     `json:"log_file"`
+	DisablePayment        bool       `json:"disable_payment"`
+	SMTPHost              string     `json:"smtp_host"`
+	SMTPPort              int        `json:"smtp_port"`
+	SMTPUsername          string     `json:"smtp_username"`
+	SMTPPassword          string     `json:"smtp_password"`
+	ResetPasswordURL      string     `json:"reset_password_url"`
+	FromEmail             string     `json:"from_email"`
+	AdminEmail            string     `json:"admin_email"`
+	AdminPassword         string     `json:"admin_password"`
+	OfficeDir             string     `json:"office_dir"`
 	MembersFile           string     `json:"members_file"`
 	DeletedMembersFile    string     `json:"deleted_members_file"`
 	ProcessedPaymentsFile string     `json:"processed_payments_file"`
 	AboutFile             string     `json:"about_file"`
-	ContactFile      string     `json:"contact_file"`
-	ObjectivesFile   string     `json:"objectives_file"`
-	ServicesFile     string     `json:"services_file"`
-	StatsFile        string     `json:"stats_file"`
-	JwtSecret        string     `json:"jwt_secret"`
-	AdminAPIKey      string     `json:"admin_api_key"`
-	RazorpayKey      string     `json:"-"`
-	RazorpaySecret   string     `json:"-"`
-	Data             DataConfig `json:"data"`
+	ContactFile           string     `json:"contact_file"`
+	ObjectivesFile        string     `json:"objectives_file"`
+	ServicesFile          string     `json:"services_file"`
+	StatsFile             string     `json:"stats_file"`
+	JwtSecret             string     `json:"jwt_secret"`
+	AdminAPIKey           string     `json:"admin_api_key"`
+	RazorpayKey           string     `json:"-"`
+	RazorpaySecret        string     `json:"-"`
+	Data                  DataConfig `json:"data"`
 }
 
 var (
@@ -241,6 +241,12 @@ func validatePaths() {
 	}
 	if Config.MembersFile == "" {
 		Config.MembersFile = "data/member/members.json"
+	}
+	if Config.DeletedMembersFile == "" {
+		Config.DeletedMembersFile = "data/member/deleted_member.json"
+	}
+	if Config.ProcessedPaymentsFile == "" {
+		Config.ProcessedPaymentsFile = "data/payments/processed_payments.json"
 	}
 	if Config.DeletedMembersFile == "" {
 		Config.DeletedMembersFile = "data/member/deleted_member.json"
