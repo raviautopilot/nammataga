@@ -38,11 +38,19 @@ func getRoomsFilePath() string {
 	return path
 }
 
-// 🔥 Central bookings file
-var bookingsFilePath = getFilePath("data", "towers", "bookings.json")
+// bookingsFilePath returns the path to the bookings JSON file.
+// Reads from config at call time so VPS deployments with absolute paths in
+// config.json work correctly regardless of the binary's working directory.
+func bookingsFilePath() string {
+	path := config.Config.Data.Tower.BookingsFile
+	if path == "" {
+		return getFilePath("data", "towers", "bookings.json")
+	}
+	return path
+}
 
 func ReadAllBookings() ([]model.Booking, error) {
-	file, err := os.ReadFile(bookingsFilePath)
+	file, err := os.ReadFile(bookingsFilePath())
 	if err != nil {
 		return []model.Booking{}, nil
 	}
@@ -65,7 +73,7 @@ func SaveAllBookings(bookings []model.Booking) error {
 		return err
 	}
 
-	return os.WriteFile(bookingsFilePath, data, 0644)
+	return os.WriteFile(bookingsFilePath(), data, 0644)
 }
 
 /*
@@ -586,4 +594,87 @@ func runBookingCleanup() {
 	}
 
 	log.Printf("✅ Booking cleanup: removed %d old booking(s)", removed)
+}
+
+/*
+	---------------------------
+	  Bulk Range Availability
+	  Checks ALL rooms for ALL dates in the range in one shot.
+	  Returns a map: roomID → RoomAvailability (worst case across all days)
+---------------------------
+*/
+func CheckAllRoomsAvailabilityRange(checkIn, checkOut time.Time) (map[string]model.RoomAvailability, error) {
+	rooms, err := ReadRooms()
+	if err != nil {
+		return nil, err
+	}
+
+	allBookings, err := ReadAllBookings()
+	if err != nil {
+		return nil, err
+	}
+
+	// Pre-filter: only confirmed bookings that overlap [checkIn, checkOut)
+	var relevantBookings []model.Booking
+	for _, b := range allBookings {
+		if b.PaymentStatus != model.PaymentConfirmed {
+			continue
+		}
+		// Overlap: b.checkIn < checkOut && b.checkOut > checkIn
+		if b.CheckInDate.Before(checkOut) && b.CheckOutDate.After(checkIn) {
+			relevantBookings = append(relevantBookings, b)
+		}
+	}
+
+	result := make(map[string]model.RoomAvailability)
+
+	for _, room := range rooms {
+		// For each day in [checkIn, checkOut), find worst-case occupied beds
+		minAvailableBeds := room.Capacity
+		var genderRestriction model.Gender
+
+		for d := checkIn; d.Before(checkOut); d = d.AddDate(0, 0, 1) {
+			occupiedBeds := 0
+			var dayGender model.Gender
+
+			for _, b := range relevantBookings {
+				if b.RoomID != room.ID {
+					continue
+				}
+				// d is within [b.checkIn, b.checkOut)
+				if !d.Before(b.CheckInDate) && d.Before(b.CheckOutDate) {
+					occupiedBeds += b.BedCount
+					if dayGender == "" && b.Gender != "" {
+						dayGender = b.Gender
+					}
+				}
+			}
+
+			availOnDay := room.Capacity - occupiedBeds
+			if availOnDay < minAvailableBeds {
+				minAvailableBeds = availOnDay
+				if dayGender != "" {
+					genderRestriction = dayGender
+				}
+			}
+		}
+
+		if minAvailableBeds < 0 {
+			minAvailableBeds = 0
+		}
+
+		var finalGender model.Gender
+		if room.AllowSingleBed && minAvailableBeds > 0 && minAvailableBeds < room.Capacity {
+			finalGender = genderRestriction
+		}
+
+		result[room.ID] = model.RoomAvailability{
+			Room:              room,
+			Available:         minAvailableBeds > 0,
+			AvailableBeds:     minAvailableBeds,
+			GenderRestriction: finalGender,
+		}
+	}
+
+	return result, nil
 }

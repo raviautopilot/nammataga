@@ -233,6 +233,57 @@ func CheckAvailability(c *gin.Context) {
 	})
 }
 
+// CheckAvailabilityRange godoc
+// @Summary Check availability for all rooms over a date range (bulk)
+// @Description One-shot endpoint: returns availability of every room for the entire
+// check-in to check-out range. Replaces N×(checkOut-checkIn) individual /availability calls.
+// @Tags TAGA Towers
+// @Produce json
+// @Param checkIn query string true "Check-in date (YYYY-MM-DD)"
+// @Param checkOut query string true "Check-out date (YYYY-MM-DD)"
+// @Success 200 {object} map[string]model.RoomAvailability
+// @Router /api/towers/availability-range [get]
+func CheckAvailabilityRange(c *gin.Context) {
+	checkInStr := c.Query("checkIn")
+	checkOutStr := c.Query("checkOut")
+
+	if checkInStr == "" || checkOutStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "checkIn and checkOut are required"})
+		return
+	}
+
+	checkIn, err := time.Parse("2006-01-02", checkInStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid checkIn date format, use YYYY-MM-DD"})
+		return
+	}
+
+	checkOut, err := time.Parse("2006-01-02", checkOutStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid checkOut date format, use YYYY-MM-DD"})
+		return
+	}
+
+	if !checkOut.After(checkIn) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "checkOut must be after checkIn"})
+		return
+	}
+
+	days := int(checkOut.Sub(checkIn).Hours() / 24)
+	if days > 10 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Maximum booking range is 10 days"})
+		return
+	}
+
+	availMap, err := service.CheckAllRoomsAvailabilityRange(checkIn, checkOut)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check availability"})
+		return
+	}
+
+	c.JSON(http.StatusOK, availMap)
+}
+
 /* ---------------------------
    PAYMENT (RAZORPAY)
 --------------------------- */

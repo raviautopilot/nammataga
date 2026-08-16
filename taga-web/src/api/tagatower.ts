@@ -100,7 +100,7 @@ export const getAllRooms = async (): Promise<Room[]> => {
   }
 };
 
-// ✅ Check availability
+// ✅ Check availability for a single room+date (kept for backward compat)
 export const checkAvailability = async (
   roomId: string,
   date: string
@@ -114,6 +114,18 @@ export const checkAvailability = async (
     console.error('❌ Error checking availability:', error);
     throw error;
   }
+};
+
+// ✅ Bulk: Check availability of ALL rooms across a full date range in ONE API call.
+// Replaces N × (checkOut - checkIn) calls with a single request — essential for VPS.
+export const checkAvailabilityRange = async (
+  checkIn: string,  // YYYY-MM-DD
+  checkOut: string  // YYYY-MM-DD
+): Promise<Record<string, RoomAvailability>> => {
+  const res = await fetchWithFallback(
+    `${TOWERS_API}/availability-range?checkIn=${checkIn}&checkOut=${checkOut}`
+  );
+  return await handleResponse(res);
 };
 
 // ✅ Create booking

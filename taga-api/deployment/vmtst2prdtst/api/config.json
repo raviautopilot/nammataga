@@ -1,4 +1,27 @@
 {
   "port": 1801,
-  "environment": "development"
+  "environment": "development",
+  "log_level": "info",
+  "log_file": "/apps/taga-api/dev/logs/app.log",
+  "disable_payment": true,
+  "members_file": "/apps/taga-api/dev/data/member/members.json",
+  "deleted_members_file": "/apps/taga-api/dev/data/member/deleted_member.json",
+  "processed_payments_file": "/apps/taga-api/dev/data/payments/processed_payments.json",
+  "about_file": "/apps/taga-api/dev/data/about/about.json",
+  "contact_file": "/apps/taga-api/dev/data/about/contact.json",
+  "objectives_file": "/apps/taga-api/dev/data/about/objectives.json",
+  "services_file": "/apps/taga-api/dev/data/about/services.json",
+  "office_dir": "/apps/taga-api/dev/data/office",
+  "data": {
+    "config": {
+      "subscript_type": "/apps/taga-api/dev/data/config/subscription-types.json",
+      "taga_tower_rooms": "/apps/taga-api/dev/data/config/taga-tower-rooms.json"
+    },
+    "razorpay": {
+      "payment_file": "/apps/taga-api/dev/data/config/payment.json"
+    },
+    "tower": {
+      "bookings_file": "/apps/taga-api/dev/data/towers/bookings.json"
+    }
+  }
 }

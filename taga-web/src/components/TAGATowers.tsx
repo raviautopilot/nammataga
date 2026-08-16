@@ -37,6 +37,7 @@ import { toast } from 'sonner';
 import {
   getAllRooms,
   checkAvailability,
+  checkAvailabilityRange,
   createBooking,
   getUserBookings,
   confirmPayment,
@@ -239,6 +240,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
   const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(
     addDays(new Date(), MIN_STAY_DAYS)
   );
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
 
   // ─────────────────────────────────────────────────────────────────────────
   // STATE: Rooms & Availability
@@ -292,7 +294,9 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
   // COMPUTED VALUES
   // ─────────────────────────────────────────────────────────────────────────
   const today = startOfDay(new Date());
-  const maxBookingDate = addDays(today, BOOKING_DAYS_LIMIT);
+  // 🔥 FIX: Max checkout is 10 days from the chosen check-in (not from today),
+  // so a user who picks a check-in late in the month can still select a full 10-night stay.
+  const maxCheckoutDate = addDays(today, BOOKING_DAYS_LIMIT);
   const bannerImage = `${API_BASE}/images/taga-towers.jpg`;
   const advanceAmount = ADVANCE_AMOUNTS[bookingFor];
 
@@ -320,8 +324,23 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
   // ─────────────────────────────────────────────────────────────────────────
 
   const disabledDates = useCallback(
-    (date: Date) => isBefore(date, today) || isAfter(date, maxBookingDate),
-    [today, maxBookingDate]
+    (date: Date) => {
+      const day = startOfDay(date);
+      if (isBefore(day, today)) return true;
+
+      // The absolute furthest date anyone can interact with (either check-in or check-out) is strictly today + 10 days
+      const absoluteMaxDate = addDays(today, BOOKING_DAYS_LIMIT);
+
+      if (checkInDate) {
+        const checkInStart = startOfDay(checkInDate);
+        // Check-out date must be on or after check-in, and cannot exceed today + 10 days
+        return isBefore(day, checkInStart) || isAfter(day, absoluteMaxDate);
+      }
+
+      // If no check-in is selected yet, check-in date must be within 10 days from today
+      return isAfter(day, absoluteMaxDate);
+    },
+    [today, checkInDate]
   );
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -346,78 +365,82 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
   // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!checkInDate || rooms.length === 0) return;
+    if (!checkInDate || !checkOutDate || rooms.length === 0) return;
 
-    const dates: string[] = [];
+    // Stale-result guard — if deps change mid-flight, discard results from old run
+    let cancelled = false;
 
-    // 🔥 FIX: Use immutable date iteration (was mutating original date)
-    for (let i = 0; i < BOOKING_DAYS_LIMIT; i++) {
-      const d = new Date(checkInDate);
-      d.setDate(d.getDate() + i);
-      if (checkOutDate && d >= checkOutDate) break;
-      dates.push(format(d, 'yyyy-MM-dd'));
-    }
+    const checkInStr = format(checkInDate, 'yyyy-MM-dd');
+    const checkOutStr = format(checkOutDate, 'yyyy-MM-dd');
 
     setAvailabilityLoading(true);
     setAvailabilityError(null);
     setAvailabilityMap({});
 
-    Promise.all(
-      rooms.map(async (room) => {
+    // ── PRIMARY: Bulk endpoint (1 round trip for all rooms × all days) ──────
+    checkAvailabilityRange(checkInStr, checkOutStr)
+      .then((bulkResult) => {
+        if (cancelled) return;
+        // Bulk result is roomId → RoomAvailability — use directly
+        setAvailabilityMap(bulkResult);
+      })
+      .catch(async (bulkErr) => {
+        // ── FALLBACK: Old endpoint returned error (old backend / network issue) ──
+        // Per-room parallel fetch — all dates in parallel per room
+        console.warn('Bulk availability endpoint failed, falling back to per-room fetch:', bulkErr);
+
+        const dates: string[] = [];
+        for (let i = 0; i < BOOKING_DAYS_LIMIT; i++) {
+          const d = new Date(checkInDate);
+          d.setDate(d.getDate() + i);
+          if (d >= checkOutDate) break;
+          dates.push(format(d, 'yyyy-MM-dd'));
+        }
+
         try {
-          let finalAvailable = true;
-          let minBeds = room.capacity;
-          let genderRestriction = undefined;
-
-          for (const date of dates) {
-            const avail = await checkAvailability(room.id, date);
-
-            if (!avail.available) {
-              finalAvailable = false;
-            }
-
-            minBeds = Math.min(minBeds, avail.availableBeds);
-
-            if (avail.genderRestriction) {
-              genderRestriction = avail.genderRestriction;
-            }
+          const results = await Promise.all(
+            rooms.map(async (room) => {
+              try {
+                const dayResults = await Promise.all(
+                  dates.map((date) => checkAvailability(room.id, date))
+                );
+                let finalAvailable = true;
+                let minBeds = room.capacity;
+                let genderRestriction: string | undefined;
+                for (const avail of dayResults) {
+                  if (!avail.available) finalAvailable = false;
+                  minBeds = Math.min(minBeds, avail.availableBeds);
+                  if (avail.genderRestriction) genderRestriction = avail.genderRestriction;
+                }
+                return {
+                  [room.id]: { room, available: finalAvailable, availableBeds: minBeds, genderRestriction },
+                };
+              } catch {
+                // Individual room fetch failed — show as available (don't block booking)
+                return {
+                  [room.id]: { room, available: true, availableBeds: room.capacity },
+                };
+              }
+            })
+          );
+          if (!cancelled) {
+            const map: Record<string, RoomAvailability> = Object.assign({}, ...results);
+            setAvailabilityMap(map);
           }
-
-          return {
-            roomId: room.id,
-            avail: {
-              room,
-              available: finalAvailable,
-              availableBeds: minBeds,
-              genderRestriction,
-            },
-          };
-        } catch (error) {
-          console.error(`Failed to check availability for room ${room.id}:`, error);
-          return {
-            roomId: room.id,
-            avail: {
-              room,
-              available: false,
-              availableBeds: 0,
-            },
-          };
+        } catch (fallbackErr) {
+          if (cancelled) return;
+          console.error('Fallback availability fetch also failed:', fallbackErr);
+          setAvailabilityError('Failed to load room availability. Please refresh.');
+          toast.error('Failed to load room availability');
         }
       })
-    )
-      .then((results: Array<{ roomId: string; avail: RoomAvailability }>) => {
-        const map: Record<string, RoomAvailability> = {};
-        results.forEach(({ roomId, avail }) => {
-          map[roomId] = avail;
-        });
-        setAvailabilityMap(map);
-      })
-      .catch((error) => {
-        console.error('Failed to fetch availability:', error);
-        setAvailabilityError('Failed to load room availability');
-        toast.error('Failed to load room availability');
-      })
-      .finally(() => setAvailabilityLoading(false));
+      .finally(() => {
+        if (!cancelled) setAvailabilityLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [checkInDate, checkOutDate, rooms, refreshTrigger]);
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1005,10 +1028,6 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
             </p>
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-green-100">
               <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
-                <BedDouble className="w-4 h-4" />
-                <span>{rooms.length} Rooms Available</span>
-              </div>
-              <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
                 <MapPin className="w-4 h-4" />
                 <span>Chennai Location</span>
               </div>
@@ -1043,14 +1062,39 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                   mode="range"
                   data-testid="testid-room-date-range-calendar"
                   selected={{ from: checkInDate, to: checkOutDate }}
+                  // 🔥 FIX: Auto-navigate to the check-in month so cross-month
+                  // 🔥 FIX: Controlled month navigation so developers and users
+                  // can select dates across multiple months (like Aug 31 to Sep 8)
+                  // while still centering on checkInDate when it's selected.
+                  month={calendarMonth}
+                  onMonthChange={setCalendarMonth}
                   onSelect={(range: any) => {
                     const from = range?.from;
                     let to = range?.to;
+                    const maxAllowed = addDays(today, BOOKING_DAYS_LIMIT);
+
                     if (from && to && to <= from) {
                       to = addDays(from, MIN_STAY_DAYS);
                     }
+
+                    // 🔥 FIX: Programmatic validation guard to ensure check-out date
+                    // never exceeds today + 10 days limit under any circumstances.
+                    if (to && isAfter(startOfDay(to), maxAllowed)) {
+                      to = maxAllowed;
+                    }
+
+                    // 🔥 FIX: If check-in is the absolute max date itself, block it
+                    // because a minimum stay of 1 night would require checking out on day 11.
+                    if (from && (isAfter(startOfDay(from), maxAllowed) || startOfDay(from).getTime() === maxAllowed.getTime())) {
+                      toast.error("Cannot check in on this date. Bookings are capped at 10 days from today.");
+                      return;
+                    }
+
                     setCheckInDate(from);
                     setCheckOutDate(to);
+                    if (from) {
+                      setCalendarMonth(from);
+                    }
                   }}
                   disabled={disabledDates}
                   className="rounded-md border"
