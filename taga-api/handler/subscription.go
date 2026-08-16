@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"taga-api/config"
 	"taga-api/utils"
 
 	"github.com/gin-gonic/gin"
@@ -33,7 +34,7 @@ type SubscriptionPlanResponse struct {
 func GetSubscriptions(c *gin.Context) {
 	var subscriptions []map[string]interface{}
 
-	err := utils.ReadJSON("data/subscriptions/subscriptions.json", &subscriptions)
+	err := utils.ReadJSON(config.Config.Data.Config.SubscriptionType, &subscriptions)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to read subscriptions",

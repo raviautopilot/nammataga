@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"taga-api/config"
 	"taga-api/model"
 )
 
@@ -29,99 +30,12 @@ func getFilePath(pathParts ...string) string {
 
 ---------------------------
 */
-var roomsFilePath = getFilePath("data", "towers", "rooms.json")
-
-
-
-/*
-	---------------------------
-	  Initialize Rooms
-
----------------------------
-*/
-func InitializeRooms() error {
-	// Check if rooms.json exists
-	if _, err := os.Stat(roomsFilePath); err == nil {
-		return nil // File exists
+func getRoomsFilePath() string {
+	path := config.Config.Data.Config.TagaTowerRooms
+	if path == "" {
+		return "data/config/taga-tower-rooms.json"
 	}
-
-	// Create default rooms (EXACTLY as in UI)
-	defaultRooms := []model.Room{
-		{
-			ID:             "apex-1",
-			Name:           "Apex Suite A/C",
-			Type:           model.RoomTypeApexSuite,
-			Capacity:       3,
-			AllowSingleBed: false,
-		},
-		{
-			ID:             "kurinchi",
-			Name:           "Kurinchi",
-			Type:           model.RoomTypeACRoom,
-			Capacity:       2,
-			AllowSingleBed: true,
-		},
-		{
-			ID:             "pavalam",
-			Name:           "Pavalam",
-			Type:           model.RoomTypeACRoom,
-			Capacity:       2,
-			AllowSingleBed: true,
-		},
-		{
-			ID:             "malligai",
-			Name:           "Malligai",
-			Type:           model.RoomTypeACRoom,
-			Capacity:       2,
-			AllowSingleBed: true,
-		},
-		{
-			ID:             "kavery",
-			Name:           "Kavery",
-			Type:           model.RoomTypeACRoom,
-			Capacity:       2,
-			AllowSingleBed: true,
-		},
-		{
-			ID:             "vasantham",
-			Name:           "Vasantham",
-			Type:           model.RoomTypeACRoom,
-			Capacity:       2,
-			AllowSingleBed: true,
-		},
-		{
-			ID:             "pasumai",
-			Name:           "Pasumai",
-			Type:           model.RoomTypeACRoom,
-			Capacity:       2,
-			AllowSingleBed: true,
-		},
-		{
-			ID:             "gents-dorm",
-			Name:           "Gents Dormitory",
-			Type:           model.RoomTypeGentsDorm,
-			Capacity:       12,
-			AllowSingleBed: true,
-		},
-		{
-			ID:             "ladies-dorm",
-			Name:           "Ladies Dormitory",
-			Type:           model.RoomTypeLadiesDorm,
-			Capacity:       8,
-			AllowSingleBed: true,
-		},
-	}
-
-	// Create directory if not exists
-	dir := filepath.Dir(roomsFilePath)
-	os.MkdirAll(dir, 0755)
-
-	// Write rooms to file
-	data, err := json.MarshalIndent(defaultRooms, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(roomsFilePath, data, 0644)
+	return path
 }
 
 // 🔥 Central bookings file
@@ -161,10 +75,7 @@ func SaveAllBookings(bookings []model.Booking) error {
 ---------------------------
 */
 func ReadRooms() ([]model.Room, error) {
-	// Initialize rooms if they don't exist
-	InitializeRooms()
-
-	file, err := os.ReadFile(roomsFilePath)
+	file, err := os.ReadFile(getRoomsFilePath())
 	if err != nil {
 		log.Printf("Error reading rooms file: %v", err)
 		return nil, err

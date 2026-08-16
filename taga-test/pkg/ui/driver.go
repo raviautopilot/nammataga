@@ -22,6 +22,11 @@ func InitWebDriver(seleniumURL string, headless bool) (selenium.WebDriver, error
 
 	chromeCaps := chrome.Capabilities{
 		Args: args,
+		Prefs: map[string]interface{}{
+			"profile.password_manager_leak_detection": false,
+			"credentials_enable_service":              false,
+			"profile.password_manager_enabled":       false,
+		},
 	}
 
 	caps.AddChrome(chromeCaps)

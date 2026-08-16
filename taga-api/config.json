@@ -14,6 +14,8 @@
   "admin_password": "admin123",
   "office_dir": "data/office",
   "members_file": "data/member/members.json",
+  "deleted_members_file": "data/member/deleted_member.json",
+  "processed_payments_file": "data/payments/processed_payments.json",
   "about_file": "data/about/about.json",
   "contact_file": "data/about/contact.json",
   "objectives_file": "data/about/objectives.json",
@@ -21,5 +23,15 @@
   "jwt_secret": "ilovetaga",
   "admin_api_key": "taga-admin-secret-key-2024",
   "razorpay_key": "rzp_test_SeVBCSMzeFlqy8",
-  "razorpay_secret": "AgSFQehLYxH0LRVtsRQFhkzw"
+  "razorpay_secret": "AgSFQehLYxH0LRVtsRQFhkzw",
+  "data": {
+    "config": {
+      "subscript_type": "data/config/subscription-types.json",
+      "taga_tower_rooms": "data/config/taga-tower-rooms.json"
+    },
+    "razorpay": {
+      "payment_file": "data/config/payment.json"
+    },
+    "tower": {}
+  }
 }

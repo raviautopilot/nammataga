@@ -49,15 +49,19 @@ type WebhookPayload struct {
 var (
 	processedPayments     = make(map[string]ProcessedPayment)
 	processedPaymentsLock sync.RWMutex
-	processedPaymentsFile = filepath.Join("data", "payments", "processed_payments.json")
+	// The path is now loaded dynamically inside functions where needed
 )
+
+func getProcessedPaymentsFile() string {
+	return config.Config.ProcessedPaymentsFile
+}
 
 // loadProcessedPayments loads previously processed payments from JSON file
 func loadProcessedPayments() {
 	processedPaymentsLock.Lock()
 	defer processedPaymentsLock.Unlock()
 
-	data, err := os.ReadFile(processedPaymentsFile)
+	data, err := os.ReadFile(getProcessedPaymentsFile())
 	if err != nil {
 		if !os.IsNotExist(err) {
 			config.Logger.Warn("Failed to load processed payments file", zap.Error(err))
@@ -91,7 +95,7 @@ func saveProcessedPayment(payment ProcessedPayment) {
 	}
 
 	// Ensure directory exists
-	dir := filepath.Dir(processedPaymentsFile)
+	dir := filepath.Dir(getProcessedPaymentsFile())
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		config.Logger.Error("Failed to create payments directory", zap.Error(err))
 		return
@@ -103,8 +107,8 @@ func saveProcessedPayment(payment ProcessedPayment) {
 		return
 	}
 
-	if err := os.WriteFile(processedPaymentsFile, data, 0644); err != nil {
-		config.Logger.Error("Failed to save processed payments", zap.Error(err))
+	if err := os.WriteFile(getProcessedPaymentsFile(), data, 0644); err != nil {
+		config.Logger.Error("Failed to write processed payments file", zap.Error(err))
 	}
 }
 
