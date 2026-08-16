@@ -67,14 +67,17 @@ func CreateBooking(c *gin.Context) {
 		return
 	}
 
-	bookerName := c.GetString("bookerName")
-	if bookerName == "" {
-		bookerName = "User"
-	}
-
 	bookerID := c.GetString("bookerID")
 	if bookerID == "" {
 		bookerID = c.Query("bookerId")
+	}
+
+	bookerName := c.GetString("bookerName")
+	if bookerName == "" && bookerID != "" {
+		bookerName = getMemberNameByTagaID(bookerID)
+	}
+	if bookerName == "" {
+		bookerName = "User"
 	}
 
 	booking, err := service.CreateBooking(req, bookerName, bookerID)
@@ -453,7 +456,46 @@ func ConfirmPayment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Payment confirmed"})
 }
 
-// buildRoomBookingEmailBody builds the HTML email body for room booking payments
+func getMemberEmailByTagaID(tagaID string) string {
+	cfg := config.GetConfig()
+	data, err := os.ReadFile(cfg.MembersFile)
+	if err != nil {
+		return ""
+	}
+	var members []map[string]interface{}
+	if err := json.Unmarshal(data, &members); err != nil {
+		return ""
+	}
+	for _, m := range members {
+		if id, ok := m["tagaId"].(string); ok && id == tagaID {
+			if email, ok := m["emailId"].(string); ok {
+				return email
+			}
+		}
+	}
+	return ""
+}
+
+func getMemberNameByTagaID(tagaID string) string {
+	cfg := config.GetConfig()
+	data, err := os.ReadFile(cfg.MembersFile)
+	if err != nil {
+		return ""
+	}
+	var members []map[string]interface{}
+	if err := json.Unmarshal(data, &members); err != nil {
+		return ""
+	}
+	for _, m := range members {
+		if id, ok := m["tagaId"].(string); ok && id == tagaID {
+			if name, ok := m["name"].(string); ok {
+				return name
+			}
+		}
+	}
+	return ""
+}
+
 func buildRoomBookingEmailBody(data AdminRoomBookingData) string {
 	amountInRupees := float64(data.Amount) / 100
 
@@ -464,31 +506,40 @@ func buildRoomBookingEmailBody(data AdminRoomBookingData) string {
 	guestTableHTML := ""
 	if data.GuestDetails != "" && data.GuestDetails != "[]" {
 		if err := json.Unmarshal([]byte(data.GuestDetails), &guestList); err == nil && len(guestList) > 0 {
-			guestTableHTML = `<h3>👥 Guest Details</h3>
-<table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-    <thead>
-        <tr style="background: #f3f4f6;">
-            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">#</th>
-            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Name</th>
-            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Age</th>
-            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Contact</th>
-        </tr>
-    </thead>
-    <tbody>`
+			guestTableHTML = `
+            <div style="margin-top: 24px;">
+                <h3 style="color: #065f46; margin-bottom: 12px; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">👥 Guest Details</h3>
+                <table style="width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+                    <thead>
+                        <tr style="background: #f3f4f6;">
+                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #4b5563;">#</th>
+                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #4b5563;">Name</th>
+                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #4b5563;">Age</th>
+                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #4b5563;">Contact</th>
+                        </tr>
+                    </thead>
+                    <tbody>`
 			for i, guest := range guestList {
 				name, _ := guest["name"].(string)
 				age, _ := guest["age"].(float64)
 				contact, _ := guest["contact"].(string)
+				
+				borderBottom := ""
+				if i < len(guestList)-1 {
+					borderBottom = "border-bottom: 1px solid #e5e7eb;"
+				}
+
 				guestTableHTML += fmt.Sprintf(`
-        <tr>
-            <td style="padding: 8px; border: 1px solid #e5e7eb;">%d</td>
-            <td style="padding: 8px; border: 1px solid #e5e7eb;">%s</td>
-            <td style="padding: 8px; border: 1px solid #e5e7eb;">%.0f</td>
-            <td style="padding: 8px; border: 1px solid #e5e7eb;">%s</td>
-        </tr>`, i+1, name, age, contact)
+                        <tr>
+                            <td style="padding: 10px; %s font-size: 14px;">%d</td>
+                            <td style="padding: 10px; %s font-size: 14px;">%s</td>
+                            <td style="padding: 10px; %s font-size: 14px;">%.0f</td>
+                            <td style="padding: 10px; %s font-size: 14px;">%s</td>
+                        </tr>`, borderBottom, i+1, borderBottom, name, borderBottom, age, borderBottom, contact)
 			}
 			guestTableHTML += `</tbody>
-</table>`
+                </table>
+            </div>`
 		}
 	}
 
@@ -500,87 +551,71 @@ func buildRoomBookingEmailBody(data AdminRoomBookingData) string {
 	fmt.Fprintf(&body, `<!DOCTYPE html>
 <html>
 <head>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #065f46; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-        .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
-        .footer { background: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 8px 8px; }
-        table { width: 100%%; border-collapse: collapse; margin: 15px 0; }
-        td { padding: 12px 10px; border-bottom: 1px solid #e5e7eb; }
-        th { padding: 12px 10px; text-align: left; }
-        .label { font-weight: bold; width: 35%%; background: #f3f4f6; }
-        .value { background: white; }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #dcfce7; color: #166534; }
-        h3 { color: #065f46; margin-top: 20px; margin-bottom: 10px; }
-        hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
-    </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAGA Towers Booking Confirmation</title>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>TAGA Towers Booking Notification</h2>
-            <p>%s</p>
-        </div>
-        <div class="content">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <span class="badge">🏨 ROOM BOOKING</span>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #065f46 0%%, #047857 100%%); color: white; padding: 30px 20px; text-align: center;">
+            <div style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; background: rgba(255, 255, 255, 0.2); margin-bottom: 16px;">
+                CONFIRMED BOOKING
             </div>
-            
-            <h3>💰 Payment Summary</h3>
-            <table>
-                <tr><td class="label">Payment ID:</td><td class="value">%s</td></tr>
-                <tr><td class="label">Order ID:</td><td class="value">%s</td></tr>
-                <tr><td class="label">Advance Amount:</td><td class="value">₹ %.2f</td></tr>
-                <tr><td class="label">Customer Email:</td><td class="value">%s</td></tr>
-            表
-            
-            <h3>🏨 Room Details</h3>
-            <table>
-                <tr><td class="label">Room Name:</td><td class="value">%s</td></tr>
-                <tr><td class="label">Room Number:</td><td class="value">%s</td></tr>
-                <tr><td class="label">Bed Count:</td><td class="value">%d bed(s)</td></tr>
-                <tr><td class="label">Check-in Date:</td><td class="value">%s</td></tr>
-                <tr><td class="label">Check-out Date:</td><td class="value">%s</td></tr>
-            表
-            
-            <h3>👤 Booker Details</h3>
-            <table>
-                <tr><td class="label">Name:</td><td class="value">%s</td></tr>
-                <tr><td class="label">TAGA ID:</td><td class="value">%s</td></tr>
-                <tr><td class="label">Phone:</td><td class="value">%s</td></tr>
-                <tr><td class="label">Booking For:</td><td class="value">%s</td></tr>
-            表
-            
-            %s
-            
-            <hr>
-            <p style="font-size: 12px; color: #6b7280; text-align: center;">
-                This is an automated notification from TAGA Towers Booking System.
-                <br>Remaining amount to be paid after stay.
-            </p>
+            <h2 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700;">TAGA Towers Reservation</h2>
+            <p style="margin: 0; font-size: 15px; opacity: 0.9;">Booking ID: <strong>%s</strong></p>
         </div>
-        <div class="footer">
-            <p>TAGA Towers | Agriculture Complex Road, Chennai - 600017</p>
-            <p>Caretaker: Mr. Murugan Ramasamy | +91 98765 43210</p>
+
+        <!-- Content -->
+        <div style="padding: 30px 24px;">
+            
+            <!-- Payment Summary Card -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 15px; display: flex; align-items: center;">
+                    <span style="margin-right: 8px;">💳</span> Payment Summary
+                </h3>
+                <table style="width: 100%%; border-collapse: collapse;">
+                    <tr><td style="padding: 6px 0; color: #64748b; font-size: 14px; width: 40%%;">Advance Amount</td><td style="padding: 6px 0; font-weight: 600; color: #0f172a; text-align: right;">₹ %.2f</td></tr>
+                    <tr><td style="padding: 6px 0; color: #64748b; font-size: 14px;">Payment ID</td><td style="padding: 6px 0; color: #334155; font-size: 13px; text-align: right; word-break: break-all;">%s</td></tr>
+                    <tr><td style="padding: 6px 0; color: #64748b; font-size: 14px;">Order ID</td><td style="padding: 6px 0; color: #334155; font-size: 13px; text-align: right; word-break: break-all;">%s</td></tr>
+                </table>
+            </div>
+
+            <!-- Room Details -->
+            <h3 style="color: #065f46; margin: 0 0 16px 0; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">🏨 Stay Details</h3>
+            <table style="width: 100%%; border-collapse: collapse; margin-bottom: 24px;">
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b; width: 40%%;">Room Category</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%s</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Beds Booked</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%d</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Check-in</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #065f46;">%s</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Check-out</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #991b1b;">%s</td></tr>
+            </table>
+
+            <!-- Guest Details -->
+            <h3 style="color: #065f46; margin: 0 0 16px 0; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">👤 Primary Guest / Booker</h3>
+            <table style="width: 100%%; border-collapse: collapse;">
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b; width: 40%%;">Name</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%s</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">TAGA ID</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%s</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Email</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%s</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Phone</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%s</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Booking Type</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%s</td></tr>
+            </table>
+
+            %s
+
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 8px 0; font-size: 13px; color: #64748b;">This is an automated message from the TAGA Towers Booking System.</p>
+            <p style="margin: 0; font-size: 12px; color: #94a3b8;">&copy; 2026 TAGA. All rights reserved.</p>
         </div>
     </div>
 </body>
 </html>`,
-		time.Now().Format("January 02, 2006 at 03:04 PM"),
-		data.PaymentID,
-		data.OrderID,
-		amountInRupees,
-		data.CustomerEmail,
-		data.RoomName,
-		data.RoomNumber,
-		data.BedCount,
-		data.CheckInDate,
-		data.CheckOutDate,
-		data.BookerName,
-		data.BookerTagaID,
-		data.BookerPhone,
-		bookingForDisplay,
+		data.BookingID, amountInRupees, data.PaymentID, data.OrderID,
+		data.RoomName, data.BedCount, data.CheckInDate, data.CheckOutDate,
+		data.BookerName, data.BookerTagaID, data.CustomerEmail, data.CustomerPhone, bookingForDisplay,
 		guestTableHTML,
 	)
 
@@ -660,18 +695,31 @@ func VerifyPayment(c *gin.Context) {
 			bookingForStr = "self"
 		}
 
-		// Prepare email data (no email field available, use phone as identifier)
+		// Get Member to extract their email
+		var customerEmail string
+		customerEmail = getMemberEmailByTagaID(booking.BookerID)
+
+		bookerName := booking.BookerName
+		if (bookerName == "" || bookerName == "User") && booking.BookerID != "" {
+			if realName := getMemberNameByTagaID(booking.BookerID); realName != "" {
+				bookerName = realName
+			}
+		}
+
+		// Prepare email data
 		emailData := AdminRoomBookingData{
+			BookingID:     req.BookingID,
 			PaymentID:     req.PaymentID,
 			OrderID:       req.OrderID,
 			Amount:        booking.AdvanceAmount,
-			CustomerEmail: booking.BookerPhone, // Use phone as identifier since no email
+			CustomerEmail: customerEmail, 
+			CustomerPhone: booking.BookerPhone,
 			RoomName:      roomName,
 			RoomNumber:    "", // Will be populated from frontend notes
 			BedCount:      booking.BedCount,
 			CheckInDate:   booking.CheckInDate.Format("2006-01-02"),
 			CheckOutDate:  booking.CheckOutDate.Format("2006-01-02"),
-			BookerName:    booking.BookerName,
+			BookerName:    bookerName,
 			BookerTagaID:  booking.BookerID,
 			BookerPhone:   booking.BookerPhone,
 			BookingFor:    bookingForStr,
@@ -692,14 +740,22 @@ func VerifyPayment(c *gin.Context) {
 		// Get email body
 		emailBody := buildRoomBookingEmailBody(emailData)
 
-		// Send email with retry mechanism
+		// Send emails with retry mechanism
 		paymentID := req.PaymentID
 		if !hasEmailBeenSent(paymentID) {
+			// 1. Send to Admin
 			adminEmail := config.GetConfig().AdminEmail
 			if adminEmail != "" {
 				go sendEmailWithRetry(adminEmail, subject, emailBody, paymentID, "room_booking", 2)
 			} else {
-				config.Logger.Warn("Admin email not configured, skipping notification")
+				config.Logger.Warn("Admin email not configured, skipping admin notification")
+			}
+			
+			// 2. Send to Customer
+			if customerEmail != "" {
+				go sendEmailWithRetry(customerEmail, subject, emailBody, paymentID, "room_booking", 2)
+			} else {
+				config.Logger.Warn("Customer email not found, skipping customer notification")
 			}
 		} else {
 			config.Logger.Info("Email already sent for this payment, skipping duplicate",
@@ -707,8 +763,7 @@ func VerifyPayment(c *gin.Context) {
 		}
 	} else {
 		config.Logger.Error("Failed to fetch booking details for email notification",
-			zap.String("booking_id", req.BookingID),
-			zap.Error(err))
+			zap.String("booking_id", req.BookingID))
 	}
 	// ========== END OF ADMIN EMAIL ==========
 

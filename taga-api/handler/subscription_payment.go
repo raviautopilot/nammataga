@@ -382,12 +382,20 @@ func VerifySubscriptionPayment(c *gin.Context) {
 		// Get email body from admin_notify.go
 		emailBody := buildSubscriptionEmailBody(emailData)
 
-		// Send email with retry mechanism (2 retries, 2 sec delay)
+		// Send emails with retry mechanism (2 retries, 2 sec delay)
+		// 1. Send to Admin
 		adminEmail := config.GetConfig().AdminEmail
 		if adminEmail != "" {
 			go sendEmailWithRetry(adminEmail, subject, emailBody, paymentID, "subscription", 2)
 		} else {
-			config.Logger.Warn("Admin email not configured, skipping notification")
+			config.Logger.Warn("Admin email not configured, skipping admin notification")
+		}
+
+		// 2. Send to Customer
+		if req.Email != "" {
+			go sendEmailWithRetry(req.Email, subject, emailBody, paymentID, "subscription", 2)
+		} else {
+			config.Logger.Warn("Customer email not found, skipping customer notification")
 		}
 	} else {
 		config.Logger.Info("Email already sent for this payment, skipping duplicate",
@@ -410,65 +418,66 @@ func buildSubscriptionEmailBody(data AdminSubscriptionData) string {
 	fmt.Fprintf(&body, `<!DOCTYPE html>
 <html>
 <head>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #065f46; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-        .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
-        .footer { background: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 8px 8px; }
-        table { width: 100%%; border-collapse: collapse; margin: 15px 0; }
-        td { padding: 12px 10px; border-bottom: 1px solid #e5e7eb; }
-        .label { font-weight: bold; width: 35%%; background: #f3f4f6; }
-        .value { background: white; }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #dbeafe; color: #1e40af; }
-        h3 { color: #065f46; margin-top: 20px; margin-bottom: 10px; }
-        hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
-    </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAGA Subscription Payment Confirmation</title>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>TAGA Payment Notification</h2>
-            <p>%s</p>
-        </div>
-        <div class="content">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <span class="badge">📋 SUBSCRIPTION PAYMENT</span>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1e40af 0%%, #1e3a8a 100%%); color: white; padding: 30px 20px; text-align: center;">
+            <div style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; background: rgba(255, 255, 255, 0.2); margin-bottom: 16px;">
+                CONFIRMED SUBSCRIPTION
             </div>
-            
-            <h3>💰 Payment Summary</h3>
-            <table>
-                <tr><td class="label">Payment ID:</td><td class="value">%s</td></tr>
-                <tr><td class="label">Order ID:</td><td class="value">%s</td></tr>
-                <tr><td class="label">Amount:</td><td class="value">₹ %.2f</td></tr>
-                <tr><td class="label">Customer Email:</td><td class="value">%s</td></tr>
-            }</table>
-            
-            <h3>📋 Subscription Details</h3>
-            <table>
-                <tr><td class="label">Subscription Type:</td><td class="value">%s</td></tr>
-                <tr><td class="label">Subscription ID:</td><td class="value">%s</td></tr>
-                <tr><td class="label">Member Name:</td><td class="value">%s</td></tr>
-                <tr><td class="label">TAGA ID:</td><td class="value">%s</td></tr>
-                <tr><td class="label">Member Email:</td><td class="value">%s</td></tr>
-            }</table>
-            
-            <hr>
-            <p style="font-size: 12px; color: #6b7280; text-align: center;">
-                This is an automated notification from TAGA Payment System.
-            </p>
+            <h2 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700;">TAGA Member Subscription</h2>
+            <p style="margin: 0; font-size: 15px; opacity: 0.9;">Payment Verified on: %s</p>
         </div>
-        <div class="footer">
-            <p>TAGA Towers | Agriculture Complex Road, Chennai - 600017</p>
+
+        <!-- Content -->
+        <div style="padding: 30px 24px;">
+            
+            <!-- Payment Summary Card -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 15px; display: flex; align-items: center;">
+                    <span style="margin-right: 8px;">💳</span> Payment Summary
+                </h3>
+                <table style="width: 100%%; border-collapse: collapse;">
+                    <tr><td style="padding: 6px 0; color: #64748b; font-size: 14px; width: 40%%;">Amount Paid</td><td style="padding: 6px 0; font-weight: 600; color: #0f172a; text-align: right;">₹ %.2f</td></tr>
+                    <tr><td style="padding: 6px 0; color: #64748b; font-size: 14px;">Payment ID</td><td style="padding: 6px 0; color: #334155; font-size: 13px; text-align: right; word-break: break-all;">%s</td></tr>
+                    <tr><td style="padding: 6px 0; color: #64748b; font-size: 14px;">Order ID</td><td style="padding: 6px 0; color: #334155; font-size: 13px; text-align: right; word-break: break-all;">%s</td></tr>
+                </table>
+            </div>
+
+            <!-- Subscription Details -->
+            <h3 style="color: #1e40af; margin: 0 0 16px 0; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">📋 Subscription Details</h3>
+            <table style="width: 100%%; border-collapse: collapse; margin-bottom: 24px;">
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b; width: 40%%;">Subscription Type</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%s</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Subscription ID</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%s</td></tr>
+            </table>
+
+            <!-- Member Details -->
+            <h3 style="color: #1e40af; margin: 0 0 16px 0; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">👤 Member Profile</h3>
+            <table style="width: 100%%; border-collapse: collapse;">
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b; width: 40%%;">Name</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%s</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">TAGA ID</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%s</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Email</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%s</td></tr>
+            </table>
+
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 8px 0; font-size: 13px; color: #64748b;">This is an automated message from the TAGA Membership System.</p>
+            <p style="margin: 0; font-size: 12px; color: #94a3b8;">&copy; 2026 TAGA. All rights reserved.</p>
         </div>
     </div>
 </body>
 </html>`,
 		time.Now().Format("January 02, 2006 at 03:04 PM"),
+		amountInRupees,
 		data.PaymentID,
 		data.OrderID,
-		amountInRupees,
-		data.CustomerEmail,
 		data.SubscriptionName,
 		data.SubscriptionID,
 		data.MemberName,

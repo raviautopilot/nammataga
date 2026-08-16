@@ -1,10 +1,10 @@
 package handler
 
 import (
-
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -22,9 +22,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/xuri/excelize/v2"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/xuri/excelize/v2"
 )
 
 // Data Transfer Objects
@@ -1627,29 +1627,82 @@ func sendErrorEmailToAdmin(errors []map[string]interface{}) error {
 	cfg := config.GetConfig()
 	adminEmail := cfg.FromEmail
 	if adminEmail == "" {
+		adminEmail = cfg.AdminEmail
+	}
+	if adminEmail == "" {
 		return fmt.Errorf("admin email not configured")
 	}
 
-	subject := "Member Registration Validation Errors"
-	var body strings.Builder
-	body.WriteString("<h3>Registration Validation Failed</h3>")
-	body.WriteString("<p>The following registration requests have errors:</p>")
-	body.WriteString("<ul>")
-
+	subject := "⚠️ TAGA Admin Alert - Member Registration Validation Errors"
+	
+	var errorRows strings.Builder
 	for _, err := range errors {
-		body.WriteString(fmt.Sprintf("<li><strong>Email:</strong> %v<br>", err["email"]))
-		body.WriteString("<strong>Errors:</strong><ul>")
+		var fieldErrors strings.Builder
 		if errList, ok := err["errors"].([]RegistrationError); ok {
 			for _, e := range errList {
-				body.WriteString(fmt.Sprintf("<li>%s: %s</li>", e.Field, e.Message))
+				fieldErrors.WriteString(fmt.Sprintf("<div style='font-size: 13px; color: #991b1b; margin-bottom: 4px;'>&bull; <strong>%s:</strong> %s</div>", html.EscapeString(e.Field), html.EscapeString(e.Message)))
 			}
 		}
-		body.WriteString("</ul></li>")
+
+		errorRows.WriteString(fmt.Sprintf(`
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px; font-size: 14px; font-weight: 600; color: #1f2937; vertical-align: top; width: 35%%;">%v</td>
+                <td style="padding: 12px; vertical-align: top;">%s</td>
+            </tr>`, err["email"], fieldErrors.String()))
 	}
 
-	body.WriteString("</ul>")
-	body.WriteString("<p>Please correct these errors and resubmit.</p>")
-	return sendEmail(adminEmail, subject, body.String())
+	body := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Validation Errors</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e5e7eb;">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #dc2626 0%%, #991b1b 100%%); color: white; padding: 32px 24px; text-align: center;">
+            <div style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(255, 255, 255, 0.2); margin-bottom: 12px;">
+                Admin Alert
+            </div>
+            <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 800;">Registration Validation Failed</h1>
+            <p style="margin: 0; font-size: 14px; opacity: 0.9;">One or more member entries require attention</p>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 32px 24px;">
+            <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">
+                The following registration requests encountered validation issues during processing:
+            </p>
+
+            <table style="width: 100%%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 24px;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 10px 12px; text-align: left; font-size: 13px; color: #64748b; font-weight: 600;">Email</th>
+                        <th style="padding: 10px 12px; text-align: left; font-size: 13px; color: #64748b; font-weight: 600;">Validation Errors</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    %s
+                </tbody>
+            </table>
+
+            <p style="margin: 0; font-size: 13px; color: #6b7280;">
+                Please correct these records in the administration portal or notify the respective applicants.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #475569;">Tamil Nadu Agricultural Graduates Association</p>
+            <p style="margin: 0; font-size: 12px; color: #94a3b8;">Automated Admin System &bull; &copy; 2026 TAGA</p>
+        </div>
+    </div>
+</body>
+</html>`, errorRows.String())
+
+	return sendEmail(adminEmail, subject, body)
 }
 
 func loadSubscriptionPaymentMap() map[string]bool {

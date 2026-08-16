@@ -167,10 +167,14 @@ func SetupRouter() *gin.Engine {
 		memberRoutes.GET("/notifications/unread/count", handler.GetUnreadCount)
 	}
 
-	// Member Edit Request
+	// Member Edit Request & Misc API
 	api := r.Group("/api")
 	{
 		api.POST("/member/edit-request", handler.CreateEditRequest)
+		
+		// Temporary test email endpoint
+		api.POST("/test-email", handler.TestEmail)
+		api.GET("/test-email", handler.TestEmail)
 	}
 
 	// ==================== MEMBERSHIP ROUTES ====================
