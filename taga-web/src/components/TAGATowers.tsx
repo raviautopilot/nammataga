@@ -635,9 +635,18 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
           return;
         }
       }
-      // Also check gender restriction from availability data
+      // Also check gender restriction from availability data for guests
       const avail = availabilityMap[selectedRoom.id];
       if (avail?.genderRestriction && derivedGuestGender && avail.genderRestriction !== derivedGuestGender) {
+        toast.error(
+          `This room is partially occupied by ${avail.genderRestriction} guests — only ${avail.genderRestriction} guests can book the remaining beds.`
+        );
+        return;
+      }
+    } else if (bookingFor === 'self') {
+      // Check gender restriction from availability data for self booking
+      const avail = availabilityMap[selectedRoom.id];
+      if (selectedRoom.allowSingleBed && avail?.genderRestriction && bookingGender && avail.genderRestriction !== bookingGender) {
         toast.error(
           `This room is partially occupied by ${avail.genderRestriction} guests — only ${avail.genderRestriction} guests can book the remaining beds.`
         );

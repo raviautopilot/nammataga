@@ -1190,7 +1190,7 @@ func BookSingleBedWithGender(mai MemberActionsInterface, cfg *config.Config, r *
 		r.Error = err
 		return
 	}
-	time.Sleep(3 * time.Second)
+	r.WaitForElementAndCapture(mp.Page, "xpath://li[@data-sonner-toast and contains(., 'Booking Successful')]", 5 * time.Second, fmt.Sprintf("TAGATower_GenderBooking_Complete_%s_%s", roomID, gender))
 }
 
 // TryBookSingleBedWithGenderOpposite tries to book 1 bed in a room with a specific gender, expecting it to be disallowed.
@@ -1269,6 +1269,9 @@ func TryBookSingleBedWithGenderOpposite(mai MemberActionsInterface, cfg *config.
 	}
 	time.Sleep(1 * time.Second)
 
+	// Capture modal state before clicking proceed
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_OppositeGender_Attempt_%s_%s", roomID, gender))
+
 	// Mocking Razorpay
 	mockScript := `
 	window.Razorpay = function(options) {
@@ -1285,10 +1288,45 @@ func TryBookSingleBedWithGenderOpposite(mai MemberActionsInterface, cfg *config.
 	// Click proceed
 	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
 		// If it failed to click (or showed validation error), that is expected behavior!
+		r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_OppositeGender_Blocked_%s_%s", roomID, gender))
 		r.Advice = append(r.Advice, "System prevented proceeding to payment for opposite gender booking.")
 		return
 	}
-	time.Sleep(3 * time.Second)
+
+	time.Sleep(1 * time.Second)
+
+	// Check if a toast error appeared or if Razorpay modal was NOT opened
+	toastCheckScript := `
+		const toasts = document.querySelectorAll('li[data-sonner-toast]');
+		for (let t of toasts) {
+			const txt = t.textContent || '';
+			if (txt.includes('partially occupied') || txt.includes('only') || txt.includes('guests') || txt.includes('gender')) {
+				return txt;
+			}
+		}
+		return null;
+	`
+	toastVal, _ := mp.Page.Driver.ExecuteScript(toastCheckScript, nil)
+
+	// Check if modal is still open (payment was blocked)
+	checkModalScript := `return !!document.querySelector('[data-testid="testid-room-booking-modal"]');`
+	modalOpenObj, _ := mp.Page.Driver.ExecuteScript(checkModalScript, nil)
+	modalOpen, _ := modalOpenObj.(bool)
+
+	if toastVal != nil || modalOpen {
+		// Capture blocked screenshot
+		r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_OppositeGender_Blocked_%s_%s", roomID, gender))
+		r.Advice = append(r.Advice, fmt.Sprintf("System correctly blocked booking for opposite gender '%s' on partially occupied room %s (Toast/Block verified).", gender, roomID))
+
+		// Close modal if open
+		closeModalScript := `
+			const closeBtn = document.querySelector('[data-testid="testid-booking-modal-cancel-button"]');
+			if (closeBtn) closeBtn.click();
+		`
+		_, _ = mp.Page.Driver.ExecuteScript(closeModalScript, nil)
+		time.Sleep(1 * time.Second)
+		return
+	}
 
 	// Capture modal state of the allowed (but should be disallowed) booking
 	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_GenderMix_Allowed_Failure_%s_%s", roomID, gender))
@@ -1318,7 +1356,7 @@ func TryBookSingleBedWithGenderOpposite(mai MemberActionsInterface, cfg *config.
 	r.Status = "failed"
 	r.Error = fmt.Errorf("security vulnerability: room %s allowed booking for both male and female concurrently. Gender mixed dorm bookings should be disallowed", roomID)
 	mp.Page.LastError = r.Error
-	r.Advice = append(r.Advice, "Advice: Update frontend to send gender for all single-bed rooms and ensure backend checks are enforced")
+	r.Advice = append(r.Advice, "Advice: Update frontend and backend to block opposite gender bookings for partially occupied single-bed rooms")
 }
 
 // VerifyDormitoryGenderRestrictionUI verifies that the gender selection is locked to a specific gender
