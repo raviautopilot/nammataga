@@ -120,6 +120,38 @@ func GetBookings(c *gin.Context) {
 	c.JSON(http.StatusOK, bookings)
 }
 
+// GetPastBookings godoc
+// @Summary Get past (archived) user bookings
+// @Tags TAGA Towers
+// @Produce json
+// @Param bookerId query string true "Booker ID"
+// @Param year query string false "Year (YYYY)"
+// @Param month query string false "Month (MM)"
+// @Success 200 {array} model.BookingResponse
+// @Router /api/towers/bookings/past [get]
+func GetPastBookings(c *gin.Context) {
+	bookerID := c.Query("bookerId")
+	if bookerID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bookerId is required"})
+		return
+	}
+	
+	year := c.Query("year")
+	month := c.Query("month")
+
+	bookings, err := service.GetPastUserBookings(bookerID, year, month)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if bookings == nil {
+		bookings = []model.BookingResponse{}
+	}
+
+	c.JSON(http.StatusOK, bookings)
+}
+
 // GetAllBookingsAdmin godoc
 // @Summary Get all bookings (admin only — for occupancy schedule)
 // @Description Returns all bookings across all users. Used by the admin occupancy schedule tab.

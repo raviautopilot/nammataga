@@ -149,7 +149,7 @@ export const createBooking = async (
   }
 };
 
-// ✅ Get user bookings
+// ✅ Get user bookings (Active)
 export const getUserBookings = async (bookerId: string): Promise<BookingResponse[]> => {
   try {
     const res = await fetchWithFallback(
@@ -159,6 +159,26 @@ export const getUserBookings = async (bookerId: string): Promise<BookingResponse
     return bookings || [];
   } catch (error) {
     console.error('❌ Error fetching bookings:', error);
+    throw error;
+  }
+};
+
+// ✅ Get past user bookings (Archived)
+export const getPastUserBookings = async (
+  bookerId: string,
+  year?: string,
+  month?: string
+): Promise<BookingResponse[]> => {
+  try {
+    let url = `${TOWERS_API}/bookings/past?bookerId=${encodeURIComponent(bookerId)}`;
+    if (year) url += `&year=${year}`;
+    if (month) url += `&month=${month}`;
+
+    const res = await fetchWithFallback(url);
+    const bookings = await handleResponse(res);
+    return bookings || [];
+  } catch (error) {
+    console.error('❌ Error fetching past bookings:', error);
     throw error;
   }
 };

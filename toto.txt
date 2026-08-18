@@ -1,0 +1,108 @@
+Implement the TAGA Towers booking archival feature professionally.
+
+Requirements:
+
+1. REMOVE the current 6-month booking cleanup/deletion logic completely.
+   - Do not delete old booking records anymore.
+   - Remove/replace the existing scheduler logic that deletes bookings older than 6 months.
+   - Do not keep any 6-month deletion fallback.
+
+2. Keep active/current bookings in:
+   data/towers/bookings.json
+
+3. Create a yearly/monthly archive structure:
+   data/towers/archive/YYYY/YYYY-MM.json
+
+   Example:
+   data/towers/archive/2026/2026-08.json
+   data/towers/archive/2027/2027-01.json
+
+4. Archive rule:
+   - A booking remains in bookings.json throughout its checkout date.
+   - On the next day, when its CheckOutDate is before today, it becomes eligible for archival.
+   - Move the complete booking record to the correct archive/YYYY/YYYY-MM.json file.
+   - Never lose or permanently delete the booking.
+
+5. Use the existing daily booking scheduler.
+   - Run the archive process once per day.
+   - Do not create unnecessary duplicate schedulers.
+   - The archive process must be safe to run repeatedly without creating duplicate archived bookings.
+
+6. Keep normal booking operations using only bookings.json:
+   - room availability
+   - availability range
+   - create booking
+   - payment confirmation
+   - cancellation/refund-related active booking operations
+   - current member bookings
+   - admin live occupancy
+
+7. Past booking support:
+   - Members must still be able to see their old/past bookings after they are archived.
+   - Do NOT make the normal current-bookings request read every archive file.
+   - Add/modify a separate past-bookings flow that reads archived data only when requested.
+   - Prefer year-based retrieval, with optional month filtering, so the system does not load the entire archive history unnecessarily.
+
+8. Admin occupancy:
+   - The existing admin occupancy screen is for live/upcoming occupancy.
+   - It must continue to use active bookings only.
+   - Archived bookings must never affect room availability or current occupancy calculations.
+
+9. Preserve the complete booking object when archiving.
+   - Booking ID
+   - room information
+   - member/booker information
+   - check-in/check-out dates
+   - bed count
+   - payment information/status
+   - guest details
+   - all existing booking fields
+   - Do not create a reduced archive record unless the existing model requires it.
+
+10. Configuration:
+   - Do not hardcode archive paths in multiple places.
+   - Add an appropriate archive path/configuration using the project's existing configuration pattern.
+   - Keep the existing bookings file configuration working.
+
+11. Data safety:
+   - Archive should be effectively a MOVE, not copy-only.
+   - Only remove a booking from bookings.json after the archive write succeeds.
+   - Prevent duplicate archival if the scheduler runs again.
+   - Handle missing archive directories/files safely.
+   - Handle empty/missing bookings.json safely.
+   - Log how many bookings were archived and any failures.
+
+12. Testing:
+   Add/update tests for:
+   - booking is NOT archived on checkout day
+   - booking IS archived on the day after checkout
+   - multiple bookings can be archived in one run
+   - correct year/month archive file is used
+   - archived booking is not included in active availability
+   - archived booking can still be retrieved as a member's past booking
+   - scheduler/archive process is idempotent
+   - failed archive write does not remove booking from bookings.json
+   - existing admin occupancy behavior still works
+   - old 6-month deletion behavior no longer exists
+
+13. Important:
+   - First inspect the existing TAGA Towers service, model, handlers, scheduler, configuration, and frontend booking/occupancy flow.
+   - Make the smallest clean architectural change needed.
+   - Do not rewrite unrelated booking logic.
+   - Keep existing API behavior backward compatible wherever possible.
+   - Update Swagger/API documentation if any new endpoint is introduced.
+   - After implementation, run the relevant Go tests and frontend/type checks and report what changed and what passed.
+
+Expected final behavior:
+
+bookings.json
+    = current/upcoming/active bookings
+
+archive/YYYY/YYYY-MM.json
+    = completed historical bookings
+
+Checkout on Aug 27
+    → remains active during Aug 27
+    → archived on Aug 28
+
+There must be NO automatic deletion of bookings after 6 months anymore.

@@ -28,7 +28,8 @@ type RazorpayConfig struct {
 }
 
 type TowerConfig struct {
-	BookingsFile string `json:"bookings_file"`
+	BookingsFile       string `json:"bookings_file"`
+	BookingsArchiveDir string `json:"bookings_archive_dir"`
 }
 
 type DataConfig struct {
@@ -238,6 +239,9 @@ func validatePaths() {
 	}
 	if Config.Data.Tower.BookingsFile == "" {
 		Config.Data.Tower.BookingsFile = "data/towers/bookings.json"
+	}
+	if Config.Data.Tower.BookingsArchiveDir == "" {
+		Config.Data.Tower.BookingsArchiveDir = "data/towers/archive"
 	}
 	if Config.MembersFile == "" {
 		Config.MembersFile = "data/member/members.json"

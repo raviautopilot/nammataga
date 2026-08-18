@@ -40,6 +40,7 @@ import {
   checkAvailabilityRange,
   createBooking,
   getUserBookings,
+  getPastUserBookings,
   confirmPayment,
   cancelBooking,
   createOrder,
@@ -261,6 +262,10 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [bookingsError, setBookingsError] = useState<string | null>(null);
 
+  const [pastBookings, setPastBookings] = useState<BookingResponse[]>([]);
+  const [pastBookingsLoading, setPastBookingsLoading] = useState(false);
+  const [pastYear, setPastYear] = useState<string>(new Date().getFullYear().toString());
+
   const [allBookings, setAllBookings] = useState<BookingResponse[]>([]);
   const [allBookingsLoading, setAllBookingsLoading] = useState(false);
   const [allBookingsError, setAllBookingsError] = useState<string | null>(null);
@@ -464,6 +469,22 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
   useEffect(() => {
     if (isPaidMember) fetchMyBookings();
   }, [isPaidMember, BOOKER_ID, fetchMyBookings]);
+
+  const fetchPastBookings = useCallback(() => {
+    if (!BOOKER_ID || !pastYear) return;
+    setPastBookingsLoading(true);
+    getPastUserBookings(BOOKER_ID, pastYear)
+      .then((data: BookingResponse[]) => setPastBookings(data))
+      .catch((error) => {
+        console.error('Failed to load past bookings:', error);
+        toast.error('Failed to load past bookings');
+      })
+      .finally(() => setPastBookingsLoading(false));
+  }, [BOOKER_ID, pastYear]);
+
+  useEffect(() => {
+    if (isPaidMember) fetchPastBookings();
+  }, [isPaidMember, fetchPastBookings]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // FETCH: All Bookings (Admin)
@@ -1337,10 +1358,30 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
 
                   {/* Past Bookings Tab */}
                   <TabsContent value="past" className="space-y-4 mt-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Select value={pastYear} onValueChange={setPastYear}>
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={(new Date().getFullYear()).toString()}>{new Date().getFullYear()}</SelectItem>
+                          <SelectItem value={(new Date().getFullYear() - 1).toString()}>{new Date().getFullYear() - 1}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {pastBookingsLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                    </div>
+
                     {(() => {
-                      const filtered = myBookings.filter((b) => {
+                      const combined = [...myBookings, ...pastBookings];
+                      // unique by id
+                      const uniqueMap = new Map();
+                      combined.forEach(b => uniqueMap.set(b.id, b));
+                      const unique = Array.from(uniqueMap.values());
+
+                      const filtered = unique.filter((b) => {
                         const status = getEffectiveBookingStatus(b);
-                        return status === 'completed' || status === 'cancelled';
+                        const matchesYear = b.checkOutDate.startsWith(pastYear);
+                        return (status === 'completed' || status === 'cancelled') && matchesYear;
                       });
                       if (filtered.length === 0) {
                         return (

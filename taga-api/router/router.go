@@ -134,6 +134,7 @@ func SetupRouter() *gin.Engine {
 		towers.GET("/availability-range", handler.CheckAvailabilityRange)
 		towers.POST("/bookings", handler.CreateBooking)
 		towers.GET("/bookings", handler.GetBookings)
+		towers.GET("/bookings/past", handler.GetPastBookings)
 		towers.DELETE("/bookings/:id", handler.DeleteBooking)
 		towers.POST("/bookings/:id/confirm-payment", handler.ConfirmPayment)
 		towers.POST("/create-order", handler.CreateOrder)

@@ -49,8 +49,8 @@ func main() {
 		// gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Start the daily booking cleanup scheduler
-	service.StartBookingCleanupScheduler()
+	// Start the daily booking archive scheduler
+	service.StartBookingArchiveScheduler()
 
 	// Start the renewal reminder scheduler
 	service.StartScheduler()

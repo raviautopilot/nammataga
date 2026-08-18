@@ -1,12 +1,20 @@
 package api_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"e2e-template/tests"
+
+	"taga-api/config"
+	"taga-api/model"
+	"taga-api/service"
 )
 
 type BookingGuestDetail struct {
@@ -280,4 +288,191 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 			tctx.Actual = fmt.Sprintf("Correctly rejected overlapping booking with %d", err2.StatusCode())
 		}
 	})
+
+	// Step K: Get Past User Bookings
+	tests.RunAPITestWithDetails(t, "[Member] GET Past Bookings List", "Retrieves past/archived bookings for the current member.", "HTTP 200 OK containing booking list", func(tctx *tests.TestContext) {
+		var resp []interface{}
+		err := tctx.Client.SendHttpRequest("GET", "/api/towers/bookings/past?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg&year=2026", nil, nil, &resp, nil)
+
+		if err != nil {
+			tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
+			tctx.Fatalf("Expected 200 OK, got: %v", err)
+		}
+		tctx.Actual = fmt.Sprintf("HTTP 200 OK, Retrieved %d past bookings for user", len(resp))
+	})
+}
+
+func setupTestEnv(t *testing.T) (string, func()) {
+	// Create temp dir
+	tempDir, err := os.MkdirTemp("", "tagatower_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+
+	// Update config
+	config.Config.Data.Tower.BookingsFile = filepath.Join(tempDir, "bookings.json")
+	config.Config.Data.Tower.BookingsArchiveDir = filepath.Join(tempDir, "archive")
+	config.Config.Data.Config.TagaTowerRooms = filepath.Join(tempDir, "rooms.json")
+
+	// Create dummy rooms
+	rooms := []model.Room{
+		{ID: "r1", Name: "Test Room 1", Capacity: 2},
+	}
+	roomsData, _ := json.Marshal(rooms)
+	os.WriteFile(config.Config.Data.Config.TagaTowerRooms, roomsData, 0644)
+
+	cleanup := func() {
+		os.RemoveAll(tempDir)
+	}
+	return tempDir, cleanup
+}
+
+func TestBookingArchiveProcess(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	// Create bookings
+	bActive := model.Booking{
+		ID:            "BK_ACTIVE",
+		RoomID:        "r1",
+		BookerID:      "u1",
+		CheckInDate:   now,
+		CheckOutDate:  now.AddDate(0, 0, 1), // Checkout tomorrow
+		PaymentStatus: model.PaymentConfirmed,
+	}
+	
+	bCheckoutToday := model.Booking{
+		ID:            "BK_TODAY",
+		RoomID:        "r1",
+		BookerID:      "u1",
+		CheckInDate:   now.AddDate(0, 0, -2),
+		CheckOutDate:  todayStart, // Checkout today
+		PaymentStatus: model.PaymentConfirmed,
+	}
+
+	bPast1 := model.Booking{
+		ID:            "BK_PAST_1",
+		RoomID:        "r1",
+		BookerID:      "u1",
+		CheckInDate:   now.AddDate(0, -1, -5),
+		CheckOutDate:  now.AddDate(0, -1, -3), // Checkout past month
+		PaymentStatus: model.PaymentConfirmed,
+	}
+	
+	bPast2 := model.Booking{
+		ID:            "BK_PAST_2",
+		RoomID:        "r1",
+		BookerID:      "u2", // different user
+		CheckInDate:   now.AddDate(0, 0, -5),
+		CheckOutDate:  now.AddDate(0, 0, -3), // Checkout past same month
+		PaymentStatus: model.PaymentConfirmed,
+	}
+
+	// Save active bookings
+	initialBookings := []model.Booking{bActive, bCheckoutToday, bPast1, bPast2}
+	err := service.SaveAllBookings(initialBookings)
+	if err != nil {
+		t.Fatalf("Failed to save initial bookings: %v", err)
+	}
+
+	// Run archive process
+	service.RunBookingArchive()
+
+	// 1. Verify active bookings
+	activeBookings, _ := service.ReadAllBookings()
+	if len(activeBookings) != 2 {
+		t.Errorf("Expected 2 active bookings, got %d", len(activeBookings))
+	}
+	activeIds := map[string]bool{}
+	for _, b := range activeBookings {
+		activeIds[b.ID] = true
+	}
+	if !activeIds["BK_ACTIVE"] {
+		t.Errorf("Expected BK_ACTIVE to remain active")
+	}
+	if !activeIds["BK_TODAY"] {
+		t.Errorf("Expected BK_TODAY to remain active (checkout today should not be archived)")
+	}
+
+	// 2. Verify archived files
+	year1 := bPast1.CheckOutDate.Format("2006")
+	month1 := bPast1.CheckOutDate.Format("2006-01")
+	file1 := filepath.Join(service.BookingsArchiveDirHelper(), year1, month1+".json")
+	if _, err := os.Stat(file1); os.IsNotExist(err) {
+		t.Errorf("Expected archive file %s to exist", file1)
+	}
+
+	year2 := bPast2.CheckOutDate.Format("2006")
+	month2 := bPast2.CheckOutDate.Format("2006-01")
+	file2 := filepath.Join(service.BookingsArchiveDirHelper(), year2, month2+".json")
+	if _, err := os.Stat(file2); os.IsNotExist(err) {
+		t.Errorf("Expected archive file %s to exist", file2)
+	}
+
+	// 3. Idempotency test
+	service.RunBookingArchive() // Run again
+	activeBookings2, _ := service.ReadAllBookings()
+	if len(activeBookings2) != 2 {
+		t.Errorf("Idempotency check failed: expected 2 active bookings, got %d", len(activeBookings2))
+	}
+
+	// 4. Past bookings retrieval
+	pastBookingsU1, err := service.GetPastUserBookings("u1", "", "")
+	if err != nil {
+		t.Fatalf("GetPastUserBookings failed: %v", err)
+	}
+	if len(pastBookingsU1) != 1 || pastBookingsU1[0].ID != "BK_PAST_1" {
+		t.Errorf("Expected past bookings for u1 to contain only BK_PAST_1, got %v", pastBookingsU1)
+	}
+	
+	// 5. Admin occupancy behavior
+	adminBookings, err := service.GetAllBookingsForAdmin()
+	if err != nil {
+		t.Fatalf("GetAllBookingsForAdmin failed: %v", err)
+	}
+	if len(adminBookings) != 2 {
+		t.Errorf("Admin should only see active bookings, expected 2, got %d", len(adminBookings))
+	}
+}
+
+func TestArchiveFailureHandling(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	now := time.Now()
+	bPast := model.Booking{
+		ID:            "BK_PAST_FAIL",
+		RoomID:        "r1",
+		BookerID:      "u1",
+		CheckInDate:   now.AddDate(0, 0, -5),
+		CheckOutDate:  now.AddDate(0, 0, -3),
+		PaymentStatus: model.PaymentConfirmed,
+	}
+	
+	service.SaveAllBookings([]model.Booking{bPast})
+	
+	// Create directory with bad permissions or block file creation
+	year := bPast.CheckOutDate.Format("2006")
+	dir := filepath.Join(service.BookingsArchiveDirHelper(), year)
+	os.MkdirAll(dir, 0755)
+	
+	// make month file a directory to cause write failure
+	month := bPast.CheckOutDate.Format("2006-01")
+	badFile := filepath.Join(dir, month+".json")
+	os.Mkdir(badFile, 0755) 
+
+	// Run archive process
+	service.RunBookingArchive()
+
+	// Booking should remain in active bookings
+	activeBookings, _ := service.ReadAllBookings()
+	if len(activeBookings) != 1 || activeBookings[0].ID != "BK_PAST_FAIL" {
+		t.Errorf("Booking should remain active when archive fails, got %v", activeBookings)
+	}
+	
+	// Fix permission to allow cleanup
+	os.RemoveAll(badFile)
 }
