@@ -69,6 +69,7 @@ type GuestDetail struct {
 	Name    string `json:"name"`
 	Age     int    `json:"age"`
 	Contact string `json:"contact"`
+	Gender  Gender `json:"gender,omitempty"`
 }
 
 // CreateBookingRequest is the payload for POST /towers/bookings

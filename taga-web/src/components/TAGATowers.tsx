@@ -103,6 +103,7 @@ interface GuestDetail {
   name: string;
   age: number;
   contact: string;
+  gender: 'male' | 'female' | '';
 }
 
 interface LoggedInUser {
@@ -291,7 +292,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
   const [bedCount, setBedCount] = useState<number>(1);
   const [bookerPhone, setBookerPhone] = useState(INITIAL_PHONE_PREFIX);
   const [guestDetails, setGuestDetails] = useState<GuestDetail[]>([
-    { name: '', age: 0, contact: '' },
+    { name: '', age: 0, contact: '', gender: '' },
   ]);
   const [bookingGender, setBookingGender] = useState<'male' | 'female'>('male');
 
@@ -524,7 +525,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
       }
       setSelectedRoom(room);
       setBedCount(1);
-      setGuestDetails([{ name: '', age: 0, contact: '' }]);
+      setGuestDetails([{ name: '', age: 0, contact: '', gender: '' }]);
       setBookingFor('self');
       setBookerPhone(INITIAL_PHONE_PREFIX);
       setBookingDialogOpen(true);
@@ -532,9 +533,34 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
     [isPaidMember]
   );
 
-  const addGuestDetail = useCallback(() => {
-    setGuestDetails((prev) => [...prev, { name: '', age: 0, contact: '' }]);
-  }, []);
+  // ── Sync guestDetails array to bedCount when in guest mode ───────────────
+  // When the user picks N beds for a guest booking, we need exactly N guest
+  // detail cards — no more, no less.  We also enforce bedCount === 1 for self.
+  useEffect(() => {
+    if (bookingFor === 'self') {
+      // Self bookings are always single-bed; reset bed count silently
+      setBedCount(1);
+    } else {
+      // guest mode: keep guestDetails in sync with bedCount
+      setGuestDetails((prev) => {
+        if (prev.length === bedCount) return prev; // nothing to do
+        if (prev.length < bedCount) {
+          // Add blank cards
+          return [
+            ...prev,
+            ...Array.from({ length: bedCount - prev.length }, () => ({
+              name: '',
+              age: 0,
+              contact: '',
+              gender: '' as '' | 'male' | 'female',
+            })),
+          ];
+        }
+        // Trim excess cards (user reduced bed count)
+        return prev.slice(0, bedCount);
+      });
+    }
+  }, [bedCount, bookingFor]);
 
   const updateGuestDetail = useCallback(
     (index: number, field: keyof GuestDetail, value: string | number) => {
@@ -576,25 +602,57 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
 
     // Validation: Guest Details
     if (bookingFor === 'guest') {
-      if (guestDetails.some((g) => !g.name || !g.age || !g.contact)) {
-        toast.error('Please fill in all guest details');
+      // Enforce the correct number of guest records
+      const requiredBeds = selectedRoom.allowSingleBed ? bedCount : selectedRoom.capacity;
+      if (guestDetails.length !== requiredBeds) {
+        toast.error(`Please provide details for all ${requiredBeds} guest(s)`);
         return;
       }
-      // 🔥 NEW: Validate guest contact numbers
-      for (const guest of guestDetails) {
-        const guestPhoneValidation = validateMobileNumber(guest.contact);
-        if (!guestPhoneValidation.isValid) {
-          toast.error(`Invalid phone number for guest: ${guest.name}`);
+      // Check every guest card is fully filled in (including gender)
+      let derivedGuestGender: 'male' | 'female' | null = null;
+      for (let i = 0; i < guestDetails.length; i++) {
+        const g = guestDetails[i];
+        if (!g.name || !g.age || !g.contact) {
+          toast.error(`Please fill in all details for Guest ${i + 1}`);
           return;
         }
+        if (!g.gender) {
+          toast.error(`Please select the gender for Guest ${i + 1} (${g.name})`);
+          return;
+        }
+        const guestPhoneValidation = validateMobileNumber(g.contact);
+        if (!guestPhoneValidation.isValid) {
+          toast.error(`Invalid phone number for Guest ${i + 1} (${g.name})`);
+          return;
+        }
+        // Enforce same gender for all guests in this booking
+        if (derivedGuestGender === null) {
+          derivedGuestGender = g.gender;
+        } else if (g.gender !== derivedGuestGender) {
+          toast.error(
+            `All guests must be of the same gender. Guest ${i + 1} (${g.name}) has a different gender — mixed-gender groups cannot share a room.`
+          );
+          return;
+        }
+      }
+      // Also check gender restriction from availability data
+      const avail = availabilityMap[selectedRoom.id];
+      if (avail?.genderRestriction && derivedGuestGender && avail.genderRestriction !== derivedGuestGender) {
+        toast.error(
+          `This room is partially occupied by ${avail.genderRestriction} guests — only ${avail.genderRestriction} guests can book the remaining beds.`
+        );
+        return;
       }
     }
 
     try {
-      const finalGender = 
+      const finalGender =
         selectedRoom.type === 'gents-dorm' ? 'male' :
         selectedRoom.type === 'ladies-dorm' ? 'female' :
-        bookingGender;
+        bookingFor === 'guest'
+          // For guest bookings, gender is derived from guest list (already validated)
+          ? (guestDetails[0]?.gender as 'male' | 'female' | undefined)
+          : bookingGender;
 
       const response = await createBooking(
         {
@@ -604,7 +662,8 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
           bookerPhone,
           bookingFor,
           bedCount: selectedRoom.allowSingleBed ? bedCount : selectedRoom.capacity,
-          ...(selectedRoom.allowSingleBed && bedCount < selectedRoom.capacity && { gender: finalGender }),
+          // Always send gender so the backend gender-restriction check has data to work with
+          ...(finalGender && { gender: finalGender }),
           ...(bookingFor === 'guest' && { guestDetails }),
         },
         BOOKER_ID
@@ -710,7 +769,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
             setSelectedRoom(null);
 
             // 🔥 FIX: Reset booking form
-            setGuestDetails([{ name: '', age: 0, contact: '' }]);
+            setGuestDetails([{ name: '', age: 0, contact: '', gender: '' }]);
             setBookingFor('self');
             setBookerPhone(INITIAL_PHONE_PREFIX);
 
@@ -1565,8 +1624,8 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
               </RadioGroup>
             </div>
 
-            {/* Bed Count Selection */}
-            {selectedRoom?.allowSingleBed && (
+            {/* Bed Count Selection — guest mode only; self is always 1 bed */}
+            {selectedRoom?.allowSingleBed && bookingFor === 'guest' && (
               <div className="space-y-3">
                 <Label>Number of Beds</Label>
                 <Select
@@ -1587,8 +1646,9 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
               </div>
             )}
 
-            {/* Gender Selection */}
+            {/* Gender Selection — self mode only; for guests, gender is provided in each guest details card */}
             {selectedRoom?.allowSingleBed &&
+              bookingFor === 'self' &&
               bedCount < selectedRoom.capacity && (
                 <div className="space-y-3">
                   <Label>Gender</Label>
@@ -1622,20 +1682,33 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                 </div>
               )}
 
-            {/* Guest Details */}
+            {/* Guest Details — one card per bed, auto-managed */}
             {bookingFor === 'guest' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="font-semibold">Guest Details</h4>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={addGuestDetail}
-                    data-testid="testid-add-guest-button"
-                  >
-                    Add Guest
-                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    {guestDetails.length} guest{guestDetails.length !== 1 ? 's' : ''} required
+                  </span>
                 </div>
+
+                {/* Gender restriction warning from room availability */}
+                {(() => {
+                  const avail = selectedRoom ? availabilityMap[selectedRoom.id] : undefined;
+                  if (!avail?.genderRestriction) return null;
+                  return (
+                    <Alert className="border-amber-200 bg-amber-50">
+                      <AlertCircle className="w-4 h-4 text-amber-600" />
+                      <AlertDescription className="text-amber-800 text-sm">
+                        This room is partially occupied by{' '}
+                        <strong>{avail.genderRestriction === 'male' ? 'male' : 'female'}</strong>{' '}
+                        guests. Only <strong>{avail.genderRestriction === 'male' ? 'male' : 'female'}</strong>{' '}
+                        guests can book the remaining beds.
+                      </AlertDescription>
+                    </Alert>
+                  );
+                })()}
+
                 {guestDetails.map((guest, index) => (
                   <Card key={index} className="p-4" data-testid={`testid-guest-${index + 1}-details-card`}>
                     <div className="grid grid-cols-2 gap-3">
@@ -1673,6 +1746,42 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                           placeholder={PHONE_PLACEHOLDER}
                           aria-label={`Guest ${index + 1} contact`}
                         />
+                      </div>
+                      {/* Gender Selection Buttons — Minimal */}
+                      <div className="col-span-2 space-y-1.5">
+                        <Label className="block text-sm font-medium">Gender</Label>
+                        <div
+                          className="grid grid-cols-2 gap-2"
+                          data-testid={`testid-guest-${index + 1}-gender-radio-group`}
+                        >
+                          <button
+                            type="button"
+                            id={`guest-${index + 1}-male`}
+                            data-testid={`testid-guest-${index + 1}-gender-male`}
+                            onClick={() => updateGuestDetail(index, 'gender', 'male')}
+                            className={`py-1.5 px-3 rounded-md border text-sm font-medium transition-colors cursor-pointer ${
+                              guest.gender === 'male'
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-input'
+                            }`}
+                          >
+                            Male
+                          </button>
+
+                          <button
+                            type="button"
+                            id={`guest-${index + 1}-female`}
+                            data-testid={`testid-guest-${index + 1}-gender-female`}
+                            onClick={() => updateGuestDetail(index, 'gender', 'female')}
+                            className={`py-1.5 px-3 rounded-md border text-sm font-medium transition-colors cursor-pointer ${
+                              guest.gender === 'female'
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-input'
+                            }`}
+                          >
+                            Female
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </Card>

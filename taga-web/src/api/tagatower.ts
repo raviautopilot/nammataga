@@ -42,6 +42,7 @@ export interface GuestDetail {
   name: string;
   age: number;
   contact: string;
+  gender: 'male' | 'female' | '';
 }
 
 export interface CreateBookingRequest {

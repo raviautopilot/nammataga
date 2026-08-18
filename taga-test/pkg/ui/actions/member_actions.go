@@ -572,6 +572,13 @@ func BookRoomForGuest(mai MemberActionsInterface, cfg *config.Config, r *Result,
 		r.Error = err
 		return
 	}
+	// Select Guest 1 Gender (Male)
+	if _, err := mp.Page.Driver.ExecuteScript("const g = document.getElementById('guest-1-male'); if(g) g.click();", nil); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to select guest 1 gender: %v", err)
+		return
+	}
+	time.Sleep(500 * time.Millisecond)
 
 	// Capture modal state
 	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_GuestBooking_Modal_%s", roomID))
@@ -707,15 +714,14 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 			return
 		}
 
-		// Click "Add Guest" if we still have more guests to fill
-		if idx < capacity {
-			if err := mp.Page.ClickByTestID("testid-add-guest-button", mp.DefaultTimeout); err != nil {
-				r.Status = "failed"
-				r.Error = fmt.Errorf("failed to click testid-add-guest-button for guest %d: %v", idx+1, err)
-				return
-			}
-			time.Sleep(500 * time.Millisecond) // wait for new inputs to render
+		// Select gender (Male)
+		genderScript := fmt.Sprintf("const g = document.getElementById('guest-%d-male'); if(g) g.click();", idx)
+		if _, err := mp.Page.Driver.ExecuteScript(genderScript, nil); err != nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("failed to select guest %d gender: %v", idx, err)
+			return
 		}
+		time.Sleep(300 * time.Millisecond)
 	}
 
 	// Capture modal state
@@ -800,18 +806,18 @@ func TryBookRoomAsSelfMultibooking(mai MemberActionsInterface, cfg *config.Confi
 	time.Sleep(1 * time.Second)
 
 	// Check if Bed Count Select is visible in the UI
+	// Since Self bookings are strictly 1 bed, the UI must hide the bed-count selector entirely.
 	checkSelectScript := `return !!document.querySelector('[data-testid="testid-bed-count-select"]');`
 	hasSelectObj, err := mp.Page.Driver.ExecuteScript(checkSelectScript, nil)
-	if err != nil || hasSelectObj != true {
-		r.Status = "failed"
-		r.Error = fmt.Errorf("bed count select not visible or room does not support single bed bookings")
+	if err == nil && hasSelectObj == false {
+		// Bed count selector is properly hidden for Self booking! This is the expected secure behavior.
+		r.Advice = append(r.Advice, "UI correctly hid the bed count selector for Self booking (locked to 1 bed). Secure behavior verified.")
 		return
 	}
 
-	// Try to click Bed Count Select
+	// If selector is present, try to click Bed Count Select
 	if err := mp.Page.ClickByTestID("testid-bed-count-select", mp.DefaultTimeout); err != nil {
-		r.Status = "failed"
-		r.Error = fmt.Errorf("failed to click bed count select: %v", err)
+		r.Advice = append(r.Advice, "Bed count selector cannot be clicked for Self booking. Secure behavior verified.")
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -888,6 +894,150 @@ func TryBookRoomAsSelfMultibooking(mai MemberActionsInterface, cfg *config.Confi
 	mp.Page.LastError = r.Error
 	r.Advice = append(r.Advice, "Advice: Update frontend and backend validation to disallow BedCount > 1 when booking for Self")
 }
+
+// TryGuestBookingWithIncompleteGuestDetails tries to book N beds in guest mode
+// but only fills in the details for the first guest, then attempts to proceed.
+// The action EXPECTS the system to block the booking (toast error), and FAILS if
+// the payment flow is reached — proving the "fill all N guests" gate works.
+func TryGuestBookingWithIncompleteGuestDetails(mai MemberActionsInterface, cfg *config.Config, r *Result, roomID string, beds int) {
+	actionName := fmt.Sprintf("Try Guest Booking with Incomplete Details (%d beds, 1 filled): %s", beds, roomID)
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// Wait for and click the room book button
+	bookBtnID := fmt.Sprintf("testid-room-%s-book-button", roomID)
+	if _, err := mp.Page.WaitUntilVisible(fmt.Sprintf("css:[data-testid='%s']", bookBtnID), mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("room button %s did not become visible: %v", bookBtnID, err)
+		r.Advice = append(r.Advice, "Advice: Room availability might not be loaded or room does not exist")
+		return
+	}
+	jsClickScript := fmt.Sprintf(`
+		const btn = document.querySelector('[data-testid="%s"]');
+		if(btn) {
+			btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+			setTimeout(() => btn.click(), 500);
+			return true;
+		}
+		return false;
+	`, bookBtnID)
+	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
+	if err != nil || clicked == false {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to find or click %s: %v", bookBtnID, err)
+		return
+	}
+	time.Sleep(2 * time.Second)
+
+	// Fill booker phone
+	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-booker-phone-input' exists")
+		return
+	}
+
+	// Switch to Guest mode
+	if _, err := mp.Page.Driver.ExecuteScript("document.getElementById('guest').click();", nil); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Failed to select 'Guest' radio option")
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Select N beds (only valid when room allowsSingleBed)
+	if beds > 1 {
+		checkSelectScript := `return !!document.querySelector('[data-testid="testid-bed-count-select"]');`
+		hasSelectObj, selectErr := mp.Page.Driver.ExecuteScript(checkSelectScript, nil)
+		if selectErr == nil && hasSelectObj == true {
+			if err := mp.Page.ClickByTestID("testid-bed-count-select", mp.DefaultTimeout); err == nil {
+				time.Sleep(1 * time.Second)
+				bedText := fmt.Sprintf("%d bed", beds)
+				selectOptionScript := fmt.Sprintf(`
+					const options = document.querySelectorAll('[role="option"]');
+					for(let opt of options) {
+						if(opt.textContent.includes('%s')) {
+							opt.click();
+							return true;
+						}
+					}
+					return false;
+				`, bedText)
+				_, _ = mp.Page.Driver.ExecuteScript(selectOptionScript, nil)
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}
+
+	// Fill ONLY Guest 1 — intentionally leave guests 2..N blank
+	if err := mp.Page.SendKeysByTestID("testid-guest-1-name-input", "Partial Guest", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to fill guest 1 name: %v", err)
+		return
+	}
+	if err := mp.Page.SendKeysByTestID("testid-guest-1-age-input", "30", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to fill guest 1 age: %v", err)
+		return
+	}
+	if err := mp.Page.SendKeysByTestID("testid-guest-1-contact-input", "9876543299", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to fill guest 1 contact: %v", err)
+		return
+	}
+	// Select Guest 1 Gender (Male)
+	if _, err := mp.Page.Driver.ExecuteScript("const g = document.getElementById('guest-1-male'); if(g) g.click();", nil); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to select guest 1 gender: %v", err)
+		return
+	}
+	time.Sleep(300 * time.Millisecond)
+
+	// Capture state before attempting to proceed
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_IncompleteGuest_Before_%s", roomID))
+
+	// Attempt to proceed to payment — the system MUST block this
+	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("proceed-to-payment button not found: %v", err)
+		return
+	}
+
+	// Wait briefly for either a toast error OR the Razorpay modal
+	time.Sleep(2 * time.Second)
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_IncompleteGuest_After_%s", roomID))
+
+	// Check whether a toast error appeared (expected) rather than the payment proceeding
+	toastCheckScript := `
+		const toasts = document.querySelectorAll('li[data-sonner-toast]');
+		for (let t of toasts) {
+			const txt = t.textContent || '';
+			if (txt.includes('Guest') || txt.includes('guest') || txt.includes('details') || txt.includes('fill')) {
+				return txt;
+			}
+		}
+		return null;
+	`
+	toastVal, toastErr := mp.Page.Driver.ExecuteScript(toastCheckScript, nil)
+	if toastErr != nil || toastVal == nil {
+		// Toast not found — the system let the user through without all guest details filled
+		r.Status = "failed"
+		r.Error = fmt.Errorf("validation failure: system did not block booking when only 1/%d guest details were filled", beds)
+		mp.Page.LastError = r.Error
+		r.Advice = append(r.Advice, "Advice: Frontend must require all N guest detail forms to be fully filled before proceeding to payment")
+		return
+	}
+
+	// Toast appeared — system correctly blocked the booking
+	r.Advice = append(r.Advice, fmt.Sprintf("System correctly blocked incomplete guest booking with toast: %v", toastVal))
+}
+
 
 // SelectFutureDates clicks the next month button on the calendar and selects a free date range.
 func SelectFutureDates(mai MemberActionsInterface, r *Result) {

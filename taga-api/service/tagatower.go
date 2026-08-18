@@ -160,6 +160,28 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 		advanceAmount = 200
 	}
 
+	// ── VALIDATION 0: Guest gender consistency ────────────────────────────────
+	// For guest bookings, every GuestDetail must have a gender set, all guests
+	// must share the same gender (mixed groups cannot share a partially-occupied
+	// room), and that common gender becomes the booking-level Gender field so the
+	// existing gender-restriction checks in VALIDATION 1.5 and 2 work correctly.
+	if req.BookingFor == model.BookingForGuest && len(req.GuestDetails) > 0 {
+		var derivedGender model.Gender
+		for i, g := range req.GuestDetails {
+			if g.Gender != model.GenderMale && g.Gender != model.GenderFemale {
+				return nil, fmt.Errorf("please specify the gender for Guest %d (%s)", i+1, g.Name)
+			}
+			if derivedGender == "" {
+				derivedGender = g.Gender
+			} else if g.Gender != derivedGender {
+				return nil, fmt.Errorf("all guests must be of the same gender — Guest %d (%s) has a different gender. Mixed-gender groups cannot share a room", i+1, g.Name)
+			}
+		}
+		// Override the top-level Gender with the guest-derived value so the
+		// downstream partial-occupancy check (VALIDATION 2) works correctly.
+		req.Gender = derivedGender
+	}
+
 	// Create booking object (not saved yet)
 	booking := model.Booking{
 		ID:            fmt.Sprintf("BK%d", time.Now().UnixNano()),
