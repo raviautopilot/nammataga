@@ -654,20 +654,39 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
       }
     }
 
+    const finalGender =
+      selectedRoom.type === 'gents-dorm' ? 'male' :
+      selectedRoom.type === 'ladies-dorm' ? 'female' :
+      bookingFor === 'guest'
+        // For guest bookings, gender is derived from guest list (already validated)
+        ? (guestDetails[0]?.gender as 'male' | 'female' | undefined)
+        : bookingGender;
+
     try {
-      const finalGender =
-        selectedRoom.type === 'gents-dorm' ? 'male' :
-        selectedRoom.type === 'ladies-dorm' ? 'female' :
-        bookingFor === 'guest'
-          // For guest bookings, gender is derived from guest list (already validated)
-          ? (guestDetails[0]?.gender as 'male' | 'female' | undefined)
-          : bookingGender;
+      // 🔒 Double-check live availability immediately before creating the booking
+      const checkInStr = format(checkInDate, 'yyyy-MM-dd');
+      const checkOutStr = format(checkOutDate, 'yyyy-MM-dd');
+      const liveAvailMap = await checkAvailabilityRange(checkInStr, checkOutStr).catch(() => null);
+      if (liveAvailMap && liveAvailMap[selectedRoom.id]) {
+        const liveAvail = liveAvailMap[selectedRoom.id];
+        const requestedBeds = selectedRoom.allowSingleBed ? bedCount : selectedRoom.capacity;
+        if (!liveAvail.available || liveAvail.availableBeds < requestedBeds) {
+          toast.error(`Room is no longer available for the selected dates (only ${liveAvail.availableBeds} bed(s) left).`);
+          refreshAvailability();
+          return;
+        }
+        if (liveAvail.genderRestriction && finalGender && liveAvail.genderRestriction !== finalGender) {
+          toast.error(`This room is partially occupied by ${liveAvail.genderRestriction} guests — only ${liveAvail.genderRestriction} guests can book the remaining beds.`);
+          refreshAvailability();
+          return;
+        }
+      }
 
       const response = await createBooking(
         {
           roomId: selectedRoom.id,
-          checkInDate: format(checkInDate, 'yyyy-MM-dd'),
-          checkOutDate: format(checkOutDate, 'yyyy-MM-dd'),
+          checkInDate: checkInStr,
+          checkOutDate: checkOutStr,
           bookerPhone,
           bookingFor,
           bedCount: selectedRoom.allowSingleBed ? bedCount : selectedRoom.capacity,
@@ -684,19 +703,20 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Booking failed';
 
-      // 🔥 Enhanced error messages
+      // 🔥 Enhanced error messages directly from backend validation
       if (message.includes('only') && message.includes('guests')) {
         toast.error(message);
       } else if (message.includes('not enough beds')) {
-        toast.error('Room is full for selected dates');
+        toast.error(message);
       } else if (message.includes('already booked')) {
         toast.error('Room already booked for these dates');
       } else if (message.includes('past')) {
         toast.error('Cannot book dates in the past');
       } else {
-        toast.error('Booking failed. Please try again.');
+        toast.error(message || 'Booking failed. Please try again.');
       }
 
+      refreshAvailability();
       console.error('Booking error:', err);
     }
   };

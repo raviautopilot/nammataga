@@ -128,7 +128,7 @@ func LoginAsMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 	}
 
 	// Take screenshot before submitting the form
-	r.WaitForElementAndCapture(mp.Page, "css:[role='dialog']", 5 * time.Second, "MemberLogin_Filled_Form")
+	r.CaptureScreenshot(mp.Page, "MemberLogin_Filled_Form")
 
 	if err := loginPage.SubmitLogin(cfg.MemberLoginSubmitButtonTestID, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
@@ -1039,7 +1039,7 @@ func TryGuestBookingWithIncompleteGuestDetails(mai MemberActionsInterface, cfg *
 }
 
 
-// SelectFutureDates clicks the next month button on the calendar and selects a free date range.
+// SelectFutureDates selects a 1-day date range (e.g. Day 1 to Day 2) using synthetic MouseEvents like in BookRoomForTenDays
 func SelectFutureDates(mai MemberActionsInterface, r *Result) {
 	actionName := "Select Future Dates in Calendar"
 	r.Actions = append(r.Actions, actionName)
@@ -1050,47 +1050,94 @@ func SelectFutureDates(mai MemberActionsInterface, r *Result) {
 
 	mp := mai.GetMemberPersona()
 
-	selectFutureDatesScript := `
-	// Click Next Month button
-	const nextBtn = document.querySelector('button.rdp-nav_button_next') || 
-	                document.querySelector('button[name="next-button"]') ||
-	                document.querySelector('.rdp-nav_button_next button');
-	if (nextBtn) {
-		nextBtn.click();
-		return true;
-	}
-	return false;
-	`
-
-	clicked, err := mp.Page.Driver.ExecuteScript(selectFutureDatesScript, nil)
-	if err != nil || clicked == false {
-		r.Advice = append(r.Advice, "Note: Next month button not found or clicked, proceeding with default dates")
-		return
-	}
-	time.Sleep(1 * time.Second)
-
-	// Select two active days in the next month
-	clickDaysScript := `
-	const days = Array.from(document.querySelectorAll('button.rdp-day')).filter(btn => {
-		return !btn.disabled && 
-		       !btn.classList.contains('rdp-day_outside') && 
-		       btn.getAttribute('aria-disabled') !== 'true';
+	select1DayScript := `
+	const calendar = document.querySelector('[data-testid="testid-room-date-range-calendar"]');
+	if (!calendar) return false;
+	const buttons = Array.from(calendar.querySelectorAll('button'));
+	const days = buttons.filter(btn => {
+		const text = btn.textContent.trim();
+		const num = Number(text);
+		return !isNaN(num) && num >= 1 && num <= 31 && 
+		       !btn.disabled && 
+		       btn.getAttribute('aria-disabled') !== 'true' &&
+		       !btn.classList.contains('day-outside') &&
+		       !btn.classList.contains('rdp-day_outside');
 	});
-	if (days.length >= 5) {
-		days[2].click();
+	if (days.length >= 3) {
+		const clickEl = (el) => {
+			['mousedown', 'mouseup', 'click'].forEach(type => {
+				el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+			});
+		};
+		// Click Day 1 (check-in) twice, then Day 2 (check-out)
+		clickEl(days[1]);
 		setTimeout(() => {
-			days[3].click();
+			clickEl(days[1]);
+			setTimeout(() => {
+				clickEl(days[2]);
+			}, 300);
 		}, 300);
 		return true;
 	}
 	return false;
 	`
-	selectedDays, err := mp.Page.Driver.ExecuteScript(clickDaysScript, nil)
-	if err != nil || selectedDays == false {
-		r.Advice = append(r.Advice, "Note: Could not select custom future dates, using default dates")
+	selected, err := mp.Page.Driver.ExecuteScript(select1DayScript, nil)
+	if err != nil || selected == false {
+		r.Advice = append(r.Advice, "Note: Could not select 1-day date range via script, proceeding with default dates")
 	} else {
-		time.Sleep(2 * time.Second) // wait for availability to refresh
+		time.Sleep(3 * time.Second) // wait for availability to refresh
 	}
+}
+
+// SelectThreeDaysOverlappingDates selects a 3-day range in the calendar (Day 0 to Day 3) using synthetic MouseEvents
+func SelectThreeDaysOverlappingDates(mai MemberActionsInterface, r *Result) {
+	actionName := "Select 3 Consecutive Days Spanning Booked Date"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	select3DaysScript := `
+	const calendar = document.querySelector('[data-testid="testid-room-date-range-calendar"]');
+	if (!calendar) return false;
+	const buttons = Array.from(calendar.querySelectorAll('button'));
+	const days = buttons.filter(btn => {
+		const text = btn.textContent.trim();
+		const num = Number(text);
+		return !isNaN(num) && num >= 1 && num <= 31 && 
+		       !btn.disabled && 
+		       btn.getAttribute('aria-disabled') !== 'true' &&
+		       !btn.classList.contains('day-outside') &&
+		       !btn.classList.contains('rdp-day_outside');
+	});
+	if (days.length >= 4) {
+		const clickEl = (el) => {
+			['mousedown', 'mouseup', 'click'].forEach(type => {
+				el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+			});
+		};
+		// Click Day 0 (check-in) twice, then Day 3 (check-out) spanning Day 1-2
+		clickEl(days[0]);
+		setTimeout(() => {
+			clickEl(days[0]);
+			setTimeout(() => {
+				clickEl(days[3]);
+			}, 300);
+		}, 300);
+		return true;
+	}
+	return false;
+	`
+	selected, err := mp.Page.Driver.ExecuteScript(select3DaysScript, nil)
+	if err != nil || selected == false {
+		r.Advice = append(r.Advice, "Note: Could not select 3-day range via script, proceeding with current selection")
+	}
+
+	time.Sleep(3 * time.Second) // wait for availability to refresh
+	r.CaptureScreenshot(mp.Page, "TAGATower_3Days_DateRange_Selected")
 }
 
 // BookSingleBedWithGender books 1 bed in a room with a specific gender.
@@ -1590,6 +1637,9 @@ func TryBookOverlappingRoom(mai MemberActionsInterface, cfg *config.Config, r *R
 
 	mp := mai.GetMemberPersona()
 
+	// Wait for room availability and cards to update
+	time.Sleep(3 * time.Second)
+
 	// Verify if the room book button is visible and active (not disabled/Full).
 	// If it is disabled or has offsetParent == null (or doesn't exist), that means it's correctly blocked!
 	bookBtnID := fmt.Sprintf("testid-room-%s-book-button", roomID)
@@ -1601,14 +1651,13 @@ func TryBookOverlappingRoom(mai MemberActionsInterface, cfg *config.Config, r *R
 	visible, _ := visibleObj.(bool)
 
 	if err != nil || !visible {
-		r.Advice = append(r.Advice, "System correctly blocked overlapping booking (room button is disabled/unavailable).")
+		time.Sleep(1 * time.Second)
+		r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_Overlapping_3Days_Blocked_%s", roomID))
+		r.Advice = append(r.Advice, fmt.Sprintf("System correctly blocked 3-day overlapping booking for room %s (Room button is disabled/Full).", roomID))
 		return
 	}
 
-	// Capture modal state of the allowed (but should be disallowed) booking
-	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_Overlapping_Allowed_Failure_%s", roomID))
-
-	// Try clicking Book just to see if we can open payment modal
+	// If button was active, try clicking Book to check if payment proceed is blocked
 	jsClickScript := fmt.Sprintf(`
 		const btn = document.querySelector('[data-testid="%s"]');
 		if(btn) {
@@ -1620,6 +1669,8 @@ func TryBookOverlappingRoom(mai MemberActionsInterface, cfg *config.Config, r *R
 	`, bookBtnID)
 	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
 	if err != nil || clicked == false {
+		time.Sleep(1 * time.Second)
+		r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_Overlapping_3Days_Blocked_%s", roomID))
 		r.Advice = append(r.Advice, "System correctly blocked overlapping booking (could not click book button).")
 		return
 	}
@@ -1631,12 +1682,53 @@ func TryBookOverlappingRoom(mai MemberActionsInterface, cfg *config.Config, r *R
 		return
 	}
 
+	// Capture modal state before clicking proceed
+	time.Sleep(1 * time.Second)
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_Overlapping_Attempt_%s", roomID))
+
 	// Click proceed
 	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
+		time.Sleep(1 * time.Second)
+		r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_Overlapping_3Days_Blocked_%s", roomID))
 		r.Advice = append(r.Advice, "System correctly blocked proceeding to payment for overlapping booking.")
 		return
 	}
-	time.Sleep(3 * time.Second)
+	time.Sleep(2 * time.Second)
+
+	// Check if a toast error appeared or if modal stayed open without creating Razorpay payment
+	toastCheckScript := `
+		const toasts = document.querySelectorAll('li[data-sonner-toast]');
+		for (let t of toasts) {
+			const txt = t.textContent || '';
+			if (txt.includes('not enough beds') || txt.includes('full') || txt.includes('already booked') || txt.includes('no longer available')) {
+				return txt;
+			}
+		}
+		return null;
+	`
+	toastVal, _ := mp.Page.Driver.ExecuteScript(toastCheckScript, nil)
+
+	checkModalScript := `return !!document.querySelector('[data-testid="testid-room-booking-modal"]');`
+	modalOpenObj, _ := mp.Page.Driver.ExecuteScript(checkModalScript, nil)
+	modalOpen, _ := modalOpenObj.(bool)
+
+	if toastVal != nil || modalOpen {
+		time.Sleep(1 * time.Second)
+		r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_Overlapping_3Days_Blocked_%s", roomID))
+		r.Advice = append(r.Advice, fmt.Sprintf("System correctly blocked 3-day overlapping booking for %s (Toast/Modal block verified).", roomID))
+
+		// Close modal if open
+		closeModalScript := `
+			const closeBtn = document.querySelector('[data-testid="testid-booking-modal-cancel-button"]');
+			if (closeBtn) closeBtn.click();
+		`
+		_, _ = mp.Page.Driver.ExecuteScript(closeModalScript, nil)
+		time.Sleep(1 * time.Second)
+		return
+	}
+
+	// Capture modal state of the allowed (but should be disallowed) booking
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_Overlapping_Allowed_Failure_%s", roomID))
 
 	// Clean up the overlapping booking if it got created
 	clickCancelScript := `

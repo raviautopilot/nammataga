@@ -7,11 +7,33 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"taga-api/config"
 	"taga-api/model"
 )
+
+// bookingsLock protects all concurrent read/write operations to bookings.json
+var bookingsLock sync.RWMutex
+
+// PendingHoldDuration defines how long an unconfirmed/pending booking holds bed capacity (10 minutes)
+const PendingHoldDuration = 10 * time.Minute
+
+// isBookingActive determines if a booking is occupying room/bed inventory.
+// A booking occupies inventory if:
+// 1. It is PaymentConfirmed, OR
+// 2. It is PaymentPending and created within PendingHoldDuration (in-flight checkout hold)
+func isBookingActive(b model.Booking, now time.Time) bool {
+	if b.PaymentStatus == model.PaymentConfirmed {
+		return true
+	}
+	if b.PaymentStatus == model.PaymentPending {
+		// Active hold if within 10 minutes of creation
+		return now.Sub(b.CreatedAt) < PendingHoldDuration
+	}
+	return false
+}
 
 /*
 	---------------------------
@@ -59,6 +81,13 @@ func BookingsArchiveDirHelper() string {
 }
 
 func ReadAllBookings() ([]model.Booking, error) {
+	bookingsLock.RLock()
+	defer bookingsLock.RUnlock()
+
+	return readAllBookingsUnsafe()
+}
+
+func readAllBookingsUnsafe() ([]model.Booking, error) {
 	file, err := os.ReadFile(bookingsFilePath())
 	if err != nil {
 		return []model.Booking{}, nil
@@ -77,6 +106,13 @@ func ReadAllBookings() ([]model.Booking, error) {
 }
 
 func SaveAllBookings(bookings []model.Booking) error {
+	bookingsLock.Lock()
+	defer bookingsLock.Unlock()
+
+	return saveAllBookingsUnsafe(bookings)
+}
+
+func saveAllBookingsUnsafe(bookings []model.Booking) error {
 	data, err := json.MarshalIndent(bookings, "", "  ")
 	if err != nil {
 		return err
@@ -182,9 +218,11 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 		req.Gender = derivedGender
 	}
 
+	now := time.Now()
+
 	// Create booking object (not saved yet)
 	booking := model.Booking{
-		ID:            fmt.Sprintf("BK%d", time.Now().UnixNano()),
+		ID:            fmt.Sprintf("BK%d", now.UnixNano()),
 		RoomID:        req.RoomID,
 		CheckInDate:   checkInDate,
 		CheckOutDate:  checkOutDate,
@@ -198,16 +236,19 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 		PaymentStatus: model.PaymentPending,
 		UpiID:         req.UpiID,
 		AdvanceAmount: advanceAmount,
-		CreatedAt:     time.Now(),
+		CreatedAt:     now,
 	}
 
-	// 🔥 Read all bookings
-	allBookingsData, err := ReadAllBookings()
+	// 🔒 ATOMIC TRANSACTION: Acquire exclusive lock for reading, validating, and reserving bed/room
+	bookingsLock.Lock()
+	defer bookingsLock.Unlock()
+
+	allBookingsData, err := readAllBookingsUnsafe()
 	if err != nil {
 		return nil, err
 	}
 
-	// ── VALIDATION 1: Bed capacity overlap check ──
+	// ── VALIDATION 1: Bed capacity overlap check (Confirmed + Active Pending holds) ──
 	for d := checkInDate; d.Before(checkOutDate); d = d.AddDate(0, 0, 1) {
 		occupiedBeds := 0
 
@@ -215,8 +256,8 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 			if b.RoomID != req.RoomID {
 				continue
 			}
-			// Only confirmed bookings block availability
-			if b.PaymentStatus != model.PaymentConfirmed {
+			// Both confirmed bookings and active pending holds block capacity
+			if !isBookingActive(b, now) {
 				continue
 			}
 			// Check date overlap: existing booking overlaps day d
@@ -248,11 +289,11 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 	if room.AllowSingleBed {
 		// Find existing confirmed bookings for this room that overlap our date range
 		for _, existingBooking := range allBookingsData {
-			// Skip non-matching rooms and non-confirmed bookings
+			// Skip non-matching rooms and inactive bookings
 			if existingBooking.RoomID != req.RoomID {
 				continue
 			}
-			if existingBooking.PaymentStatus != model.PaymentConfirmed {
+			if !isBookingActive(existingBooking, now) {
 				continue
 			}
 
@@ -270,15 +311,14 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 		}
 	}
 
-	// 🔥 Append and save
+	// 🔥 Append and save safely under lock
 	allBookingsData = append(allBookingsData, booking)
 
-	if err := SaveAllBookings(allBookingsData); err != nil {
+	if err := saveAllBookingsUnsafe(allBookingsData); err != nil {
 		return nil, err
 	}
 
 	// Return response (with computed status for consistency)
-	now := time.Now()
 	bookingStatus := calculateBookingStatus(booking, now)
 
 	return &model.BookingResponse{
@@ -306,7 +346,7 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 ---------------------------
 */
 func CheckRoomAvailability(room *model.Room, date time.Time, bookings []model.Booking) (bool, int, string, error) {
-
+	now := time.Now()
 	filtered := []model.Booking{}
 	for _, b := range bookings {
 
@@ -314,7 +354,7 @@ func CheckRoomAvailability(room *model.Room, date time.Time, bookings []model.Bo
 			continue
 		}
 
-		if b.PaymentStatus != model.PaymentConfirmed {
+		if !isBookingActive(b, now) {
 			continue
 		}
 
@@ -495,7 +535,10 @@ func calculateBookingStatus(booking model.Booking, now time.Time) string {
 // CancelBooking marks any booking as cancelled regardless of payment status.
 // ── CHANGE 6: Refund logic removed — cancellation is always a simple status update.
 func CancelBooking(bookingID string) error {
-	allBookings, err := ReadAllBookings()
+	bookingsLock.Lock()
+	defer bookingsLock.Unlock()
+
+	allBookings, err := readAllBookingsUnsafe()
 	if err != nil {
 		return err
 	}
@@ -503,14 +546,12 @@ func CancelBooking(bookingID string) error {
 	for i := range allBookings {
 		if allBookings[i].ID == bookingID {
 			allBookings[i].PaymentStatus = model.PaymentCancelled
-			return SaveAllBookings(allBookings)
+			return saveAllBookingsUnsafe(allBookings)
 		}
 	}
 
 	return fmt.Errorf("booking not found")
 }
-
-
 
 /*
 	---------------------------
@@ -519,19 +560,20 @@ func CancelBooking(bookingID string) error {
 ---------------------------
 */
 func ConfirmPayment(bookingID, upiID string) error {
-	allBookings, err := ReadAllBookings()
+	bookingsLock.Lock()
+	defer bookingsLock.Unlock()
+
+	allBookings, err := readAllBookingsUnsafe()
 	if err != nil {
 		return err
 	}
 
 	for i := range allBookings {
-
 		if allBookings[i].ID == bookingID {
-
 			allBookings[i].PaymentStatus = model.PaymentConfirmed
 			allBookings[i].UpiID = upiID
 
-			return SaveAllBookings(allBookings)
+			return saveAllBookingsUnsafe(allBookings)
 		}
 	}
 
@@ -539,21 +581,21 @@ func ConfirmPayment(bookingID, upiID string) error {
 }
 
 func ConfirmPaymentWithDetails(bookingID, orderID, paymentID string) error {
+	bookingsLock.Lock()
+	defer bookingsLock.Unlock()
 
-	allBookings, err := ReadAllBookings()
+	allBookings, err := readAllBookingsUnsafe()
 	if err != nil {
 		return err
 	}
 
 	for i := range allBookings {
-
 		if allBookings[i].ID == bookingID {
-
 			allBookings[i].PaymentStatus = model.PaymentConfirmed
 			allBookings[i].RazorpayOrderID = orderID
 			allBookings[i].RazorpayPaymentID = paymentID
 
-			return SaveAllBookings(allBookings)
+			return saveAllBookingsUnsafe(allBookings)
 		}
 	}
 
@@ -601,7 +643,10 @@ func StartBookingArchiveScheduler() {
 
 // RunBookingArchive archives all bookings whose checkOutDate is before today.
 func RunBookingArchive() {
-	allBookings, err := ReadAllBookings()
+	bookingsLock.Lock()
+	defer bookingsLock.Unlock()
+
+	allBookings, err := readAllBookingsUnsafe()
 	if err != nil {
 		log.Printf("❌ Booking archive: failed to read bookings: %v", err)
 		return
@@ -613,10 +658,18 @@ func RunBookingArchive() {
 
 	kept := []model.Booking{}
 	archivedCount := 0
+	expiredPendingCount := 0
 
 	for _, b := range allBookings {
 		isPastDate := b.CheckOutDate.Before(todayStart)
 		isCancelled := b.PaymentStatus == model.PaymentCancelled // Also archive cancelled bookings
+		isExpiredPending := b.PaymentStatus == model.PaymentPending && now.Sub(b.CreatedAt) > 24*time.Hour
+
+		if isExpiredPending {
+			expiredPendingCount++
+			log.Printf("🧹 Booking archive: cleaned up abandoned pending booking %s (created %s)", b.ID, b.CreatedAt.Format("2006-01-02 15:04"))
+			continue
+		}
 
 		if isPastDate || isCancelled {
 			if err := archiveBooking(b); err != nil {
@@ -631,17 +684,17 @@ func RunBookingArchive() {
 		}
 	}
 
-	if archivedCount == 0 {
-		log.Println("✅ Booking archive: no completed bookings to archive")
+	if archivedCount == 0 && expiredPendingCount == 0 {
+		log.Println("✅ Booking archive: no completed/expired bookings to archive")
 		return
 	}
 
-	if err := SaveAllBookings(kept); err != nil {
+	if err := saveAllBookingsUnsafe(kept); err != nil {
 		log.Printf("❌ Booking archive: failed to save updated active bookings: %v", err)
 		return
 	}
 
-	log.Printf("✅ Booking archive: successfully archived %d booking(s)", archivedCount)
+	log.Printf("✅ Booking archive: successfully archived %d booking(s), cleaned %d expired pending", archivedCount, expiredPendingCount)
 }
 
 func archiveBooking(b model.Booking) error {
@@ -818,10 +871,12 @@ func CheckAllRoomsAvailabilityRange(checkIn, checkOut time.Time) (map[string]mod
 		return nil, err
 	}
 
-	// Pre-filter: only confirmed bookings that overlap [checkIn, checkOut)
+	now := time.Now()
+
+	// Pre-filter: only confirmed bookings & active pending holds that overlap [checkIn, checkOut)
 	var relevantBookings []model.Booking
 	for _, b := range allBookings {
-		if b.PaymentStatus != model.PaymentConfirmed {
+		if !isBookingActive(b, now) {
 			continue
 		}
 		// Overlap: b.checkIn < checkOut && b.checkOut > checkIn

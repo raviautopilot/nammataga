@@ -2,7 +2,7 @@
   "baseUrl": "http://localhost:1801/",
   "uiUrl": "http://localhost:1701/",
   "seleniumUrl": "http://localhost:9515",
-  "headless": true,
+  "headless": false,
   "timeout": 10,
   "adminLoginButtonTestID": "testid-admin-login-button",
   "memberLoginButtonTestID": "testid-member-login-button",

@@ -20,9 +20,14 @@ func TestUI_22_TAGATower_OverlappingBooking(t *testing.T) {
 		actions.GoToHome(member, result)
 		actions.LoginAsMember(member, cfg, result)
 		actions.NavigateToTAGATower(member, cfg, result)
+		// Step 1: Select future date and book all beds in apex-1 (capacity 3) for 1 day
 		actions.SelectFutureDates(member, result)
-		actions.BookSimpleRoom(member, cfg, result, "pavalam")
-		actions.TryBookOverlappingRoom(member, cfg, result, "pavalam")
+		actions.BookAllBedsInRoom(member, cfg, result, "apex-1", 3)
+		// Step 2: Select a 3-day consecutive range spanning across that booked date
+		actions.SelectThreeDaysOverlappingDates(member, result)
+		// Step 3: Verify that booking the room for the 3-day range is blocked because the room is occupied on the middle date
+		actions.TryBookOverlappingRoom(member, cfg, result, "apex-1")
+		// Step 4: Cancel the original booking and clean up
 		actions.CancelLatestBooking(member, cfg, result)
 		actions.LogoutMember(member, cfg, result)
 
