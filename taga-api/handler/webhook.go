@@ -276,11 +276,15 @@ func WebhookHandler(c *gin.Context) {
 		}
 		guestDetailsJSON, _ := notes["guest_details"].(string)
 
+		bookingID, _ := notes["booking_id"].(string)
+
 		emailData := AdminRoomBookingData{
+			BookingID:     bookingID,
 			PaymentID:     paymentID,
 			OrderID:       orderID,
 			Amount:        payment.Amount,
 			CustomerEmail: customerEmail,
+			CustomerPhone: bookerPhone,
 			RoomName:      roomName,
 			RoomNumber:    roomNumber,
 			BedCount:      int(bedCount),

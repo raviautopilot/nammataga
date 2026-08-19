@@ -131,8 +131,10 @@ func SetupRouter() *gin.Engine {
 	{
 		towers.GET("/rooms", handler.GetRooms)
 		towers.GET("/availability", handler.CheckAvailability)
+		towers.GET("/availability-range", handler.CheckAvailabilityRange)
 		towers.POST("/bookings", handler.CreateBooking)
 		towers.GET("/bookings", handler.GetBookings)
+		towers.GET("/bookings/past", handler.GetPastBookings)
 		towers.DELETE("/bookings/:id", handler.DeleteBooking)
 		towers.POST("/bookings/:id/confirm-payment", handler.ConfirmPayment)
 		towers.POST("/create-order", handler.CreateOrder)
@@ -166,10 +168,14 @@ func SetupRouter() *gin.Engine {
 		memberRoutes.GET("/notifications/unread/count", handler.GetUnreadCount)
 	}
 
-	// Member Edit Request
+	// Member Edit Request & Misc API
 	api := r.Group("/api")
 	{
 		api.POST("/member/edit-request", handler.CreateEditRequest)
+		
+		// Temporary test email endpoint
+		api.POST("/test-email", handler.TestEmail)
+		api.GET("/test-email", handler.TestEmail)
 	}
 
 	// ==================== MEMBERSHIP ROUTES ====================

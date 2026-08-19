@@ -158,83 +158,135 @@ func getAnnualSubscriptionAmount() int {
 	return 3500
 }
 
-// buildEmailHTML returns a beautiful HTML email for the given reminder type.
+// buildEmailHTML returns a premium HTML email for the given reminder type.
 func buildEmailHTML(reminderType, memberName string) string {
 	annualAmount := getAnnualSubscriptionAmount()
+	yearStart := time.Now().Year()
+	yearEnd := yearStart + 1
 
-	// Shared header & footer
-	header := `<div style="background:#0f5132;color:#fff;padding:20px;text-align:center;border-radius:8px 8px 0 0;">
-                    <h1 style="margin:0;">TAGA Membership</h1>
-                    <p style="margin:5px 0 0;">Tamil Nadu Agriculture Graduate Association</p>
-                </div>`
-	footer := `<div style="background:#f0f0f0;padding:15px;text-align:center;font-size:12px;color:#555;border-radius:0 0 8px 8px;">
-                    This is an automated reminder. Please do not reply to this email.<br/>
-                    For assistance, contact <a href="mailto:nammataga@gmail.com">nammataga@gmail.com</a>
-                </div>`
+	var badgeText, badgeColor, headerGradient, actionBtnBg, customContent string
 
-	var body string
 	switch reminderType {
 	case Reminder1:
-		body = fmt.Sprintf(`
-            <p>Dear %s,</p>
-            <p>Warm greetings from TAGA! 🌾</p>
-            <p>The new membership year <strong>(April 1, %d – March 31, %d)</strong> has begun.</p>
-            <p>To keep your membership active and continue enjoying all benefits, kindly renew your <strong>Annual Subscription</strong> of ₹%d at your earliest convenience.</p>
-            <p>We have a grace period until <strong>May 31</strong>. After that, access to member‑only features will be restricted.</p>
-            <p style="text-align:center;margin:30px 0;">
-                <a href="https://www.nammataga.com/member-login" 
-                   style="background:#0f5132;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">
-                   Renew Now
-                </a>
+		badgeText = "MEMBERSHIP RENEWAL"
+		badgeColor = "rgba(255, 255, 255, 0.2)"
+		headerGradient = "linear-gradient(135deg, #065f46 0%, #047857 100%)"
+		actionBtnBg = "linear-gradient(135deg, #065f46 0%, #047857 100%)"
+		customContent = fmt.Sprintf(`
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #374151;">Dear <strong>%s</strong>,</p>
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #374151;">Warm greetings from <strong>TAGA</strong>! 🌾</p>
+            <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">
+                The new membership year <strong>(April 1, %d – March 31, %d)</strong> has commenced. To keep your membership active and continue enjoying all association benefits and services, kindly renew your Annual Subscription.
             </p>
-            <p>Thank you for being a valued member of TAGA.</p>
-        `, memberName, time.Now().Year(), time.Now().Year()+1, annualAmount)
+            
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <table style="width: 100%%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 6px 0; color: #64748b; font-size: 14px;">Renewal Period</td>
+                        <td style="padding: 6px 0; font-weight: 600; color: #0f172a; text-align: right; font-size: 14px;">%d – %d</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; color: #64748b; font-size: 14px;">Annual Fee</td>
+                        <td style="padding: 6px 0; font-weight: 700; color: #065f46; text-align: right; font-size: 16px;">₹ %d</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; color: #64748b; font-size: 14px;">Grace Period Ends</td>
+                        <td style="padding: 6px 0; font-weight: 600; color: #d97706; text-align: right; font-size: 14px;">May 31, %d</td>
+                    </tr>
+                </table>
+            </div>`, memberName, yearStart, yearEnd, yearStart, yearEnd, annualAmount, yearStart)
 
 	case Reminder2:
-		body = fmt.Sprintf(`
-            <p>Dear %s,</p>
-            <p>We noticed that your Annual Subscription for the membership year <strong>(April 1, %d – March 31, %d)</strong> is still pending.</p>
-            <p>This is a gentle reminder to renew at ₹%d to avoid any disruption to your membership.</p>
-            <p>The grace period ends on <strong>May 31</strong>. After that, your account will become <span style="color:#c00;">inactive</span>.</p>
-            <p style="text-align:center;margin:30px 0;">
-                <a href="https://www.nammataga.com/member-login"
-                   style="background:#0f5132;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">
-                   Renew Now
-                </a>
+		badgeText = "REMINDER: SUBSCRIPTION PENDING"
+		badgeColor = "rgba(255, 255, 255, 0.25)"
+		headerGradient = "linear-gradient(135deg, #d97706 0%, #b45309 100%)"
+		actionBtnBg = "linear-gradient(135deg, #d97706 0%, #b45309 100%)"
+		customContent = fmt.Sprintf(`
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #374151;">Dear <strong>%s</strong>,</p>
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #374151;">
+                We noticed that your TAGA Annual Subscription for the period <strong>(April 1, %d – March 31, %d)</strong> is still pending.
             </p>
-            <p>We appreciate your continued support.</p>
-        `, memberName, time.Now().Year(), time.Now().Year()+1, annualAmount)
+            <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">
+                This is a friendly reminder to complete your renewal before the grace period expires on <strong>May 31</strong> to avoid any interruption in membership privileges.
+            </p>
+            
+            <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <table style="width: 100%%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 6px 0; color: #92400e; font-size: 14px;">Annual Fee Due</td>
+                        <td style="padding: 6px 0; font-weight: 700; color: #b45309; text-align: right; font-size: 16px;">₹ %d</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; color: #92400e; font-size: 14px;">Final Grace Date</td>
+                        <td style="padding: 6px 0; font-weight: 700; color: #dc2626; text-align: right; font-size: 14px;">May 31, %d</td>
+                    </tr>
+                </table>
+            </div>`, memberName, yearStart, yearEnd, annualAmount, yearStart)
 
 	case Reminder3:
-		body = fmt.Sprintf(`
-            <p>Dear %s,</p>
-            <p>This is the final reminder regarding your TAGA Annual Subscription for <strong>%d‑%d</strong>.</p>
-            <p>After <strong>May 31</strong>, your membership will become <span style="color:#c00;">inactive</span> and you will lose access to exclusive member benefits.</p>
-            <p>Please take a moment to complete the renewal today.</p>
-            <p style="text-align:center;margin:30px 0;">
-                <a href="https://www.nammataga.com/member-login"
-                   style="background:#c00;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">
-                   Renew Now Before It’s Too Late
-                </a>
+		badgeText = "FINAL NOTICE: ACTION REQUIRED"
+		badgeColor = "rgba(255, 255, 255, 0.3)"
+		headerGradient = "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)"
+		actionBtnBg = "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)"
+		customContent = fmt.Sprintf(`
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #374151;">Dear <strong>%s</strong>,</p>
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #374151;">
+                This is the <strong>Final Notice</strong> regarding your TAGA Annual Subscription renewal for <strong>%d‑%d</strong>.
             </p>
-            <p>We’d love to have you continue with us!</p>
-        `, memberName, time.Now().Year(), time.Now().Year()+1)
+            <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 4px; margin-bottom: 24px;">
+                <p style="margin: 0; font-size: 14px; color: #991b1b; line-height: 1.5;">
+                    After <strong>May 31</strong>, accounts without active subscriptions will be marked as <strong style="text-decoration: underline;">Inactive</strong> and will lose access to member directory, booking privileges, and association services.
+                </p>
+            </div>
+            <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">
+                Please take a moment right now to complete your renewal and maintain uninterrupted membership.
+            </p>`, memberName, yearStart, yearEnd)
 	}
 
-	fullHTML := fmt.Sprintf(`
-    <html>
-    <body style="font-family:Arial,sans-serif;background:#f4f4f4;padding:20px;">
-        <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-            %s
-            <div style="padding:20px;">
+	return fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAGA Membership Renewal</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e5e7eb;">
+        
+        <!-- Header -->
+        <div style="background: %s; color: white; padding: 32px 24px; text-align: center;">
+            <div style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: %s; margin-bottom: 12px;">
                 %s
             </div>
-            %s
+            <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 800;">Annual Membership Renewal</h1>
+            <p style="margin: 0; font-size: 14px; opacity: 0.9;">Tamil Nadu Agricultural Graduates Association</p>
         </div>
-    </body>
-    </html>`, header, body, footer)
 
-	return fullHTML
+        <!-- Body -->
+        <div style="padding: 32px 24px;">
+            %s
+
+            <!-- Action Button -->
+            <div style="text-align: center; margin: 32px 0 24px 0;">
+                <a href="https://www.nammataga.com/member-login" style="background: %s; color: #ffffff; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);">
+                    Renew Membership Online &rarr;
+                </a>
+            </div>
+
+            <p style="margin: 0; font-size: 13px; color: #6b7280; text-align: center;">
+                We appreciate your continued dedication and support as a valued member of TAGA.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #475569;">Tamil Nadu Agricultural Graduates Association</p>
+            <p style="margin: 0 0 8px 0; font-size: 12px; color: #94a3b8;">TAGA Towers, Chennai &bull; Support: <a href="mailto:nammataga@gmail.com" style="color: #047857; text-decoration: none;">nammataga@gmail.com</a></p>
+            <p style="margin: 0; font-size: 11px; color: #cbd5e1;">&copy; 2026 TAGA. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`, headerGradient, badgeColor, badgeText, customContent, actionBtnBg)
 }
 
 // SendRemindersIfDue checks the date and sends the appropriate reminder email to all unpaid members.

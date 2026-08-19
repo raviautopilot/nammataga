@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -72,10 +73,12 @@ type AdminSubscriptionData struct {
 }
 
 type AdminRoomBookingData struct {
+	BookingID     string
 	PaymentID     string
 	OrderID       string
 	Amount        int
 	CustomerEmail string
+	CustomerPhone string
 	RoomName      string
 	RoomNumber    string
 	BedCount      int
@@ -789,31 +792,53 @@ func formatAnnouncementSubject(title, priority string) string {
 }
 
 func buildAnnouncementEmailContent(title, message, priority string) string {
-	var priorityColor, priorityBadge string
+	var badgeText, headerGradient string
 	switch priority {
 	case "urgent":
-		priorityColor = "#ff4444"
-		priorityBadge = "URGENT"
+		badgeText = "URGENT ANNOUNCEMENT"
+		headerGradient = "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)"
 	case "high":
-		priorityColor = "#ff8800"
-		priorityBadge = "HIGH PRIORITY"
+		badgeText = "IMPORTANT NOTICE"
+		headerGradient = "linear-gradient(135deg, #d97706 0%, #b45309 100%)"
 	default:
-		priorityColor = "#44aa00"
-		priorityBadge = "NORMAL"
+		badgeText = "ANNOUNCEMENT"
+		headerGradient = "linear-gradient(135deg, #065f46 0%, #047857 100%)"
 	}
 
-	return fmt.Sprintf(`
-<!DOCTYPE html>
+	return fmt.Sprintf(`<!DOCTYPE html>
 <html>
-<head><style>body { font-family: Arial, sans-serif; }</style></head>
-<body>
-    <div style="padding: 20px;">
-        <span style="background:%s; color:white; padding:3px 8px; font-weight:bold;">%s</span>
-        <h3>%s</h3>
-        <p>%s</p>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>%s</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e5e7eb;">
+        
+        <!-- Header -->
+        <div style="background: %s; color: white; padding: 32px 24px; text-align: center;">
+            <div style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(255, 255, 255, 0.2); margin-bottom: 12px;">
+                %s
+            </div>
+            <h1 style="margin: 0; font-size: 24px; font-weight: 800;">TAGA Official Broadcast</h1>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 32px 24px;">
+            <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #0f172a; line-height: 1.4;">%s</h2>
+            <div style="font-size: 15px; color: #374151; line-height: 1.7; white-space: pre-line; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px;">
+%s
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #475569;">Tamil Nadu Agricultural Graduates Association</p>
+            <p style="margin: 0; font-size: 12px; color: #94a3b8;">TAGA Towers, Chennai &bull; &copy; 2026 TAGA. All rights reserved.</p>
+        </div>
     </div>
 </body>
-</html>`, priorityColor, priorityBadge, title, message)
+</html>`, html.EscapeString(title), headerGradient, badgeText, html.EscapeString(title), html.EscapeString(message))
 }
 
 func sendAdminSubscriptionEmail(data AdminSubscriptionData) error {
@@ -824,8 +849,8 @@ func sendAdminSubscriptionEmail(data AdminSubscriptionData) error {
 	}
 
 	amountInRupees := float64(data.Amount) / 100
-	subject := fmt.Sprintf("💰 New Subscription Payment: %s", data.SubscriptionName)
-	body := fmt.Sprintf("Payment ID: %s, Amount: ₹%.2f, Member: %s (%s)", data.PaymentID, amountInRupees, data.MemberName, data.MemberEmail)
+	subject := fmt.Sprintf("💰 New Subscription Payment: %s - ₹%.2f", data.SubscriptionName, amountInRupees)
+	body := buildSubscriptionEmailBody(data)
 	return sendEmail(adminEmail, subject, body)
 }
 
@@ -837,7 +862,7 @@ func sendAdminRoomBookingEmail(data AdminRoomBookingData) error {
 	}
 
 	amountInRupees := float64(data.Amount) / 100
-	subject := fmt.Sprintf("🏨 New Room Booking: %s", data.RoomName)
-	body := fmt.Sprintf("Payment ID: %s, Amount: ₹%.2f, Booker: %s (%s)", data.PaymentID, amountInRupees, data.BookerName, data.BookerPhone)
+	subject := fmt.Sprintf("🏨 New Room Booking: %s - ₹%.2f", data.RoomName, amountInRupees)
+	body := buildRoomBookingEmailBody(data)
 	return sendEmail(adminEmail, subject, body)
 }

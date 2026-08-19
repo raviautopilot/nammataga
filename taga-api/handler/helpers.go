@@ -75,15 +75,75 @@ func sendSuccessEmail(memberEmail, tempPassword string) error {
 	loginURL := cfg.ResetPasswordURL + "/?page=member-login"
 
 	var body strings.Builder
-	body.WriteString("<h2>Welcome to TAGA!</h2>")
-	body.WriteString("<p>Your registration has been successfully completed.</p>")
-	body.WriteString("<h3>Login Credentials</h3>")
-	body.WriteString(fmt.Sprintf("<p><strong>Email:</strong> %s</p>", html.EscapeString(memberEmail)))
-	body.WriteString(fmt.Sprintf("<p><strong>Temporary Password:</strong> %s</p>", html.EscapeString(tempPassword)))
-	body.WriteString("<p><strong>Important:</strong> You must change this password on your first login.</p>")
-	body.WriteString(fmt.Sprintf("<p><a href='%s'>Click here to login</a></p>", loginURL))
-	body.WriteString("<p>If you did not register for this account, please contact our support team.</p>")
-	body.WriteString("<br><p>Best regards,<br>TAGA Team</p>")
+	body.WriteString(fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to TAGA</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e5e7eb;">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #065f46 0%%, #047857 100%%); color: white; padding: 32px 24px; text-align: center;">
+            <div style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(255, 255, 255, 0.2); margin-bottom: 12px;">
+                Membership Confirmed
+            </div>
+            <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em;">Welcome to TAGA!</h1>
+            <p style="margin: 0; font-size: 15px; opacity: 0.9;">Your member registration has been successfully completed.</p>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 32px 24px;">
+            <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">
+                We are delighted to welcome you to the <strong>Tamil Nadu Agricultural Graduates Association (TAGA)</strong> community. Below are your initial login credentials to access the TAGA Portal.
+            </p>
+
+            <!-- Credential Card -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <h3 style="margin: 0 0 14px 0; color: #065f46; font-size: 16px; font-weight: 700; display: flex; align-items: center;">
+                    <span style="margin-right: 8px;">🔐</span> Your Login Credentials
+                </h3>
+                <table style="width: 100%%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b; font-size: 14px; width: 40%%; border-bottom: 1px solid #f1f5f9;">Registered Email</td>
+                        <td style="padding: 8px 0; font-weight: 600; color: #0f172a; border-bottom: 1px solid #f1f5f9; font-size: 14px;">%s</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Temporary Password</td>
+                        <td style="padding: 8px 0; font-family: monospace; font-size: 15px; font-weight: 700; color: #047857; letter-spacing: 0.05em;">%s</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Notice Box -->
+            <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px 16px; border-radius: 4px; margin-bottom: 24px;">
+                <p style="margin: 0; font-size: 13px; color: #92400e; line-height: 1.5;">
+                    <strong>Security Notice:</strong> For your security, you will be prompted to change your temporary password immediately upon your first login.
+                </p>
+            </div>
+
+            <!-- Action Button -->
+            <div style="text-align: center; margin: 32px 0 24px 0;">
+                <a href="%s" style="background: linear-gradient(135deg, #065f46 0%%, #047857 100%%); color: #ffffff; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(6, 95, 70, 0.25);">
+                    Log In to Your Account &rarr;
+                </a>
+            </div>
+
+            <p style="margin: 0; font-size: 13px; color: #6b7280; text-align: center;">
+                If you did not register for this account, please immediately contact our administrative team.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #475569;">Tamil Nadu Agricultural Graduates Association</p>
+            <p style="margin: 0; font-size: 12px; color: #94a3b8;">TAGA Towers, Chennai &bull; &copy; 2026 TAGA. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`, html.EscapeString(memberEmail), html.EscapeString(tempPassword), loginURL))
 
 	// For E2E testing: Save the temporary password to a mock emails file
 	mockEmailFile := "data/emails/mock_emails.json"

@@ -42,6 +42,7 @@ export interface GuestDetail {
   name: string;
   age: number;
   contact: string;
+  gender: 'male' | 'female' | '';
 }
 
 export interface CreateBookingRequest {
@@ -100,7 +101,7 @@ export const getAllRooms = async (): Promise<Room[]> => {
   }
 };
 
-// ✅ Check availability
+// ✅ Check availability for a single room+date (kept for backward compat)
 export const checkAvailability = async (
   roomId: string,
   date: string
@@ -114,6 +115,18 @@ export const checkAvailability = async (
     console.error('❌ Error checking availability:', error);
     throw error;
   }
+};
+
+// ✅ Bulk: Check availability of ALL rooms across a full date range in ONE API call.
+// Replaces N × (checkOut - checkIn) calls with a single request — essential for VPS.
+export const checkAvailabilityRange = async (
+  checkIn: string,  // YYYY-MM-DD
+  checkOut: string  // YYYY-MM-DD
+): Promise<Record<string, RoomAvailability>> => {
+  const res = await fetchWithFallback(
+    `${TOWERS_API}/availability-range?checkIn=${checkIn}&checkOut=${checkOut}`
+  );
+  return await handleResponse(res);
 };
 
 // ✅ Create booking
@@ -137,7 +150,7 @@ export const createBooking = async (
   }
 };
 
-// ✅ Get user bookings
+// ✅ Get user bookings (Active)
 export const getUserBookings = async (bookerId: string): Promise<BookingResponse[]> => {
   try {
     const res = await fetchWithFallback(
@@ -147,6 +160,26 @@ export const getUserBookings = async (bookerId: string): Promise<BookingResponse
     return bookings || [];
   } catch (error) {
     console.error('❌ Error fetching bookings:', error);
+    throw error;
+  }
+};
+
+// ✅ Get past user bookings (Archived)
+export const getPastUserBookings = async (
+  bookerId: string,
+  year?: string,
+  month?: string
+): Promise<BookingResponse[]> => {
+  try {
+    let url = `${TOWERS_API}/bookings/past?bookerId=${encodeURIComponent(bookerId)}`;
+    if (year) url += `&year=${year}`;
+    if (month) url += `&month=${month}`;
+
+    const res = await fetchWithFallback(url);
+    const bookings = await handleResponse(res);
+    return bookings || [];
+  } catch (error) {
+    console.error('❌ Error fetching past bookings:', error);
     throw error;
   }
 };

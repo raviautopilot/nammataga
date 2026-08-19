@@ -32,6 +32,8 @@
     "razorpay": {
       "payment_file": "data/config/payment.json"
     },
-    "tower": {}
+    "tower": {
+      "bookings_file": "data/towers/bookings.json"
+    }
   }
 }
