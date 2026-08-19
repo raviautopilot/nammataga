@@ -591,12 +591,12 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 		return
 	}
 
-	// Click Book on the specific room using JS to bypass sticky navbar
+	// Click Book on the specific room (try direct click or JS click)
 	jsClickScript := fmt.Sprintf(`
 		const btn = document.querySelector('[data-testid="%s"]');
-		if(btn) {
-			btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-			setTimeout(() => btn.click(), 500);
+		if(btn && !btn.disabled) {
+			btn.scrollIntoView({behavior: 'instant', block: 'center'});
+			btn.click();
 			return true;
 		}
 		return false;
@@ -604,11 +604,20 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 
 	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
 	if err != nil || clicked == false {
+		if clickErr := mp.Page.ClickByTestID(bookBtnID, mp.DefaultTimeout); clickErr != nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("failed to find or click %s: %v", bookBtnID, clickErr)
+			return
+		}
+	}
+
+	// Wait for booking modal and booker phone input to be visible
+	if _, err := mp.Page.WaitUntilVisible("css:[data-testid='testid-booker-phone-input']", 10*time.Second); err != nil {
 		r.Status = "failed"
-		r.Error = fmt.Errorf("failed to find or click %s: %v", bookBtnID, err)
+		r.Error = fmt.Errorf("booking modal / phone input did not appear: %w", err)
+		r.Advice = append(r.Advice, "Advice: Verify room booking button triggers dialog and 'testid-booker-phone-input' exists")
 		return
 	}
-	time.Sleep(2 * time.Second) // wait for modal to open
 
 	// Fill Modal: Booker Phone Number
 	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
@@ -618,7 +627,7 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 	}
 
 	// Select "Guest" / "Others"
-	if _, err := mp.Page.Driver.ExecuteScript("document.getElementById('guest').click();", nil); err != nil {
+	if _, err := mp.Page.Driver.ExecuteScript("const g = document.getElementById('guest'); if(g) { g.click(); }", nil); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		return
@@ -632,17 +641,18 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 		// Select Bed Count (Capacity)
 		if err := mp.Page.ClickByTestID("testid-bed-count-select", mp.DefaultTimeout); err == nil {
 			time.Sleep(1 * time.Second)
-			bedText := fmt.Sprintf("%d bed", capacity)
 			selectOptionScript := fmt.Sprintf(`
 				const options = document.querySelectorAll('[role="option"]');
 				for(let opt of options) {
-					if(opt.textContent.includes('%s')) {
+					const val = opt.getAttribute('data-value') || opt.getAttribute('value') || '';
+					const txt = opt.textContent || '';
+					if(val === '%d' || txt.includes('%d bed') || txt.includes('%d beds')) {
 						opt.click();
 						return true;
 					}
 				}
 				return false;
-			`, bedText)
+			`, capacity, capacity, capacity)
 			_, _ = mp.Page.Driver.ExecuteScript(selectOptionScript, nil)
 			time.Sleep(1 * time.Second)
 		}

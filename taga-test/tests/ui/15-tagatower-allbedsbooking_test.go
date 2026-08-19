@@ -9,20 +9,18 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_15_TAGATower_AllRoomBooking(t *testing.T) {
-	tests.RunUITest(t, "TAGA Tower - All Room Booking", func(t *testing.T, page *ui.Page) {
+func TestUI_15_TAGATower_AllBedsBooking(t *testing.T) {
+	tests.RunUITest(t, "TAGA Tower - All Beds Booking", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 
 		member := actions.NewMemberPersona(page, cfg.UiURL, 5*time.Second)
-		result := actions.NewResult("TestUI_15_TAGATower_AllRoomBooking")
+		result := actions.NewResult("TestUI_15_TAGATower_AllBedsBooking")
 
 		// Declarative Persona Action Flow
 		actions.GoToHome(member, result)
 		actions.LoginAsMember(member, cfg, result)
 		actions.NavigateToTAGATower(member, cfg, result)
-		actions.BookSimpleRoom(member, cfg, result, "apex-1")
-		actions.CancelLatestBooking(member, cfg, result)
-		actions.BookSimpleRoom(member, cfg, result, "pavalam")
+		actions.BookAllBedsInRoom(member, cfg, result, "apex-1", 3)
 		actions.CancelLatestBooking(member, cfg, result)
 		actions.LogoutMember(member, cfg, result)
 
