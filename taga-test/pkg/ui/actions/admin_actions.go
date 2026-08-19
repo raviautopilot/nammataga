@@ -1344,7 +1344,7 @@ func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, r *Result)
 
 // ManageGalleryAction handles uploading a gallery photo, verifying it, and deleting it.
 func ManageGalleryAction(aai AdminActionsInterface, cfg *config.Config, r *Result) {
-	relativeImagePath := "../../fixtures/a_test_gallery_sample.jpg"
+	relativeImagePath := "../../fixtures/gallery test image.png"
 	description := "Field visit and workshop on organic farming techniques"
 	photoDate := time.Now().Format("2006-01-02")
 	actionName := fmt.Sprintf("Manage Gallery Photo (%s)", description)

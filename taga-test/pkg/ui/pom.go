@@ -214,8 +214,58 @@ func (p *Page) GetText(locator string, timeout time.Duration) (string, error) {
 	return txt, nil
 }
 
+// WaitForLoadingToFinish waits until there are no visible loading indicators on the page.
+func (p *Page) WaitForLoadingToFinish() {
+	script := `
+		const spinners = document.querySelectorAll('.animate-spin, [data-testid*="loading"]');
+		for (let i = 0; i < spinners.length; i++) {
+			const style = window.getComputedStyle(spinners[i]);
+			if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+				return false;
+			}
+		}
+		
+		const xpath = "//*[contains(text(), 'Loading')]";
+		const textNodes = document.evaluate(xpath, document, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+		for (let i = 0; i < textNodes.snapshotLength; i++) {
+			const node = textNodes.snapshotItem(i);
+			const style = window.getComputedStyle(node);
+			if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+				const text = node.textContent.trim();
+				if (text.startsWith('Loading') && text.endsWith('...')) {
+					return false;
+				}
+				if (text === 'Loading') {
+					return false;
+				}
+			}
+		}
+		
+		if (document.readyState !== 'complete') {
+			return false;
+		}
+
+		return true;
+	`
+	_ = p.Driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
+		res, err := wd.ExecuteScript(script, nil)
+		if err != nil {
+			return true, nil // assume finished if error
+		}
+		if isFinished, ok := res.(bool); ok {
+			return isFinished, nil
+		}
+		return true, nil
+	}, 10*time.Second)
+}
+
 // CaptureScreenshot takes a PNG screenshot and writes it to the local screenshots/ directory.
 func (p *Page) CaptureScreenshot(testName string) (string, error) {
+	p.WaitForLoadingToFinish()
+	
+	// Additional brief pause to allow for CSS transitions or render updates to complete
+	time.Sleep(500 * time.Millisecond)
+
 	screenshotData, err := p.Driver.Screenshot()
 	if err != nil {
 		return "", fmt.Errorf("failed to capture screenshot bytes: %w", err)
@@ -416,9 +466,32 @@ const NetworkInterceptorScript = `
 })();
 `
 
+const MockRazorpayScript = `
+(function() {
+    window.Razorpay = function(options) {
+        this.open = function() {
+            if (options && typeof options.handler === 'function') {
+                var orderId = (options.order_id) || "mock_order_auto_" + Math.random().toString(36).substring(2, 10);
+                options.handler({
+                    razorpay_order_id: orderId,
+                    razorpay_payment_id: "pay_mock_" + Math.random().toString(36).substring(2, 10),
+                    razorpay_signature: "mock_signature"
+                });
+            }
+        };
+    };
+})();
+`
+
+// InjectMockRazorpay injects a global mock for Razorpay checkout into the window context.
+func (p *Page) InjectMockRazorpay() {
+	_, _ = p.Driver.ExecuteScript(MockRazorpayScript, nil)
+}
+
 // InjectNetworkInterceptor injects the fetch/XHR interceptor script into the browser page.
 func (p *Page) InjectNetworkInterceptor() {
 	_, _ = p.Driver.ExecuteScript(NetworkInterceptorScript, nil)
+	p.InjectMockRazorpay()
 }
 
 // RetrieveNetworkRequestsRaw retrieves the captured network requests JSON string from browser sessionStorage.

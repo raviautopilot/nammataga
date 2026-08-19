@@ -298,22 +298,7 @@ func PayAnnualSubscription(mai MemberActionsInterface, cfg *config.Config, r *Re
 	r.WaitForElementAndCapture(mp.Page, "css:[role='dialog']", 5 * time.Second, "Payment_Modal_Opened")
 
 	// 4. Inject Mock Razorpay
-	mockScript := `
-	window.Razorpay = function(options) {
-		this.open = function() {
-			options.handler({
-				razorpay_order_id: "mock_order_test_123",
-				razorpay_payment_id: "pay_mock_test_123",
-				razorpay_signature: "mock_signature"
-			});
-		};
-	};`
-	if _, err := mp.Page.Driver.ExecuteScript(mockScript, nil); err != nil {
-		r.Status = "failed"
-		r.Error = err
-		r.Advice = append(r.Advice, "Advice: Failed to inject mock Razorpay script")
-		return
-	}
+	mp.Page.InjectMockRazorpay()
 
 	// 5. Click Proceed to Pay
 	if err := mp.Page.ClickByTestID("testid-membership-payment-submit-button", mp.DefaultTimeout); err != nil {
@@ -436,17 +421,7 @@ func BookSimpleRoom(mai MemberActionsInterface, cfg *config.Config, r *Result, r
 	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_Booking_Modal_%s", roomID))
 
 	// Mocking Razorpay
-	mockScript := `
-	window.Razorpay = function(options) {
-		this.open = function() {
-			options.handler({
-				razorpay_order_id: "mock_order_tower_123",
-				razorpay_payment_id: "pay_mock_tower_123",
-				razorpay_signature: "mock_signature"
-			});
-		};
-	};`
-	mp.Page.Driver.ExecuteScript(mockScript, nil)
+	mp.Page.InjectMockRazorpay()
 
 	// Click proceed
 	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
@@ -584,17 +559,7 @@ func BookRoomForGuest(mai MemberActionsInterface, cfg *config.Config, r *Result,
 	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_GuestBooking_Modal_%s", roomID))
 
 	// Mocking Razorpay
-	mockScript := `
-	window.Razorpay = function(options) {
-		this.open = function() {
-			options.handler({
-				razorpay_order_id: "mock_order_tower_guest_123",
-				razorpay_payment_id: "pay_mock_tower_guest_123",
-				razorpay_signature: "mock_signature"
-			});
-		};
-	};`
-	mp.Page.Driver.ExecuteScript(mockScript, nil)
+	mp.Page.InjectMockRazorpay()
 
 	// Click proceed
 	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
@@ -626,12 +591,12 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 		return
 	}
 
-	// Click Book on the specific room using JS to bypass sticky navbar
+	// Click Book on the specific room (try direct click or JS click)
 	jsClickScript := fmt.Sprintf(`
 		const btn = document.querySelector('[data-testid="%s"]');
-		if(btn) {
-			btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-			setTimeout(() => btn.click(), 500);
+		if(btn && !btn.disabled) {
+			btn.scrollIntoView({behavior: 'instant', block: 'center'});
+			btn.click();
 			return true;
 		}
 		return false;
@@ -639,11 +604,20 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 
 	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
 	if err != nil || clicked == false {
+		if clickErr := mp.Page.ClickByTestID(bookBtnID, mp.DefaultTimeout); clickErr != nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("failed to find or click %s: %v", bookBtnID, clickErr)
+			return
+		}
+	}
+
+	// Wait for booking modal and booker phone input to be visible
+	if _, err := mp.Page.WaitUntilVisible("css:[data-testid='testid-booker-phone-input']", 10*time.Second); err != nil {
 		r.Status = "failed"
-		r.Error = fmt.Errorf("failed to find or click %s: %v", bookBtnID, err)
+		r.Error = fmt.Errorf("booking modal / phone input did not appear: %w", err)
+		r.Advice = append(r.Advice, "Advice: Verify room booking button triggers dialog and 'testid-booker-phone-input' exists")
 		return
 	}
-	time.Sleep(2 * time.Second) // wait for modal to open
 
 	// Fill Modal: Booker Phone Number
 	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
@@ -653,7 +627,7 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 	}
 
 	// Select "Guest" / "Others"
-	if _, err := mp.Page.Driver.ExecuteScript("document.getElementById('guest').click();", nil); err != nil {
+	if _, err := mp.Page.Driver.ExecuteScript("const g = document.getElementById('guest'); if(g) { g.click(); }", nil); err != nil {
 		r.Status = "failed"
 		r.Error = err
 		return
@@ -667,17 +641,18 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 		// Select Bed Count (Capacity)
 		if err := mp.Page.ClickByTestID("testid-bed-count-select", mp.DefaultTimeout); err == nil {
 			time.Sleep(1 * time.Second)
-			bedText := fmt.Sprintf("%d bed", capacity)
 			selectOptionScript := fmt.Sprintf(`
 				const options = document.querySelectorAll('[role="option"]');
 				for(let opt of options) {
-					if(opt.textContent.includes('%s')) {
+					const val = opt.getAttribute('data-value') || opt.getAttribute('value') || '';
+					const txt = opt.textContent || '';
+					if(val === '%d' || txt.includes('%d bed') || txt.includes('%d beds')) {
 						opt.click();
 						return true;
 					}
 				}
 				return false;
-			`, bedText)
+			`, capacity, capacity, capacity)
 			_, _ = mp.Page.Driver.ExecuteScript(selectOptionScript, nil)
 			time.Sleep(1 * time.Second)
 		}
@@ -728,17 +703,7 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_AllRoomBooking_Modal_%s", roomID))
 
 	// Mocking Razorpay
-	mockScript := `
-	window.Razorpay = function(options) {
-		this.open = function() {
-			options.handler({
-				razorpay_order_id: "mock_order_tower_allroom_123",
-				razorpay_payment_id: "pay_mock_tower_allroom_123",
-				razorpay_signature: "mock_signature"
-			});
-		};
-	};`
-	mp.Page.Driver.ExecuteScript(mockScript, nil)
+	mp.Page.InjectMockRazorpay()
 
 	// Click proceed
 	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
@@ -845,17 +810,7 @@ func TryBookRoomAsSelfMultibooking(mai MemberActionsInterface, cfg *config.Confi
 	r.CaptureScreenshot(mp.Page, "TAGATower_SelfMultibooking_Attempt")
 
 	// Mocking Razorpay
-	mockScript := `
-	window.Razorpay = function(options) {
-		this.open = function() {
-			options.handler({
-				razorpay_order_id: "mock_order_tower_self_multi_123",
-				razorpay_payment_id: "pay_mock_tower_self_multi_123",
-				razorpay_signature: "mock_signature"
-			});
-		};
-	};`
-	mp.Page.Driver.ExecuteScript(mockScript, nil)
+	mp.Page.InjectMockRazorpay()
 
 	// Click proceed to payment
 	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
@@ -1219,17 +1174,7 @@ func BookSingleBedWithGender(mai MemberActionsInterface, cfg *config.Config, r *
 	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_GenderBooking_%s_%s", roomID, gender))
 
 	// Mocking Razorpay
-	mockScript := `
-	window.Razorpay = function(options) {
-		this.open = function() {
-			options.handler({
-				razorpay_order_id: "mock_order_tower_gender_123",
-				razorpay_payment_id: "pay_mock_tower_gender_123",
-				razorpay_signature: "mock_signature"
-			});
-		};
-	};`
-	mp.Page.Driver.ExecuteScript(mockScript, nil)
+	mp.Page.InjectMockRazorpay()
 
 	// Click proceed
 	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
@@ -1320,17 +1265,7 @@ func TryBookSingleBedWithGenderOpposite(mai MemberActionsInterface, cfg *config.
 	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_OppositeGender_Attempt_%s_%s", roomID, gender))
 
 	// Mocking Razorpay
-	mockScript := `
-	window.Razorpay = function(options) {
-		this.open = function() {
-			options.handler({
-				razorpay_order_id: "mock_order_tower_gender_opp_123",
-				razorpay_payment_id: "pay_mock_tower_gender_opp_123",
-				razorpay_signature: "mock_signature"
-			});
-		};
-	};`
-	mp.Page.Driver.ExecuteScript(mockScript, nil)
+	mp.Page.InjectMockRazorpay()
 
 	// Click proceed
 	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
@@ -1605,17 +1540,7 @@ func BookRoomForTenDays(mai MemberActionsInterface, cfg *config.Config, r *Resul
 	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_10DaysBooking_Modal_%s", roomID))
 
 	// Mocking Razorpay
-	mockScript := `
-	window.Razorpay = function(options) {
-		this.open = function() {
-			options.handler({
-				razorpay_order_id: "mock_order_tower_10days_123",
-				razorpay_payment_id: "pay_mock_tower_10days_123",
-				razorpay_signature: "mock_signature"
-			});
-		};
-	};`
-	mp.Page.Driver.ExecuteScript(mockScript, nil)
+	mp.Page.InjectMockRazorpay()
 
 	// Click proceed
 	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
