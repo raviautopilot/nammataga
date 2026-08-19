@@ -249,17 +249,23 @@ export const deleteResource = async (categoryId: string, documentTitle: string):
 
 // Fetch all resource categories WITH their documents
 export const getResourceCategoriesWithDocs = async (): Promise<ResourceCategoryWithDocs[]> => {
-  const response = await fetch(`${API_BASE}/resources/all`);
+  const token = getAuthToken() || localStorage.getItem('member_token');
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}/resources/all`, { headers });
   if (!response.ok) {
     // Fallback: fetch categories then documents for each
-    const catResponse = await fetch(`${API_BASE}/resources`);
+    const catResponse = await fetch(`${API_BASE}/resources`, { headers });
     if (!catResponse.ok) throw new Error('Failed to fetch resource categories');
     const categories: { id: string; name: string }[] = await catResponse.json();
 
     const withDocs = await Promise.all(
       categories.map(async (cat) => {
         try {
-          const docResponse = await fetch(`${API_BASE}/resources/${cat.id}`);
+          const docResponse = await fetch(`${API_BASE}/resources/${cat.id}`, { headers });
           const documents: ResourceDocument[] = docResponse.ok ? await docResponse.json() : [];
           return { ...cat, documents: documents || [] };
         } catch {
@@ -341,7 +347,12 @@ export const getGallery = async (): Promise<GalleryImage[]> => {
 };
 
 export const getResourceCategories = async (): Promise<any[]> => {
-  const response = await fetch(`${API_BASE}/resources`);
+  const token = getAuthToken() || localStorage.getItem('member_token');
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const response = await fetch(`${API_BASE}/resources`, { headers });
   if (!response.ok) {
     throw new Error('Failed to fetch resources');
   }
