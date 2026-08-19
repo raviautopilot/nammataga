@@ -416,9 +416,32 @@ const NetworkInterceptorScript = `
 })();
 `
 
+const MockRazorpayScript = `
+(function() {
+    window.Razorpay = function(options) {
+        this.open = function() {
+            if (options && typeof options.handler === 'function') {
+                var orderId = (options.order_id) || "mock_order_auto_" + Math.random().toString(36).substring(2, 10);
+                options.handler({
+                    razorpay_order_id: orderId,
+                    razorpay_payment_id: "pay_mock_" + Math.random().toString(36).substring(2, 10),
+                    razorpay_signature: "mock_signature"
+                });
+            }
+        };
+    };
+})();
+`
+
+// InjectMockRazorpay injects a global mock for Razorpay checkout into the window context.
+func (p *Page) InjectMockRazorpay() {
+	_, _ = p.Driver.ExecuteScript(MockRazorpayScript, nil)
+}
+
 // InjectNetworkInterceptor injects the fetch/XHR interceptor script into the browser page.
 func (p *Page) InjectNetworkInterceptor() {
 	_, _ = p.Driver.ExecuteScript(NetworkInterceptorScript, nil)
+	p.InjectMockRazorpay()
 }
 
 // RetrieveNetworkRequestsRaw retrieves the captured network requests JSON string from browser sessionStorage.
