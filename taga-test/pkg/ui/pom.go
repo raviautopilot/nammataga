@@ -214,8 +214,58 @@ func (p *Page) GetText(locator string, timeout time.Duration) (string, error) {
 	return txt, nil
 }
 
+// WaitForLoadingToFinish waits until there are no visible loading indicators on the page.
+func (p *Page) WaitForLoadingToFinish() {
+	script := `
+		const spinners = document.querySelectorAll('.animate-spin, [data-testid*="loading"]');
+		for (let i = 0; i < spinners.length; i++) {
+			const style = window.getComputedStyle(spinners[i]);
+			if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+				return false;
+			}
+		}
+		
+		const xpath = "//*[contains(text(), 'Loading')]";
+		const textNodes = document.evaluate(xpath, document, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+		for (let i = 0; i < textNodes.snapshotLength; i++) {
+			const node = textNodes.snapshotItem(i);
+			const style = window.getComputedStyle(node);
+			if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+				const text = node.textContent.trim();
+				if (text.startsWith('Loading') && text.endsWith('...')) {
+					return false;
+				}
+				if (text === 'Loading') {
+					return false;
+				}
+			}
+		}
+		
+		if (document.readyState !== 'complete') {
+			return false;
+		}
+
+		return true;
+	`
+	_ = p.Driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
+		res, err := wd.ExecuteScript(script, nil)
+		if err != nil {
+			return true, nil // assume finished if error
+		}
+		if isFinished, ok := res.(bool); ok {
+			return isFinished, nil
+		}
+		return true, nil
+	}, 10*time.Second)
+}
+
 // CaptureScreenshot takes a PNG screenshot and writes it to the local screenshots/ directory.
 func (p *Page) CaptureScreenshot(testName string) (string, error) {
+	p.WaitForLoadingToFinish()
+	
+	// Additional brief pause to allow for CSS transitions or render updates to complete
+	time.Sleep(500 * time.Millisecond)
+
 	screenshotData, err := p.Driver.Screenshot()
 	if err != nil {
 		return "", fmt.Errorf("failed to capture screenshot bytes: %w", err)
