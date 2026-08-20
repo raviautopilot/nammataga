@@ -1857,7 +1857,6 @@ func createManualAnnualSubscription(memberID, memberEmail, memberName string) {
 // @Summary Get mock emails for E2E testing
 // @Tags Admin Members
 // @Produce json
-// @Security BearerAuth
 // @Success 200 {object} map[string]string
 // @Router /api/admin/mock-emails [get]
 func GetMockEmails(c *gin.Context) {
@@ -1882,7 +1881,6 @@ func GetMockEmails(c *gin.Context) {
 // @Summary Clear mock emails for E2E testing
 // @Tags Admin Members
 // @Produce json
-// @Security BearerAuth
 // @Success 200 {object} map[string]string
 // @Router /api/admin/mock-emails [delete]
 func ClearMockEmails(c *gin.Context) {
