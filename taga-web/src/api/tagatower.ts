@@ -90,10 +90,21 @@ const handleResponse = async (res: Response) => {
   return res.json();
 };
 
+const getAuthHeaders = (customHeaders?: Record<string, string>): Record<string, string> => {
+  const token = localStorage.getItem('member_token') || localStorage.getItem('admin_token');
+  const headers: Record<string, string> = { ...customHeaders };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
 // ✅ Get all rooms
 export const getAllRooms = async (): Promise<Room[]> => {
   try {
-    const res = await fetchWithFallback(`${TOWERS_API}/rooms`);
+    const res = await fetchWithFallback(`${TOWERS_API}/rooms`, {
+      headers: getAuthHeaders(),
+    });
     return await handleResponse(res);
   } catch (error) {
     console.error('❌ Error fetching rooms:', error);
@@ -108,7 +119,8 @@ export const checkAvailability = async (
 ): Promise<RoomAvailability> => {
   try {
     const res = await fetchWithFallback(
-      `${TOWERS_API}/availability?roomId=${roomId}&date=${date}`
+      `${TOWERS_API}/availability?roomId=${roomId}&date=${date}`,
+      { headers: getAuthHeaders() }
     );
     return await handleResponse(res);
   } catch (error) {
@@ -118,13 +130,13 @@ export const checkAvailability = async (
 };
 
 // ✅ Bulk: Check availability of ALL rooms across a full date range in ONE API call.
-// Replaces N × (checkOut - checkIn) calls with a single request — essential for VPS.
 export const checkAvailabilityRange = async (
   checkIn: string,  // YYYY-MM-DD
   checkOut: string  // YYYY-MM-DD
 ): Promise<Record<string, RoomAvailability>> => {
   const res = await fetchWithFallback(
-    `${TOWERS_API}/availability-range?checkIn=${checkIn}&checkOut=${checkOut}`
+    `${TOWERS_API}/availability-range?checkIn=${checkIn}&checkOut=${checkOut}`,
+    { headers: getAuthHeaders() }
   );
   return await handleResponse(res);
 };
@@ -139,7 +151,7 @@ export const createBooking = async (
       `${TOWERS_API}/bookings?bookerId=${encodeURIComponent(bookerId)}`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(request),
       }
     );
@@ -154,7 +166,8 @@ export const createBooking = async (
 export const getUserBookings = async (bookerId: string): Promise<BookingResponse[]> => {
   try {
     const res = await fetchWithFallback(
-      `${TOWERS_API}/bookings?bookerId=${encodeURIComponent(bookerId)}`
+      `${TOWERS_API}/bookings?bookerId=${encodeURIComponent(bookerId)}`,
+      { headers: getAuthHeaders() }
     );
     const bookings = await handleResponse(res);
     return bookings || [];
@@ -175,7 +188,7 @@ export const getPastUserBookings = async (
     if (year) url += `&year=${year}`;
     if (month) url += `&month=${month}`;
 
-    const res = await fetchWithFallback(url);
+    const res = await fetchWithFallback(url, { headers: getAuthHeaders() });
     const bookings = await handleResponse(res);
     return bookings || [];
   } catch (error) {
@@ -191,7 +204,7 @@ export const confirmPayment = async (bookingId: string, upiId: string): Promise<
       `${TOWERS_API}/bookings/${bookingId}/confirm-payment`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ upiId }),
       }
     );
@@ -213,6 +226,7 @@ export const cancelBooking = async (bookingId: string): Promise<void> => {
       `${TOWERS_API}/bookings/${bookingId}`,
       {
         method: 'DELETE',
+        headers: getAuthHeaders(),
       }
     );
 
@@ -238,7 +252,7 @@ export const createOrder = async (amount: number, notes?: Record<string, any>): 
       `${TOWERS_API}/create-order`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(body),
       }
     );

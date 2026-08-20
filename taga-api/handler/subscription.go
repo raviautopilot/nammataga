@@ -28,6 +28,7 @@ type SubscriptionPlanResponse struct {
 // @Tags         Subscription
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Success      200  {array}  SubscriptionPlanResponse
 // @Failure      500  {object}  map[string]string
 // @Router       /api/subscriptions [get]

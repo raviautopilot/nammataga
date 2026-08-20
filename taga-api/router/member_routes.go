@@ -17,16 +17,16 @@ func RegisterMemberRoutes(r *gin.Engine) {
 		auth.POST("/member-forgot-password", handler.MemberForgotPasswordHandler)
 	}
 
-	// Member Authentication & Requests (Public)
+	// Member Authentication (Public login & password recovery)
 	r.POST("/api/member/login", handler.MemberLoginHandler)
-	r.POST("/api/member/logout", handler.MemberLogoutHandler)
-	r.POST("/api/member/change-password", handler.ChangeMemberPasswordHandler)
-	r.POST("/api/member/edit-request", handler.CreateEditRequest)
 
 	// Protected Member Operations (JWT Required)
 	memberProtected := r.Group("/api/member")
 	memberProtected.Use(middleware.MemberAuthMiddleware())
 	{
+		memberProtected.POST("/logout", handler.MemberLogoutHandler)
+		memberProtected.POST("/change-password", handler.ChangeMemberPasswordHandler)
+		memberProtected.POST("/edit-request", handler.CreateEditRequest)
 		memberProtected.GET("/profile", handler.GetMemberProfileByToken)
 		memberProtected.PUT("/profile", handler.UpdateMemberProfileHandler)
 		memberProtected.GET("/notifications", handler.GetMemberNotifications)
@@ -34,8 +34,9 @@ func RegisterMemberRoutes(r *gin.Engine) {
 		memberProtected.GET("/notifications/unread/count", handler.GetUnreadCount)
 	}
 
-	// Membership Registration / Details
+	// Membership Registration / Details (Protected with Member Auth)
 	membership := r.Group("/api/membership")
+	membership.Use(middleware.MemberAuthMiddleware())
 	{
 		membership.POST("/apply", handler.ApplyMembershipHandler)
 		membership.GET("/list", handler.GetMembershipListHandler)

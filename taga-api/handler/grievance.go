@@ -21,6 +21,7 @@ var grievances []model.Grievance
 // @Tags Grievances
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param grievance body model.Grievance true "Grievance Data"
 // @Success 200 {object} model.Grievance
 // @Failure 400 {object} map[string]string
@@ -99,6 +100,7 @@ func CreateGrievance(c *gin.Context) {
 // @Description Fetch all submitted grievances
 // @Tags Grievances
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} model.Grievance
 // @Router /api/grievances [get]
 func GetGrievances(c *gin.Context) {
@@ -123,6 +125,7 @@ func GetGrievances(c *gin.Context) {
 // @Summary Get grievance by ID
 // @Tags Grievances
 // @Produce json
+// @Security BearerAuth
 // @Param id path string true "Grievance ID"
 // @Success 200 {object} model.Grievance
 // @Failure 404 {object} map[string]string
@@ -147,6 +150,7 @@ func GetGrievanceByID(c *gin.Context) {
 // @Tags Grievances
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param id path string true "Grievance ID"
 // @Param grievance body model.Grievance true "Updated Data"
 // @Success 200 {object} model.Grievance
@@ -190,6 +194,7 @@ func UpdateGrievance(c *gin.Context) {
 // DeleteGrievance godoc
 // @Summary Delete grievance
 // @Tags Grievances
+// @Security BearerAuth
 // @Param id path string true "Grievance ID"
 // @Success 200 {object} map[string]string
 // @Failure 404 {object} map[string]string
@@ -221,6 +226,7 @@ func DeleteGrievance(c *gin.Context) {
 // @Description Fetch all grievance categories from JSON file
 // @Tags Grievances
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} string
 // @Router /api/categories [get]
 func GetCategories(c *gin.Context) {
@@ -243,6 +249,7 @@ func GetCategories(c *gin.Context) {
 // @Description Fetch all grievance priorities from JSON file
 // @Tags Grievances
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} map[string]string
 // @Router /api/priorities [get]
 func GetPriorities(c *gin.Context) {
@@ -265,6 +272,7 @@ func GetPriorities(c *gin.Context) {
 // @Description Get the relative path/url of the grievance banner image
 // @Tags Grievances
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} map[string]string
 // @Router /api/grievance-banner [get]
 func GetGrievanceBanner(c *gin.Context) {

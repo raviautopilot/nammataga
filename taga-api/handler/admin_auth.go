@@ -30,6 +30,7 @@ type AdminLoginResponse struct {
 // @Tags Admin Authentication
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param credentials body AdminLoginRequest true "Admin Login Credentials"
 // @Success 200 {object} AdminLoginResponse
 // @Router /api/admin/login [post]

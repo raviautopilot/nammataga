@@ -71,6 +71,7 @@ func checkAnnualSubscriptionStatus(memberID string) bool {
 // @Tags Member Auth
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param resetRequest body model.ResetPasswordRequest true "Reset details"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/auth/reset-password [post]
@@ -101,6 +102,7 @@ func ResetPasswordHandler(c *gin.Context) {
 // @Tags Member Auth
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param forgotPasswordRequest body model.ForgotPasswordRequest true "Email address"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/auth/forgot-password [post]
@@ -131,6 +133,7 @@ func ForgotPasswordHandler(c *gin.Context) {
 // @Tags Member Auth
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param request body model.ForgotPasswordRequest true "Forgot Password"
 // @Success 200 {object} map[string]string
 // @Router /api/auth/member-forgot-password [post]
@@ -155,6 +158,7 @@ func MemberForgotPasswordHandler(c *gin.Context) {
 // @Tags Member Auth
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param credentials body MemberLoginRequest true "Member credentials"
 // @Success 200 {object} MemberLoginResponse
 // @Router /api/member/login [post]
@@ -292,6 +296,7 @@ func MemberLoginHandler(c *gin.Context) {
 // @Summary Member logout
 // @Tags Member Auth
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
 // @Router /api/member/logout [post]
 func MemberLogoutHandler(c *gin.Context) {
@@ -320,6 +325,7 @@ func MemberLogoutHandler(c *gin.Context) {
 // @Tags Member Auth
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param request body object true "Change Password Request"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/auth/change-password [post]

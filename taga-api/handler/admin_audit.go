@@ -30,14 +30,24 @@ type auditQueryParams struct {
 	Limit  int    // max 200
 }
 
-// GetAuditLogsHandler serves audit records to authorized administrators.
-//
-// GET /api/admin/audit
-// Query params: taga_id, year, month, action, module, search, page, limit
-//
-// Response:
-//
-//	{ "data": [...], "page": 1, "limit": 50, "total": 100 }
+// GetAuditLogsHandler godoc
+// @Summary Get audit records
+// @Description Serves audit records to authorized administrators with filtering and pagination
+// @Tags Admin Audit
+// @Produce json
+// @Security BearerAuth
+// @Param taga_id query string false "Member TAGA ID"
+// @Param year query string false "Year (YYYY)"
+// @Param month query string false "Month (MM)"
+// @Param action query string false "Action filter"
+// @Param module query string false "Module filter"
+// @Param search query string false "Search keyword"
+// @Param page query int false "Page number (default 1)"
+// @Param limit query int false "Limit per page (default 50, max 200)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/admin/audit [get]
 func GetAuditLogsHandler(c *gin.Context) {
 	params, err := parseAuditQuery(c)
 	if err != nil {
@@ -77,10 +87,17 @@ func GetAuditLogsHandler(c *gin.Context) {
 	})
 }
 
-// GetAuditUsersHandler returns the list of user IDs (taga-ids) that have
-// audit files for the given year/month. Used to populate the UI dropdown.
-//
-// GET /api/admin/audit/users?year=2026&month=08
+// GetAuditUsersHandler godoc
+// @Summary Get audit user list
+// @Description Returns the list of user IDs (taga-ids) that have audit files for the given year/month
+// @Tags Admin Audit
+// @Produce json
+// @Security BearerAuth
+// @Param year query string false "Year (YYYY)"
+// @Param month query string false "Month (MM)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Router /api/admin/audit/users [get]
 func GetAuditUsersHandler(c *gin.Context) {
 	year := c.Query("year")
 	month := c.Query("month")

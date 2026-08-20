@@ -16,6 +16,7 @@ import (
 // @Description Returns list of resource categories (without documents)
 // @Tags Resources
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} model.ResourceCategory
 // @Failure 500 {object} map[string]string
 // @Router /api/resources [get]
@@ -44,6 +45,7 @@ func GetResourceCategories(c *gin.Context) {
 // @Description Returns all resource categories along with their documents
 // @Tags Resources
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} service.ResourceCategory
 // @Failure 500 {object} map[string]string
 // @Router /api/resources/all [get]
@@ -61,6 +63,7 @@ func GetAllResources(c *gin.Context) {
 // @Description Returns all documents for a given resource category ID
 // @Tags Resources
 // @Produce json
+// @Security BearerAuth
 // @Param id path string true "Category ID"
 // @Param subcategory query string false "Optional subcategory: Central or State"
 // @Success 200 {array} model.Document
@@ -106,6 +109,7 @@ func GetDocumentsByCategory(c *gin.Context) {
 // @Description Get the relative path/url of the resources banner image
 // @Tags Resources
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} map[string]string
 // @Router /api/resources-banner [get]
 func GetResourcesBanner(c *gin.Context) {
@@ -119,6 +123,7 @@ func GetResourcesBanner(c *gin.Context) {
 // @Description Returns list of external links (title + URL) from CSV file
 // @Tags Resources
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /api/resources/external-links [get]

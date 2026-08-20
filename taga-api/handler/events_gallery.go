@@ -21,6 +21,7 @@ const (
 // @Summary Get upcoming events
 // @Tags Events
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} model.Event
 // @Router /api/events/upcoming [get]
 func UpcomingEventsHandler(c *gin.Context) {
@@ -78,6 +79,7 @@ func loadGallery() ([]model.GalleryImage, error) {
 // @Summary Get gallery years
 // @Tags gallery
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} int
 // @Router /api/gallery/years [get]
 func GalleryYearsHandler(c *gin.Context) {
@@ -105,6 +107,7 @@ func GalleryYearsHandler(c *gin.Context) {
 // @Summary Get gallery images by year
 // @Tags gallery
 // @Produce json
+// @Security BearerAuth
 // @Param year query int false "Gallery Year (default: current year)"
 // @Success 200 {array} model.GalleryImage
 // @Router /api/gallery [get]

@@ -17,7 +17,11 @@ const docTemplate = `{
     "paths": {
         "/": {
             "get": {
-                "description": "Returns a welcome message from the API",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -43,7 +47,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Send email announcement to members and store in database",
                 "consumes": [
                     "application/json"
                 ],
@@ -75,68 +78,69 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/admin/events/create": {
-            "post": {
+        "/api/admin/audit": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new event with optional image upload",
-                "consumes": [
-                    "multipart/form-data"
-                ],
+                "description": "Serves audit records to authorized administrators with filtering and pagination",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Admin Content"
+                    "Admin Audit"
                 ],
-                "summary": "Create a new event",
+                "summary": "Get audit records",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Event title",
-                        "name": "title",
-                        "in": "formData",
-                        "required": true
+                        "description": "Member TAGA ID",
+                        "name": "taga_id",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Event date (YYYY-MM-DD HH:MM)",
-                        "name": "date",
-                        "in": "formData",
-                        "required": true
+                        "description": "Year (YYYY)",
+                        "name": "year",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Event location",
-                        "name": "location",
-                        "in": "formData"
+                        "description": "Month (MM)",
+                        "name": "month",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Event description",
-                        "name": "description",
-                        "in": "formData"
+                        "description": "Action filter",
+                        "name": "action",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Event status (upcoming/past/completed)",
-                        "name": "status",
-                        "in": "formData"
+                        "description": "Module filter",
+                        "name": "module",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "Number of attendees",
-                        "name": "attendees",
-                        "in": "formData"
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
                     },
                     {
-                        "type": "file",
-                        "description": "Event image file",
-                        "name": "image",
-                        "in": "formData"
+                        "type": "integer",
+                        "description": "Limit per page (default 50, max 200)",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -151,11 +155,92 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/audit/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the list of user IDs (taga-ids) that have audit files for the given year/month",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Audit"
+                ],
+                "summary": "Get audit user list",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Year (YYYY)",
+                        "name": "year",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Month (MM)",
+                        "name": "month",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
                             "additionalProperties": true
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/events/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Content"
+                ],
+                "summary": "Create a new event",
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -171,9 +256,8 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update an event by ID using multipart form data",
                 "consumes": [
-                    "multipart/form-data"
+                    "application/json"
                 ],
                 "produces": [
                     "application/json"
@@ -182,75 +266,9 @@ const docTemplate = `{
                     "Admin Content"
                 ],
                 "summary": "Update an existing event",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Event ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Event title",
-                        "name": "title",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Event date (YYYY-MM-DD HH:MM)",
-                        "name": "date",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Event location",
-                        "name": "location",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Event description",
-                        "name": "description",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Event status (upcoming/ongoing/completed/cancelled)",
-                        "name": "status",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "file",
-                        "description": "Replacement event image",
-                        "name": "image",
-                        "in": "formData"
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -264,7 +282,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete an event by ID",
                 "produces": [
                     "application/json"
                 ],
@@ -272,32 +289,9 @@ const docTemplate = `{
                     "Admin Content"
                 ],
                 "summary": "Delete an event",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Event ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -313,7 +307,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Add a new image to the photo gallery",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -323,68 +316,10 @@ const docTemplate = `{
                 "tags": [
                     "Admin Content"
                 ],
-                "summary": "Upload a gallery image",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Image title",
-                        "name": "title",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Event name",
-                        "name": "event",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Date (YYYY-MM-DD)",
-                        "name": "date",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Year",
-                        "name": "year",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "file",
-                        "description": "Image file (JPEG/PNG)",
-                        "name": "image",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
+                "summary": "Upload gallery image",
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -400,40 +335,16 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Remove an image from the gallery by ID",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Admin Content"
                 ],
-                "summary": "Delete a gallery image",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Gallery image ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "Delete gallery image",
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -444,7 +355,11 @@ const docTemplate = `{
         },
         "/api/admin/init-password": {
             "post": {
-                "description": "Initialize passwords for all members, a specific member, or none (default).",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -465,19 +380,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Password initialization result",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid or missing parameter",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "OK",
                         "schema": {
                             "type": "string"
                         }
@@ -487,7 +390,11 @@ const docTemplate = `{
         },
         "/api/admin/login": {
             "post": {
-                "description": "Authenticates admin user and returns JWT token for subsequent API calls",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -515,27 +422,17 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handler.AdminLoginResponse"
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
                     }
                 }
             }
         },
         "/api/admin/member-registration": {
             "post": {
-                "description": "Process new member registration file upload, validate data, store member details, and send email with temporary password",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -557,28 +454,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Registration successful",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid file or validation errors",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "422": {
-                        "description": "Registration validation failed",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -594,7 +470,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get paginated list of members with search and filters",
                 "consumes": [
                     "application/json"
                 ],
@@ -656,7 +531,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Admin adds a new member with a generated temporary password",
                 "consumes": [
                     "application/json"
                 ],
@@ -685,20 +559,6 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
                     }
                 }
             }
@@ -710,7 +570,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upload multiple members via CSV or Excel file (supports .csv, .xlsx, .xls)",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -736,20 +595,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handler.BulkUploadResult"
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
                     }
                 }
             }
@@ -761,7 +606,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all districts that have members",
                 "consumes": [
                     "application/json"
                 ],
@@ -793,7 +637,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Export all members with filters to Excel file with summary sheet",
                 "consumes": [
                     "application/json"
                 ],
@@ -835,7 +678,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get total members, active, unpaid counts",
                 "consumes": [
                     "application/json"
                 ],
@@ -864,7 +706,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Admin updates member details (all fields except password and TAGA ID)",
                 "consumes": [
                     "application/json"
                 ],
@@ -900,27 +741,6 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
                     }
                 }
             },
@@ -930,7 +750,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Admin hard-deletes a member by ID (removes from JSON)",
                 "produces": [
                     "application/json"
                 ],
@@ -954,26 +773,57 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
+                    }
+                }
+            }
+        },
+        "/api/admin/mock-emails": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Members"
+                ],
+                "summary": "Get mock emails for E2E testing",
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": true
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
-                    },
-                    "404": {
-                        "description": "Not Found",
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Members"
+                ],
+                "summary": "Clear mock emails for E2E testing",
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -1292,7 +1142,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Export member data as CSV report",
                 "consumes": [
                     "application/json"
                 ],
@@ -1303,20 +1152,6 @@ const docTemplate = `{
                     "Admin Reports"
                 ],
                 "summary": "Generate member report",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Report type (membership/financial/activities/district)",
-                        "name": "report_type",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Period (current_month/last_month/current_quarter/current_year/all_time)",
-                        "name": "period",
-                        "in": "query"
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1334,7 +1169,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upload a PDF document to a specific resource category",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -1344,67 +1178,10 @@ const docTemplate = `{
                 "tags": [
                     "Admin Content"
                 ],
-                "summary": "Upload a new resource document",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Resource category ID",
-                        "name": "categoryId",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Document title",
-                        "name": "title",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Year (e.g., 2025)",
-                        "name": "year",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Subcategory (for Scheme G.Os: Central or State)",
-                        "name": "subcategory",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "file",
-                        "description": "PDF file to upload",
-                        "name": "file",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
+                "summary": "Upload resource document",
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1420,47 +1197,16 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete a resource document from a category",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Admin Content"
                 ],
-                "summary": "Delete a resource document",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Resource category ID",
-                        "name": "categoryId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Document title to delete",
-                        "name": "documentTitle",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "Delete resource document",
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1476,29 +1222,16 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Sends renewal emails to all unpaid members if today is a reminder date",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Admin"
                 ],
-                "summary": "Manually trigger renewal reminders (for testing)",
+                "summary": "Manually trigger renewal reminders",
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1511,7 +1244,11 @@ const docTemplate = `{
         },
         "/api/auth/change-password": {
             "post": {
-                "description": "Change member password using old password verification",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1540,34 +1277,17 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
                     }
                 }
             }
         },
         "/api/auth/forgot-password": {
             "post": {
-                "description": "Initiates a password reset process",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1591,28 +1311,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Password reset email sent",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request payload",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Email not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1623,7 +1322,11 @@ const docTemplate = `{
         },
         "/api/auth/member-forgot-password": {
             "post": {
-                "description": "Send reset email",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1654,31 +1357,17 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
                     }
                 }
             }
         },
         "/api/auth/reset-password": {
             "post": {
-                "description": "Resets the password using a valid reset token",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1702,28 +1391,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Password reset successful",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request payload",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Invalid or expired token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1734,6 +1402,11 @@ const docTemplate = `{
         },
         "/api/categories": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Fetch all grievance categories from JSON file",
                 "produces": [
                     "application/json"
@@ -1757,7 +1430,11 @@ const docTemplate = `{
         },
         "/api/events/upcoming": {
             "get": {
-                "description": "Returns upcoming events",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1780,7 +1457,11 @@ const docTemplate = `{
         },
         "/api/gallery": {
             "get": {
-                "description": "Returns gallery images for selected year",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1811,7 +1492,11 @@ const docTemplate = `{
         },
         "/api/gallery/years": {
             "get": {
-                "description": "Returns available gallery years",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1832,8 +1517,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/grievance-banner": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the relative path/url of the grievance banner image",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Grievances"
+                ],
+                "summary": "Get grievance banner image info",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/grievances": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Fetch all submitted grievances",
                 "produces": [
                     "application/json"
@@ -1855,6 +1573,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Submit a grievance with subject, category, priority, etc.",
                 "consumes": [
                     "application/json"
@@ -1898,6 +1621,11 @@ const docTemplate = `{
         },
         "/api/grievances/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1933,6 +1661,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1989,6 +1722,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Grievances"
                 ],
@@ -2026,7 +1764,11 @@ const docTemplate = `{
         },
         "/api/logo": {
             "get": {
-                "description": "Returns the URL of the application logo",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -2036,16 +1778,7 @@ const docTemplate = `{
                 "summary": "Get application logo",
                 "responses": {
                     "200": {
-                        "description": "Logo URL response",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2056,9 +1789,41 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/member/banner": {
+        "/api/member-banner": {
             "get": {
-                "description": "Returns member banner image path",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the relative path/url of the member banner image",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "member"
+                ],
+                "summary": "Get member banner image info",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/member/edit-request": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -2066,9 +1831,20 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Member"
+                    "Member Profile"
                 ],
-                "summary": "Get member banner",
+                "summary": "Create an edit request",
+                "parameters": [
+                    {
+                        "description": "Edit Request Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.EditRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2082,7 +1858,11 @@ const docTemplate = `{
         },
         "/api/member/login": {
             "post": {
-                "description": "Authenticates member and returns JWT token",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -2110,22 +1890,16 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handler.MemberLoginResponse"
                         }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
                     }
                 }
             }
         },
         "/api/member/logout": {
             "post": {
-                "description": "Logout member successfully",
-                "consumes": [
-                    "application/json"
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
                 ],
                 "produces": [
                     "application/json"
@@ -2152,7 +1926,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all notifications for a specific member",
                 "consumes": [
                     "application/json"
                 ],
@@ -2192,7 +1965,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get count of unread notifications for a specific member",
                 "consumes": [
                     "application/json"
                 ],
@@ -2230,7 +2002,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mark a specific notification as read",
                 "consumes": [
                     "application/json"
                 ],
@@ -2268,7 +2039,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Fetch logged-in member profile using JWT token",
                 "consumes": [
                     "application/json"
                 ],
@@ -2286,13 +2056,6 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
                     }
                 }
             },
@@ -2302,7 +2065,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update logged-in member profile",
                 "consumes": [
                     "application/json"
                 ],
@@ -2331,40 +2093,17 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
                     }
                 }
             }
         },
         "/api/membership/apply": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Submit a new TAGA membership application",
                 "consumes": [
                     "application/json"
@@ -2420,6 +2159,11 @@ const docTemplate = `{
         },
         "/api/membership/districts": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve list of districts for membership form",
                 "produces": [
                     "application/json"
@@ -2452,6 +2196,11 @@ const docTemplate = `{
         },
         "/api/membership/list": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve all membership applications (Admin purpose)",
                 "produces": [
                     "application/json"
@@ -2484,7 +2233,11 @@ const docTemplate = `{
         },
         "/api/office": {
             "get": {
-                "description": "Retrieve office bearer data based on the path parameter. Use 'state' for state officers or a district name for district officers",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -2504,41 +2257,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Office data",
+                        "description": "OK",
                         "schema": {}
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Office information not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to load office information",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
                     }
                 }
             }
         },
         "/api/office-bearers/district-office-bearers": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -2570,6 +2301,11 @@ const docTemplate = `{
         },
         "/api/office-bearers/districts": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -2592,6 +2328,11 @@ const docTemplate = `{
         },
         "/api/office-bearers/state-executive": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -2614,6 +2355,11 @@ const docTemplate = `{
         },
         "/api/priorities": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Fetch all grievance priorities from JSON file",
                 "produces": [
                     "application/json"
@@ -2640,7 +2386,11 @@ const docTemplate = `{
         },
         "/api/public/about": {
             "get": {
-                "description": "Returns detailed information about TAGA organization",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -2650,16 +2400,9 @@ const docTemplate = `{
                 "summary": "Get organization information",
                 "responses": {
                     "200": {
-                        "description": "Organization information",
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/model.AboutResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
                         }
                     }
                 }
@@ -2667,7 +2410,11 @@ const docTemplate = `{
         },
         "/api/public/about/contact": {
             "get": {
-                "description": "Fetches all contact details including headquarters, office hours, and regional offices.",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -2677,16 +2424,9 @@ const docTemplate = `{
                 "summary": "Get contact information",
                 "responses": {
                     "200": {
-                        "description": "Successful response with contact information",
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/model.ContactResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
                         }
                     }
                 }
@@ -2694,7 +2434,11 @@ const docTemplate = `{
         },
         "/api/public/about/objectives": {
             "get": {
-                "description": "Returns the list of TAGA organization objectives",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -2704,19 +2448,12 @@ const docTemplate = `{
                 "summary": "Get organization objectives",
                 "responses": {
                     "200": {
-                        "description": "List of organization objectives",
+                        "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/model.Objective"
                             }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
                         }
                     }
                 }
@@ -2724,7 +2461,11 @@ const docTemplate = `{
         },
         "/api/public/about/services": {
             "get": {
-                "description": "Returns a list of services provided by the organization, including their title, description, and category.",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -2734,19 +2475,12 @@ const docTemplate = `{
                 "summary": "Get organization services",
                 "responses": {
                     "200": {
-                        "description": "List of organization services",
+                        "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/model.ServiceResponse"
                             }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
                         }
                     }
                 }
@@ -2754,7 +2488,11 @@ const docTemplate = `{
         },
         "/api/public/about/stats": {
             "get": {
-                "description": "Returns key statistics and metrics about TAGA organization including member count, years of service, districts covered, and programs/events",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -2764,19 +2502,12 @@ const docTemplate = `{
                 "summary": "Get organization statistics",
                 "responses": {
                     "200": {
-                        "description": "List of organization statistics",
+                        "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/model.StatsResponse"
                             }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
                         }
                     }
                 }
@@ -2784,6 +2515,11 @@ const docTemplate = `{
         },
         "/api/resources": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Returns list of resource categories (without documents)",
                 "produces": [
                     "application/json"
@@ -2814,8 +2550,78 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/resources-banner": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the relative path/url of the resources banner image",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Resources"
+                ],
+                "summary": "Get resources banner image info",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/resources/all": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all resource categories along with their documents",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Resources"
+                ],
+                "summary": "Get all resources",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/service.ResourceCategory"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/resources/external-links": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Returns list of external links (title + URL) from CSV file",
                 "produces": [
                     "application/json"
@@ -2851,6 +2657,11 @@ const docTemplate = `{
         },
         "/api/resources/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Returns all documents for a given resource category ID",
                 "produces": [
                     "application/json"
@@ -2907,6 +2718,11 @@ const docTemplate = `{
         },
         "/api/subscriptions": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Fetch all subscription details for members",
                 "consumes": [
                     "application/json"
@@ -2940,8 +2756,238 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/subscriptions/create-order": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a Razorpay order for subscription payment",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Create subscription order",
+                "parameters": [
+                    {
+                        "description": "Order Details",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateSubscriptionOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateSubscriptionOrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/subscriptions/member-paid": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns list of subscription IDs that the member has paid for",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Get member paid subscriptions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Member Email",
+                        "name": "email",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/subscriptions/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the active subscription details and status of a member by email",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Get member subscription status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Member Email",
+                        "name": "email",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/subscriptions/verify-payment": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Verify Razorpay signature and update subscription status",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Verify subscription payment",
+                "parameters": [
+                    {
+                        "description": "Razorpay verification data",
+                        "name": "verification",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/test-email": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Test"
+                ],
+                "summary": "Send test premium emails",
+                "responses": {}
+            }
+        },
         "/api/towers/admin/bookings": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Returns all bookings across all users. Used by the admin occupancy schedule tab.",
                 "produces": [
                     "application/json"
@@ -2965,6 +3011,11 @@ const docTemplate = `{
         },
         "/api/towers/availability": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -2998,8 +3049,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/towers/availability-range": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "One-shot endpoint: returns availability of every room for the entire",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TAGA Towers"
+                ],
+                "summary": "Check availability for all rooms over a date range (bulk)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Check-in date (YYYY-MM-DD)",
+                        "name": "checkIn",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Check-out date (YYYY-MM-DD)",
+                        "name": "checkOut",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.RoomAvailability"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/towers/bookings": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -3029,6 +3129,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -3060,8 +3165,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/towers/bookings/past": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TAGA Towers"
+                ],
+                "summary": "Get past (archived) user bookings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Booker ID",
+                        "name": "bookerId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Year (YYYY)",
+                        "name": "year",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Month (MM)",
+                        "name": "month",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.BookingResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/towers/bookings/{id}": {
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -3093,6 +3251,11 @@ const docTemplate = `{
         },
         "/api/towers/bookings/{id}/confirm-payment": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -3136,6 +3299,11 @@ const docTemplate = `{
         },
         "/api/towers/create-order": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create Razorpay order for payment",
                 "consumes": [
                     "application/json"
@@ -3170,6 +3338,11 @@ const docTemplate = `{
         },
         "/api/towers/rooms": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -3192,6 +3365,11 @@ const docTemplate = `{
         },
         "/api/towers/verify-payment": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -3231,6 +3409,11 @@ const docTemplate = `{
         },
         "/api/webhook/razorpay": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Receives payment.captured events from Razorpay and sends admin notifications",
                 "consumes": [
                     "application/json"
@@ -3257,7 +3440,11 @@ const docTemplate = `{
         },
         "/health": {
             "get": {
-                "description": "Returns the health status of the API",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -3331,6 +3518,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "nativeDistrict": {
+                    "type": "string"
+                },
+                "paymentStatus": {
+                    "type": "string"
+                },
+                "payment_status": {
                     "type": "string"
                 },
                 "permanentAddress": {
@@ -3477,6 +3670,46 @@ const docTemplate = `{
                 "order": {
                     "type": "object",
                     "additionalProperties": true
+                }
+            }
+        },
+        "handler.CreateSubscriptionOrderRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "email",
+                "subscriptionId"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "subscriptionId": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.CreateSubscriptionOrderResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "orderId": {
+                    "type": "string"
                 }
             }
         },
@@ -3704,6 +3937,12 @@ const docTemplate = `{
                 "native_district": {
                     "type": "string"
                 },
+                "paymentStatus": {
+                    "type": "string"
+                },
+                "payment_status": {
+                    "type": "string"
+                },
                 "permanent_address": {
                     "type": "string"
                 },
@@ -3915,6 +4154,45 @@ const docTemplate = `{
                 }
             }
         },
+        "model.EditRequest": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "designation": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mailId": {
+                    "type": "string"
+                },
+                "mobileNumber": {
+                    "type": "string"
+                },
+                "permanentAddress": {
+                    "type": "string"
+                },
+                "remarks": {
+                    "type": "string"
+                },
+                "residentialAddress": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "pending / approved / rejected",
+                    "type": "string"
+                },
+                "workingDistrict": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Event": {
             "type": "object",
             "properties": {
@@ -4029,6 +4307,9 @@ const docTemplate = `{
                 },
                 "contact": {
                     "type": "string"
+                },
+                "gender": {
+                    "$ref": "#/definitions/model.Gender"
                 },
                 "name": {
                     "type": "string"
@@ -4332,6 +4613,54 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "service.Document": {
+            "type": "object",
+            "properties": {
+                "subcategory": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "year": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.ResourceCategory": {
+            "type": "object",
+            "properties": {
+                "documents": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.Document"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "subcategories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and the JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

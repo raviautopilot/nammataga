@@ -495,7 +495,12 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
     if (!isAdmin) return;
     setAllBookingsLoading(true);
     setAllBookingsError(null);
-    fetch(`${API_BASE}/towers/admin/bookings`)
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('member_token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    fetch(`${API_BASE}/towers/admin/bookings`, { headers })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

@@ -9,8 +9,9 @@ import (
 
 // RegisterPaymentRoutes registers subscription and room booking (TAGA Towers) payment routes
 func RegisterPaymentRoutes(r *gin.Engine) {
-	// TAGA Towers (Room booking & payments)
+	// TAGA Towers (Room booking & payments - Protected with Member Auth)
 	towers := r.Group("/api/towers")
+	towers.Use(middleware.MemberAuthMiddleware())
 	{
 		towers.GET("/rooms", handler.GetRooms)
 		towers.GET("/availability", handler.CheckAvailability)
@@ -21,7 +22,13 @@ func RegisterPaymentRoutes(r *gin.Engine) {
 		towers.POST("/bookings/:id/confirm-payment", handler.ConfirmPayment)
 		towers.POST("/create-order", handler.CreateOrder)
 		towers.POST("/verify-payment", handler.VerifyPayment)
-		towers.GET("/admin/bookings", handler.GetAllBookingsAdmin)
+	}
+
+	// Towers Admin
+	towersAdmin := r.Group("/api/towers")
+	towersAdmin.Use(middleware.AdminAuthMiddleware())
+	{
+		towersAdmin.GET("/admin/bookings", handler.GetAllBookingsAdmin)
 	}
 
 	// Subscriptions (Public listing)

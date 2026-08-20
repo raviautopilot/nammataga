@@ -47,6 +47,7 @@ func readJSONFile(path string, target interface{}) error {
 // @Summary Get State Executive Committee
 // @Tags OfficeBearers
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} StateExecutive
 // @Router /api/office-bearers/state-executive [get]
 func GetStateExecutive(c *gin.Context) {
@@ -89,6 +90,7 @@ func GetStateExecutive(c *gin.Context) {
 // @Summary Get district list
 // @Tags OfficeBearers
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} string
 // @Router /api/office-bearers/districts [get]
 func GetDistricts(c *gin.Context) {
@@ -111,6 +113,7 @@ func GetDistricts(c *gin.Context) {
 // @Summary Get district office bearers
 // @Tags OfficeBearers
 // @Produce json
+// @Security BearerAuth
 // @Param district query string true "District name"
 // @Success 200 {array} DistrictBearer
 // @Router /api/office-bearers/district-office-bearers [get]
