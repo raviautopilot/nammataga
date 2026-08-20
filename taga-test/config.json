@@ -1,8 +1,8 @@
 {
-  "baseUrl": "https://devapi.nammataga.com/",
-  "uiUrl": "https://dev.nammataga.com/",
+  "baseUrl": "https://api.nammataga.com/",
+  "uiUrl": "https://nammataga.com/",
   "seleniumUrl": "http://localhost:9515",
-  "headless": false,
+  "headless": true,
   "timeout": 10,
   "adminLoginButtonTestID": "testid-admin-login-button",
   "memberLoginButtonTestID": "testid-member-login-button",
