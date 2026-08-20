@@ -13,6 +13,7 @@ import (
 // @Tags Test
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Router /api/test-email [post]
 func TestEmail(c *gin.Context) {
 	testEmailAddress := "raviregi@gmail.com"

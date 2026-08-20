@@ -141,6 +141,7 @@ func verifyWebhookSignature(payload []byte, signature string) bool {
 // @Tags Webhook
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} map[string]string
 // @Router /api/webhook/razorpay [post]
 func WebhookHandler(c *gin.Context) {

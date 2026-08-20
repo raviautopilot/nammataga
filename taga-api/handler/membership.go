@@ -15,6 +15,7 @@ import (
 // @Tags Membership
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param request body model.Membership true "Membership Application Data"
 // @Success 200 {object} map[string]string "Application submitted successfully"
 // @Failure 400 {object} map[string]string "Invalid request body"
@@ -48,6 +49,7 @@ func ApplyMembershipHandler(c *gin.Context) {
 // @Description Retrieve all membership applications (Admin purpose)
 // @Tags Membership
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} model.Membership "List of memberships"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /api/membership/list [get]
@@ -68,6 +70,7 @@ func GetMembershipListHandler(c *gin.Context) {
 // @Description Retrieve list of districts for membership form
 // @Tags Membership
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} string "List of districts"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /api/membership/districts [get]

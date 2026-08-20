@@ -18,6 +18,7 @@ import (
 // @Summary Get welcome message
 // @Tags general
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "success response"
 // @Router / [get]
 func RootHandler(c *gin.Context) {
@@ -32,6 +33,7 @@ func RootHandler(c *gin.Context) {
 // @Summary Health check
 // @Tags general
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "health status"
 // @Router /health [get]
 func HealthHandler(c *gin.Context) {
@@ -42,6 +44,7 @@ func HealthHandler(c *gin.Context) {
 // @Summary Get organization information
 // @Tags about
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} model.AboutResponse
 // @Router /api/public/about [get]
 func AboutHandler(c *gin.Context) {
@@ -67,6 +70,7 @@ func AboutHandler(c *gin.Context) {
 // @Summary Get organization statistics
 // @Tags about
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} model.StatsResponse
 // @Router /api/public/about/stats [get]
 func AboutStatsHandler(c *gin.Context) {
@@ -82,6 +86,7 @@ func AboutStatsHandler(c *gin.Context) {
 // @Summary Get organization objectives
 // @Tags about
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} model.Objective
 // @Router /api/public/about/objectives [get]
 func AboutObjectivesHandler(c *gin.Context) {
@@ -98,6 +103,7 @@ func AboutObjectivesHandler(c *gin.Context) {
 // @Summary Get organization services
 // @Tags about
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} model.ServiceResponse
 // @Router /api/public/about/services [get]
 func AboutServicesHandler(c *gin.Context) {
@@ -114,6 +120,7 @@ func AboutServicesHandler(c *gin.Context) {
 // @Summary Get contact information
 // @Tags about
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} model.ContactResponse
 // @Router /api/public/about/contact [get]
 func AboutContactHandler(c *gin.Context) {
@@ -133,6 +140,7 @@ func AboutContactHandler(c *gin.Context) {
 // @Summary Get application logo
 // @Tags office
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} map[string]string
 // @Router /api/logo [get]
 func GetLogo(c *gin.Context) {
@@ -144,6 +152,7 @@ func GetLogo(c *gin.Context) {
 // @Description Get the relative path/url of the member banner image
 // @Tags member
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} map[string]string
 // @Router /api/member-banner [get]
 func GetMemberBanner(c *gin.Context) {
@@ -156,6 +165,7 @@ func GetMemberBanner(c *gin.Context) {
 // @Summary Get office bearer information
 // @Tags office
 // @Produce json
+// @Security BearerAuth
 // @Param pathParam query string true "Office type (state or district name)" default(state)
 // @Success 200 {object} interface{}
 // @Router /api/office [get]

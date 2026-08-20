@@ -22,8 +22,13 @@ func RegisterPublicRoutes(r *gin.Engine) {
 		about.GET("/services", handler.AboutServicesHandler)
 		about.GET("/contact", handler.AboutContactHandler)
 	}
+
 	r.GET("/api/logo", handler.GetLogo)
 	r.GET("/api/member-banner", handler.GetMemberBanner)
+	r.GET("/api/resources-banner", handler.GetResourcesBanner)
+	r.GET("/api/grievance-banner", handler.GetGrievanceBanner)
+	r.GET("/api/categories", handler.GetCategories)
+	r.GET("/api/priorities", handler.GetPriorities)
 
 	// Razorpay Webhook
 	r.POST("/api/webhook/razorpay", handler.WebhookHandler)
@@ -37,22 +42,21 @@ func RegisterPublicRoutes(r *gin.Engine) {
 		resourcesGroup.GET("/external-links", handler.GetExternalLinks)
 		resourcesGroup.GET("/:id", handler.GetDocumentsByCategory)
 	}
-	r.GET("/api/resources-banner", handler.GetResourcesBanner)
 
-	// Events
+	// Events (Public)
 	events := r.Group("/api/events")
 	{
 		events.GET("/upcoming", handler.UpcomingEventsHandler)
 	}
 
-	// Gallery
+	// Gallery (Public)
 	gallery := r.Group("/api/gallery")
 	{
 		gallery.GET("/years", handler.GalleryYearsHandler)
 		gallery.GET("", handler.GalleryImagesHandler)
 	}
 
-	// Office Bearers
+	// Office Bearers (Public)
 	officeBearers := r.Group("/api/office-bearers")
 	{
 		officeBearers.GET("/state-executive", handler.GetStateExecutive)
@@ -60,11 +64,11 @@ func RegisterPublicRoutes(r *gin.Engine) {
 		officeBearers.GET("/district-office-bearers", handler.GetDistrictOfficeBearers)
 	}
 
-	// Office Information
+	// Office Information (Public)
 	r.GET("/api/office", handler.OfficeHandler)
 	r.GET("/api/office/:pathParam", handler.OfficeHandler)
 
-	// Grievances Group
+	// Grievances Group (Public)
 	grievances := r.Group("/api/grievances")
 	{
 		grievances.POST("", handler.CreateGrievance)
@@ -73,7 +77,4 @@ func RegisterPublicRoutes(r *gin.Engine) {
 		grievances.PUT("/:id", handler.UpdateGrievance)
 		grievances.DELETE("/:id", handler.DeleteGrievance)
 	}
-	r.GET("/api/categories", handler.GetCategories)
-	r.GET("/api/priorities", handler.GetPriorities)
-	r.GET("/api/grievance-banner", handler.GetGrievanceBanner)
 }

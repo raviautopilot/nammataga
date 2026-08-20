@@ -19,6 +19,10 @@ import (
 // @version 1.0
 // @description This is the Taga API server
 // @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and the JWT token.
 
 func main() {
 	// Load .env file from the same directory as the executable

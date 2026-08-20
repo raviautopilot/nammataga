@@ -31,6 +31,7 @@ import (
 // @Summary Get all rooms
 // @Tags TAGA Towers
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} model.Room
 // @Router /api/towers/rooms [get]
 func GetRooms(c *gin.Context) {
@@ -56,6 +57,8 @@ func GetRooms(c *gin.Context) {
 // @Tags TAGA Towers
 // @Accept json
 // @Produce json
+// @Security BearerAuth
+// @Param bookerId query string false "Booker TAGA ID (optional, extracted from token if omitted)"
 // @Param request body model.CreateBookingRequest true "Booking Data"
 // @Success 201 {object} model.BookingResponse
 // @Router /api/towers/bookings [post]
@@ -101,6 +104,7 @@ func CreateBooking(c *gin.Context) {
 // @Summary Get user bookings
 // @Tags TAGA Towers
 // @Produce json
+// @Security BearerAuth
 // @Param bookerId query string true "Booker ID"
 // @Success 200 {array} model.BookingResponse
 // @Router /api/towers/bookings [get]
@@ -124,6 +128,7 @@ func GetBookings(c *gin.Context) {
 // @Summary Get past (archived) user bookings
 // @Tags TAGA Towers
 // @Produce json
+// @Security BearerAuth
 // @Param bookerId query string true "Booker ID"
 // @Param year query string false "Year (YYYY)"
 // @Param month query string false "Month (MM)"
@@ -157,6 +162,7 @@ func GetPastBookings(c *gin.Context) {
 // @Description Returns all bookings across all users. Used by the admin occupancy schedule tab.
 // @Tags TAGA Towers
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} model.BookingResponse
 // @Router /api/towers/admin/bookings [get]
 func GetAllBookingsAdmin(c *gin.Context) {
@@ -177,6 +183,7 @@ func GetAllBookingsAdmin(c *gin.Context) {
 // @Summary Cancel a booking
 // @Tags TAGA Towers
 // @Produce json
+// @Security BearerAuth
 // @Param id path string true "Booking ID"
 // @Success 200 {object} map[string]string
 // @Router /api/towers/bookings/{id} [delete]
@@ -213,6 +220,7 @@ func DeleteBooking(c *gin.Context) {
 // @Summary Check room availability
 // @Tags TAGA Towers
 // @Produce json
+// @Security BearerAuth
 // @Param roomId query string true "Room ID"
 // @Param date query string true "Date"
 // @Success 200 {object} model.RoomAvailability
@@ -274,6 +282,7 @@ func CheckAvailability(c *gin.Context) {
 // check-in to check-out range. Replaces N×(checkOut-checkIn) individual /availability calls.
 // @Tags TAGA Towers
 // @Produce json
+// @Security BearerAuth
 // @Param checkIn query string true "Check-in date (YYYY-MM-DD)"
 // @Param checkOut query string true "Check-out date (YYYY-MM-DD)"
 // @Success 200 {object} map[string]model.RoomAvailability
@@ -335,6 +344,7 @@ type CreateOrderResponse struct {
 // @Tags TAGA Towers
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param request body object true "Amount in paise" example({"amount":10000})
 // @Success 200 {object} CreateOrderResponse
 // @Router /api/towers/create-order [post]
@@ -449,6 +459,7 @@ func CreateOrder(c *gin.Context) {
 // @Tags TAGA Towers
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param id path string true "Booking ID"
 // @Param request body object true "UPI ID"
 // @Success 200 {object} map[string]string
@@ -659,6 +670,7 @@ func buildRoomBookingEmailBody(data AdminRoomBookingData) string {
 // @Tags TAGA Towers
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param request body map[string]string true "Payment verification data"
 // @Success 200 {object} map[string]string
 // @Router /api/towers/verify-payment [post]

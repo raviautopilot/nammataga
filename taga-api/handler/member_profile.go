@@ -155,6 +155,7 @@ func UpdateMemberProfileHandler(c *gin.Context) {
 // @Tags Member Profile
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param request body model.EditRequest true "Edit Request Details"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/member/edit-request [post]

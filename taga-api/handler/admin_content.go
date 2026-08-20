@@ -98,6 +98,13 @@ type AdminRoomBookingData struct {
 // @Accept multipart/form-data
 // @Produce json
 // @Security BearerAuth
+// @Param title formData string true "Event title"
+// @Param date formData string true "Event date (e.g., 2025-05-15 10:00)"
+// @Param location formData string false "Event location"
+// @Param description formData string false "Event description"
+// @Param status formData string false "Event status (upcoming, completed, etc.)"
+// @Param attendees formData integer false "Number of attendees"
+// @Param image formData file false "Event banner image file"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/admin/events/create [post]
 func CreateEvent(c *gin.Context) {
@@ -183,6 +190,8 @@ func CreateEvent(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
+// @Param id path string true "Event ID"
+// @Param event body Event true "Updated event details"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/admin/events/{id} [put]
 func UpdateEvent(c *gin.Context) {
@@ -203,26 +212,31 @@ func UpdateEvent(c *gin.Context) {
 	var events []Event
 	_ = json.Unmarshal(data, &events)
 
-	var oldState Event
 	found := false
+	var oldState Event
+	var newState Event
 	for i, e := range events {
 		if e.ID == id {
 			oldState = e
-			if title, ok := req["title"].(string); ok && title != "" {
+			if title, ok := req["title"].(string); ok {
 				events[i].Title = title
 			}
-			if date, ok := req["date"].(string); ok && date != "" {
+			if date, ok := req["date"].(string); ok {
 				events[i].Date = date
 			}
-			if loc, ok := req["location"].(string); ok {
-				events[i].Location = loc
+			if location, ok := req["location"].(string); ok {
+				events[i].Location = location
 			}
-			if desc, ok := req["description"].(string); ok {
-				events[i].Description = desc
+			if description, ok := req["description"].(string); ok {
+				events[i].Description = description
 			}
 			if status, ok := req["status"].(string); ok {
 				events[i].Status = status
 			}
+			if attendees, ok := req["attendees"].(float64); ok {
+				events[i].Attendees = int(attendees)
+			}
+			newState = events[i]
 			found = true
 			break
 		}
@@ -233,16 +247,15 @@ func UpdateEvent(c *gin.Context) {
 		return
 	}
 
-	updatedData, _ := json.MarshalIndent(events, "", "  ")
-	_ = os.WriteFile(eventsPath, updatedData, 0644)
+	updatedData, err := json.MarshalIndent(events, "", "  ")
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "Failed to save event")
+		return
+	}
 
-	// Retrieve new state after update
-	var newState Event
-	for _, e := range events {
-		if e.ID == id {
-			newState = e
-			break
-		}
+	if err := os.WriteFile(eventsPath, updatedData, 0644); err != nil {
+		respondError(c, http.StatusInternalServerError, "Failed to write event file")
+		return
 	}
 
 	// Audit event update
@@ -260,6 +273,7 @@ func UpdateEvent(c *gin.Context) {
 // @Tags Admin Content
 // @Produce json
 // @Security BearerAuth
+// @Param id path string true "Event ID"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/admin/events/{id} [delete]
 func DeleteEvent(c *gin.Context) {
@@ -310,6 +324,11 @@ func DeleteEvent(c *gin.Context) {
 // @Accept multipart/form-data
 // @Produce json
 // @Security BearerAuth
+// @Param categoryId formData string true "Resource category ID"
+// @Param title formData string true "Document title"
+// @Param year formData string true "Year (e.g., 2025)"
+// @Param subcategory formData string false "Subcategory (for Scheme G.Os: Central or State)"
+// @Param file formData file true "PDF file to upload"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/admin/resources/upload [post]
 func UploadResource(c *gin.Context) {
@@ -388,6 +407,8 @@ func UploadResource(c *gin.Context) {
 // @Tags Admin Content
 // @Produce json
 // @Security BearerAuth
+// @Param categoryId path string true "Resource category ID"
+// @Param documentTitle path string true "Document title to delete"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/admin/resources/{categoryId}/{documentTitle} [delete]
 func DeleteResource(c *gin.Context) {
@@ -446,6 +467,11 @@ func DeleteResource(c *gin.Context) {
 // @Accept multipart/form-data
 // @Produce json
 // @Security BearerAuth
+// @Param title formData string true "Image title"
+// @Param event formData string false "Event name"
+// @Param date formData string false "Event date (YYYY-MM-DD)"
+// @Param year formData integer true "Year (e.g., 2025)"
+// @Param image formData file true "Gallery image file"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/admin/gallery/upload [post]
 func UploadGalleryImage(c *gin.Context) {
@@ -520,6 +546,7 @@ func UploadGalleryImage(c *gin.Context) {
 // @Tags Admin Content
 // @Produce json
 // @Security BearerAuth
+// @Param id path string true "Gallery image ID"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/admin/gallery/{id} [delete]
 func DeleteGalleryImage(c *gin.Context) {

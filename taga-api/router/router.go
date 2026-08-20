@@ -62,49 +62,33 @@ func SetupRouter() *gin.Engine {
 	wd, _ := os.Getwd()
 	docsPath := filepath.Join(wd, "data", "docs")
 
-	// ==================== PUBLIC ROUTES (No Auth) ====================
+	// ==================== PUBLIC WEBSITE ROUTES (No Auth Required) ====================
 
 	// Health & Root
 	r.GET("/", handler.RootHandler)
 	r.GET("/health", handler.HealthHandler)
 
 	// About & Public Info
-	r.GET("/api/public/about", handler.AboutHandler)
-	r.GET("/api/public/about/stats", handler.AboutStatsHandler)
-	r.GET("/api/public/about/objectives", handler.AboutObjectivesHandler)
-	r.GET("/api/public/about/services", handler.AboutServicesHandler)
-	r.GET("/api/public/about/contact", handler.AboutContactHandler)
+	about := r.Group("/api/public/about")
+	{
+		about.GET("", handler.AboutHandler)
+		about.GET("/stats", handler.AboutStatsHandler)
+		about.GET("/objectives", handler.AboutObjectivesHandler)
+		about.GET("/services", handler.AboutServicesHandler)
+		about.GET("/contact", handler.AboutContactHandler)
+	}
+
+	// Assets, Logos & Banners
 	r.GET("/api/logo", handler.GetLogo)
 	r.GET("/api/member-banner", handler.GetMemberBanner)
-
-	// Razorpay Webhook for payment notifications
-	r.POST("/api/webhook/razorpay", handler.WebhookHandler)
-
-	// Resources (Protected with Member Auth)
-	resourcesGroup := r.Group("/api/resources")
-	resourcesGroup.Use(middleware.MemberAuthMiddleware())
-	{
-		resourcesGroup.GET("", handler.GetResourceCategories)
-		resourcesGroup.GET("/all", handler.GetAllResources)
-		resourcesGroup.GET("/external-links", handler.GetExternalLinks)
-		resourcesGroup.GET("/:id", handler.GetDocumentsByCategory)
-	}
 	r.GET("/api/resources-banner", handler.GetResourcesBanner)
+	r.GET("/api/grievance-banner", handler.GetGrievanceBanner)
+	r.GET("/api/categories", handler.GetCategories)
+	r.GET("/api/priorities", handler.GetPriorities)
 
-	// Events (Public)
-	events := r.Group("/api/events")
-	{
-		events.GET("/upcoming", handler.UpcomingEventsHandler)
-	}
-
-	// Gallery (Public)
-	gallery := r.Group("/api/gallery")
-	{
-		gallery.GET("/years", handler.GalleryYearsHandler)
-		gallery.GET("", handler.GalleryImagesHandler)
-	}
-
-	// Office Bearers (Public)
+	// Office Information & Bearers (Public)
+	r.GET("/api/office", handler.OfficeHandler)
+	r.GET("/api/office/:pathParam", handler.OfficeHandler)
 	officeBearers := r.Group("/api/office-bearers")
 	{
 		officeBearers.GET("/state-executive", handler.GetStateExecutive)
@@ -112,50 +96,52 @@ func SetupRouter() *gin.Engine {
 		officeBearers.GET("/district-office-bearers", handler.GetDistrictOfficeBearers)
 	}
 
-	// Office Information (Public)
-	r.GET("/api/office", handler.OfficeHandler)
-	r.GET("/api/office/:pathParam", handler.OfficeHandler)
-
-	// Grievances
-	r.POST("/api/grievances", handler.CreateGrievance)
-	r.GET("/api/grievances", handler.GetGrievances)
-	r.GET("/api/grievances/:id", handler.GetGrievanceByID)
-	r.PUT("/api/grievances/:id", handler.UpdateGrievance)
-	r.DELETE("/api/grievances/:id", handler.DeleteGrievance)
-	r.GET("/api/grievance-banner", handler.GetGrievanceBanner)
-	r.GET("/api/categories", handler.GetCategories)
-	r.GET("/api/priorities", handler.GetPriorities)
-
-	// TAGA Towers (Public — member auth handled at frontend level)
-	towers := r.Group("/api/towers")
+	// Events & Gallery (Public)
+	events := r.Group("/api/events")
 	{
-		towers.GET("/rooms", handler.GetRooms)
-		towers.GET("/availability", handler.CheckAvailability)
-		towers.GET("/availability-range", handler.CheckAvailabilityRange)
-		towers.POST("/bookings", handler.CreateBooking)
-		towers.GET("/bookings", handler.GetBookings)
-		towers.GET("/bookings/past", handler.GetPastBookings)
-		towers.DELETE("/bookings/:id", handler.DeleteBooking)
-		towers.POST("/bookings/:id/confirm-payment", handler.ConfirmPayment)
-		towers.POST("/create-order", handler.CreateOrder)
-		towers.POST("/verify-payment", handler.VerifyPayment)
-		towers.GET("/admin/bookings", handler.GetAllBookingsAdmin)
+		events.GET("/upcoming", handler.UpcomingEventsHandler)
 	}
 
-	// ==================== MEMBER AUTHENTICATION ROUTES ====================
+	gallery := r.Group("/api/gallery")
+	{
+		gallery.GET("/years", handler.GalleryYearsHandler)
+		gallery.GET("", handler.GalleryImagesHandler)
+	}
 
-	// Member Auth (No JWT required)
+	// Membership Application (Public Application)
+	membership := r.Group("/api/membership")
+	{
+		membership.POST("/apply", handler.ApplyMembershipHandler)
+		membership.GET("/list", handler.GetMembershipListHandler)
+		membership.GET("/districts", handler.GetMembershipDistricts)
+	}
+
+	// Subscriptions Listing (Public)
+	r.GET("/api/subscriptions", handler.GetSubscriptions)
+
+	// Razorpay Webhook for payment notifications (Verified via HMAC signature)
+	r.POST("/api/webhook/razorpay", handler.WebhookHandler)
+
+	// Member Authentication & Recovery (Public)
+	r.POST("/api/admin/login", handler.AdminLoginHandler)
+	r.POST("/api/member/login", handler.MemberLoginHandler)
+	r.POST("/api/member/logout", handler.MemberLogoutHandler)
+	r.POST("/api/member/change-password", handler.ChangeMemberPasswordHandler)
+	r.POST("/api/member/edit-request", handler.CreateEditRequest)
+
 	auth := r.Group("/api/auth")
 	{
 		auth.POST("/forgot-password", handler.ForgotPasswordHandler)
 		auth.POST("/reset-password", handler.ResetPasswordHandler)
 		auth.POST("/member-forgot-password", handler.MemberForgotPasswordHandler)
+		auth.POST("/change-password", handler.ChangeMemberPasswordHandler)
 	}
 
-	// Member Login/Logout (No JWT required)
-	r.POST("/api/member/login", handler.MemberLoginHandler)
-	r.POST("/api/member/logout", handler.MemberLogoutHandler)
-	r.POST("/api/member/change-password", handler.ChangeMemberPasswordHandler)
+	// Test Email
+	r.POST("/api/test-email", handler.TestEmail)
+	r.GET("/api/test-email", handler.TestEmail)
+
+	// ==================== PROTECTED MEMBER ROUTES (JWT Required) ====================
 
 	// Member Profile & Notifications (JWT Required)
 	memberRoutes := r.Group("/api/member")
@@ -168,41 +154,47 @@ func SetupRouter() *gin.Engine {
 		memberRoutes.GET("/notifications/unread/count", handler.GetUnreadCount)
 	}
 
-	// Member Edit Request & Misc API
-	api := r.Group("/api")
+	// Resources (Protected with Member Auth)
+	resourcesGroup := r.Group("/api/resources")
+	resourcesGroup.Use(middleware.MemberAuthMiddleware())
 	{
-		api.POST("/member/edit-request", handler.CreateEditRequest)
-		
-		// Temporary test email endpoint
-		api.POST("/test-email", handler.TestEmail)
-		api.GET("/test-email", handler.TestEmail)
+		resourcesGroup.GET("", handler.GetResourceCategories)
+		resourcesGroup.GET("/all", handler.GetAllResources)
+		resourcesGroup.GET("/external-links", handler.GetExternalLinks)
+		resourcesGroup.GET("/:id", handler.GetDocumentsByCategory)
 	}
 
-	// ==================== MEMBERSHIP ROUTES ====================
-	membership := r.Group("/api/membership")
+	// Grievances (Protected with Member/Admin Auth)
+	grievances := r.Group("/api/grievances")
+	grievances.Use(middleware.MemberAuthMiddleware())
 	{
-		membership.POST("/apply", handler.ApplyMembershipHandler)
-		membership.GET("/list", handler.GetMembershipListHandler)
-		membership.GET("/districts", handler.GetMembershipDistricts)
+		grievances.POST("", handler.CreateGrievance)
+		grievances.GET("", handler.GetGrievances)
+		grievances.GET("/:id", handler.GetGrievanceByID)
+		grievances.PUT("/:id", handler.UpdateGrievance)
+		grievances.DELETE("/:id", handler.DeleteGrievance)
 	}
 
-	// ==================== SUBSCRIPTION & PAYMENT ROUTES ====================
-
-	// Subscription (Public)
-	subscriptionPayment := r.Group("/api/subscriptions")
+	// TAGA Towers (Rooms, Availability, Booking & Payment - Protected with Member/Admin Auth)
+	towers := r.Group("/api/towers")
+	towers.Use(middleware.MemberAuthMiddleware())
 	{
-		subscriptionPayment.GET("", handler.GetSubscriptions)
+		towers.GET("/rooms", handler.GetRooms)
+		towers.GET("/availability", handler.CheckAvailability)
+		towers.GET("/availability-range", handler.CheckAvailabilityRange)
+		towers.POST("/bookings", handler.CreateBooking)
+		towers.GET("/bookings", handler.GetBookings)
+		towers.GET("/bookings/past", handler.GetPastBookings)
+		towers.DELETE("/bookings/:id", handler.DeleteBooking)
+		towers.POST("/bookings/:id/confirm-payment", handler.ConfirmPayment)
+		towers.POST("/create-order", handler.CreateOrder)
+		towers.POST("/verify-payment", handler.VerifyPayment)
 	}
 
-	// Payment (Protected with Member Auth)
-	payment := r.Group("/api/payments")
-	payment.Use(middleware.MemberAuthMiddleware())
-	{
-		payment.POST("/create-order", handler.CreateOrder)
-		payment.POST("/verify", handler.VerifyPayment)
-	}
+	// TAGA Towers Admin Occupancy Schedule
+	r.GET("/api/towers/admin/bookings", middleware.AdminAuthMiddleware(), handler.GetAllBookingsAdmin)
 
-	// Subscription Payment (Protected with Member Auth)
+	// Subscription Payments (Protected with Member Auth)
 	subscriptionPaymentProtected := r.Group("/api/subscriptions")
 	subscriptionPaymentProtected.Use(middleware.MemberAuthMiddleware())
 	{
@@ -212,19 +204,27 @@ func SetupRouter() *gin.Engine {
 		subscriptionPaymentProtected.GET("/member-paid", handler.GetMemberPaidSubscriptions)
 	}
 
-	// ==================== ADMIN ROUTES ====================
+	// Generic Payment Routes (Protected with Member Auth)
+	payment := r.Group("/api/payments")
+	payment.Use(middleware.MemberAuthMiddleware())
+	{
+		payment.POST("/create-order", handler.CreateOrder)
+		payment.POST("/verify", handler.VerifyPayment)
+	}
 
-	// E2E Test Hooks
-	r.GET("/api/admin/mock-emails", handler.GetMockEmails)
-	r.DELETE("/api/admin/mock-emails", handler.ClearMockEmails)
-
-	// Admin Login (No Auth)
-	r.POST("/api/admin/login", handler.AdminLoginHandler)
+	// ==================== ADMIN ROUTES (Admin JWT Required) ====================
 
 	// Admin Routes (JWT Required)
 	admin := r.Group("/api/admin")
 	admin.Use(middleware.AdminAuthMiddleware())
 	{
+		// E2E Test Hooks
+		admin.GET("/mock-emails", handler.GetMockEmails)
+		admin.DELETE("/mock-emails", handler.ClearMockEmails)
+
+		// Admin TAGA Towers Occupancy Schedule
+		admin.GET("/towers/bookings", handler.GetAllBookingsAdmin)
+
 		// Admin Member Registration
 		admin.POST("/member-registration", handler.HandleMemberRegistration)
 		admin.POST("/init-password", handler.InitPassword)
@@ -250,7 +250,6 @@ func SetupRouter() *gin.Engine {
 
 		// Reports
 		admin.GET("/reports/members", handler.GenerateMemberReport)
-
 		admin.GET("/members/export", handler.ExportMembersToExcel)
 
 		// Member Lists & Stats
