@@ -62,6 +62,7 @@ type AppConfig struct {
 	ServicesFile          string     `json:"services_file"`
 	StatsFile             string     `json:"stats_file"`
 	JwtSecret             string     `json:"jwt_secret"`
+	SessionDurationHours  int        `json:"session_duration_hours"`
 	AdminAPIKey           string     `json:"admin_api_key"`
 	RazorpayKey           string     `json:"-"`
 	RazorpaySecret        string     `json:"-"`
