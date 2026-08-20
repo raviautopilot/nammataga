@@ -108,16 +108,6 @@ func SetupRouter() *gin.Engine {
 		gallery.GET("", handler.GalleryImagesHandler)
 	}
 
-	// Grievances (Public Submission & Inquiry)
-	grievances := r.Group("/api/grievances")
-	{
-		grievances.POST("", handler.CreateGrievance)
-		grievances.GET("", handler.GetGrievances)
-		grievances.GET("/:id", handler.GetGrievanceByID)
-		grievances.PUT("/:id", handler.UpdateGrievance)
-		grievances.DELETE("/:id", handler.DeleteGrievance)
-	}
-
 	// Membership Application (Public Application)
 	membership := r.Group("/api/membership")
 	{
@@ -172,6 +162,17 @@ func SetupRouter() *gin.Engine {
 		resourcesGroup.GET("/all", handler.GetAllResources)
 		resourcesGroup.GET("/external-links", handler.GetExternalLinks)
 		resourcesGroup.GET("/:id", handler.GetDocumentsByCategory)
+	}
+
+	// Grievances (Protected with Member/Admin Auth)
+	grievances := r.Group("/api/grievances")
+	grievances.Use(middleware.MemberAuthMiddleware())
+	{
+		grievances.POST("", handler.CreateGrievance)
+		grievances.GET("", handler.GetGrievances)
+		grievances.GET("/:id", handler.GetGrievanceByID)
+		grievances.PUT("/:id", handler.UpdateGrievance)
+		grievances.DELETE("/:id", handler.DeleteGrievance)
 	}
 
 	// TAGA Towers (Rooms, Availability, Booking & Payment - Protected with Member/Admin Auth)

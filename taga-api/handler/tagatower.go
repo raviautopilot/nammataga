@@ -58,6 +58,7 @@ func GetRooms(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
+// @Param bookerId query string false "Booker TAGA ID (optional, extracted from token if omitted)"
 // @Param request body model.CreateBookingRequest true "Booking Data"
 // @Success 201 {object} model.BookingResponse
 // @Router /api/towers/bookings [post]

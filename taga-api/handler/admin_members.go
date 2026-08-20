@@ -1287,6 +1287,7 @@ func ExportMembersToExcel(c *gin.Context) {
 // @Accept json
 // @Produce text/csv
 // @Security BearerAuth
+// @Param report_type query string false "Report type (membership, financial, etc.)" default(membership)
 // @Success 200 {file} file
 // @Router /api/admin/reports/members [get]
 func GenerateMemberReport(c *gin.Context) {

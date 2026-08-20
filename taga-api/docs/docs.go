@@ -238,6 +238,52 @@ const docTemplate = `{
                     "Admin Content"
                 ],
                 "summary": "Create a new event",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event title",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event date (e.g., 2025-05-15 10:00)",
+                        "name": "date",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event location",
+                        "name": "location",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event description",
+                        "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event status (upcoming, completed, etc.)",
+                        "name": "status",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of attendees",
+                        "name": "attendees",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Event banner image file",
+                        "name": "image",
+                        "in": "formData"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -266,6 +312,24 @@ const docTemplate = `{
                     "Admin Content"
                 ],
                 "summary": "Update an existing event",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated event details",
+                        "name": "event",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.Event"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -289,6 +353,15 @@ const docTemplate = `{
                     "Admin Content"
                 ],
                 "summary": "Delete an event",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -317,6 +390,41 @@ const docTemplate = `{
                     "Admin Content"
                 ],
                 "summary": "Upload gallery image",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Image title",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event name",
+                        "name": "event",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event date (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Year (e.g., 2025)",
+                        "name": "year",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Gallery image file",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -342,6 +450,15 @@ const docTemplate = `{
                     "Admin Content"
                 ],
                 "summary": "Delete gallery image",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Gallery image ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1152,6 +1269,15 @@ const docTemplate = `{
                     "Admin Reports"
                 ],
                 "summary": "Generate member report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "membership",
+                        "description": "Report type (membership, financial, etc.)",
+                        "name": "report_type",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1179,6 +1305,42 @@ const docTemplate = `{
                     "Admin Content"
                 ],
                 "summary": "Upload resource document",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Resource category ID",
+                        "name": "categoryId",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document title",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Year (e.g., 2025)",
+                        "name": "year",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Subcategory (for Scheme G.Os: Central or State)",
+                        "name": "subcategory",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "PDF file to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1204,6 +1366,22 @@ const docTemplate = `{
                     "Admin Content"
                 ],
                 "summary": "Delete resource document",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Resource category ID",
+                        "name": "categoryId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document title to delete",
+                        "name": "documentTitle",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3146,6 +3324,12 @@ const docTemplate = `{
                 "summary": "Create a new booking",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Booker TAGA ID (optional, extracted from token if omitted)",
+                        "name": "bookerId",
+                        "in": "query"
+                    },
+                    {
                         "description": "Booking Data",
                         "name": "request",
                         "in": "body",
@@ -3723,6 +3907,35 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.Event": {
+            "type": "object",
+            "properties": {
+                "attendees": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 },
                 "title": {

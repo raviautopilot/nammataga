@@ -179,6 +179,25 @@ definitions:
       title:
         type: string
     type: object
+  handler.Event:
+    properties:
+      attendees:
+        type: integer
+      date:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      imageUrl:
+        type: string
+      location:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+    type: object
   handler.MemberListItem:
     properties:
       designation:
@@ -948,6 +967,12 @@ paths:
       - Admin Audit
   /api/admin/events/{id}:
     delete:
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -964,6 +989,18 @@ paths:
     put:
       consumes:
       - application/json
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated event details
+        in: body
+        name: event
+        required: true
+        schema:
+          $ref: '#/definitions/handler.Event'
       produces:
       - application/json
       responses:
@@ -981,6 +1018,37 @@ paths:
     post:
       consumes:
       - multipart/form-data
+      parameters:
+      - description: Event title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Event date (e.g., 2025-05-15 10:00)
+        in: formData
+        name: date
+        required: true
+        type: string
+      - description: Event location
+        in: formData
+        name: location
+        type: string
+      - description: Event description
+        in: formData
+        name: description
+        type: string
+      - description: Event status (upcoming, completed, etc.)
+        in: formData
+        name: status
+        type: string
+      - description: Number of attendees
+        in: formData
+        name: attendees
+        type: integer
+      - description: Event banner image file
+        in: formData
+        name: image
+        type: file
       produces:
       - application/json
       responses:
@@ -996,6 +1064,12 @@ paths:
       - Admin Content
   /api/admin/gallery/{id}:
     delete:
+      parameters:
+      - description: Gallery image ID
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -1013,6 +1087,30 @@ paths:
     post:
       consumes:
       - multipart/form-data
+      parameters:
+      - description: Image title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Event name
+        in: formData
+        name: event
+        type: string
+      - description: Event date (YYYY-MM-DD)
+        in: formData
+        name: date
+        type: string
+      - description: Year (e.g., 2025)
+        in: formData
+        name: year
+        required: true
+        type: integer
+      - description: Gallery image file
+        in: formData
+        name: image
+        required: true
+        type: file
       produces:
       - application/json
       responses:
@@ -1522,6 +1620,12 @@ paths:
     get:
       consumes:
       - application/json
+      parameters:
+      - default: membership
+        description: Report type (membership, financial, etc.)
+        in: query
+        name: report_type
+        type: string
       produces:
       - text/csv
       responses:
@@ -1536,6 +1640,17 @@ paths:
       - Admin Reports
   /api/admin/resources/{categoryId}/{documentTitle}:
     delete:
+      parameters:
+      - description: Resource category ID
+        in: path
+        name: categoryId
+        required: true
+        type: string
+      - description: Document title to delete
+        in: path
+        name: documentTitle
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -1553,6 +1668,31 @@ paths:
     post:
       consumes:
       - multipart/form-data
+      parameters:
+      - description: Resource category ID
+        in: formData
+        name: categoryId
+        required: true
+        type: string
+      - description: Document title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Year (e.g., 2025)
+        in: formData
+        name: year
+        required: true
+        type: string
+      - description: 'Subcategory (for Scheme G.Os: Central or State)'
+        in: formData
+        name: subcategory
+        type: string
+      - description: PDF file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
       produces:
       - application/json
       responses:
@@ -2753,6 +2893,10 @@ paths:
       consumes:
       - application/json
       parameters:
+      - description: Booker TAGA ID (optional, extracted from token if omitted)
+        in: query
+        name: bookerId
+        type: string
       - description: Booking Data
         in: body
         name: request
