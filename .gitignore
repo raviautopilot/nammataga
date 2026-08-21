@@ -114,6 +114,7 @@ pids/
 .env.*
 !.env.example
 .env.test
+infra/env.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -172,7 +173,7 @@ certs/
 .agents/
 
 # ============================================
-# SCREENSHOTS
+# SCREENSHOTS & PROMOTION HASHES
 # ============================================
 **/screenshots/
 **/screenshot/
