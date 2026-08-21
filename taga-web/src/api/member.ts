@@ -11,9 +11,13 @@ const API = axios.create({
 // Add token interceptor
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("member_token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      const token = localStorage.getItem("member_token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch {
+      // localStorage may throw in private browsing on some mobile browsers
     }
     return config;
   },
@@ -27,10 +31,18 @@ API.interceptors.response.use(
     if (error.response?.status === 401) {
       const message = error.response?.data?.error;
       if (message === "Token has expired. Please login again" || message === "Invalid token") {
-        localStorage.removeItem("member_token");
-        localStorage.removeItem("member_token_expiry");
-        localStorage.removeItem("user");
-        window.location.href = "/member-login";
+        try {
+          // Only wipe and redirect if token still exists (prevents double-redirect loops)
+          const token = localStorage.getItem("member_token");
+          if (token) {
+            localStorage.removeItem("member_token");
+            localStorage.removeItem("member_token_expiry");
+            localStorage.removeItem("user");
+            window.location.href = "/member-login";
+          }
+        } catch {
+          // localStorage may throw in private browsing on some mobile browsers
+        }
       }
     }
     return Promise.reject(error);
@@ -71,9 +83,12 @@ export const memberLoginAPI = async (credentials: { email: string; password: str
     localStorage.setItem("member_role", response.data.role);
     localStorage.setItem("user", JSON.stringify(response.data.user));
     
-    const expiresIn = response.data.expires_in || 86400;
-    const expiresAt = Date.now() + (expiresIn * 1000);
-    localStorage.setItem("member_token_expiry", expiresAt.toString());
+    // Use backend-provided expires_in (already configured server-side, default 1 week)
+    const expiresIn = response.data.expires_in;
+    if (expiresIn && expiresIn > 0) {
+      const expiresAt = Date.now() + (expiresIn * 1000);
+      localStorage.setItem("member_token_expiry", expiresAt.toString());
+    }
   }
   
   return response.data;
@@ -81,10 +96,14 @@ export const memberLoginAPI = async (credentials: { email: string; password: str
 
 // Member Logout
 export const memberLogoutAPI = () => {
-  localStorage.removeItem("member_token");
-  localStorage.removeItem("member_token_expiry");
-  localStorage.removeItem("member_role");
-  localStorage.removeItem("user");
+  try {
+    localStorage.removeItem("member_token");
+    localStorage.removeItem("member_token_expiry");
+    localStorage.removeItem("member_role");
+    localStorage.removeItem("user");
+  } catch {
+    // localStorage may throw in private browsing on some mobile browsers
+  }
 };
 
 // Get Member Profile (using JWT token)
@@ -121,21 +140,30 @@ export const getMemberProfile = async (): Promise<Member> => {
 
 // Check if member is logged in and token not expired
 export const isMemberLoggedIn = (): boolean => {
-  const token = localStorage.getItem("member_token");
-  const expiry = localStorage.getItem("member_token_expiry");
-  
-  if (!token) return false;
-  if (!expiry) return true;
-  
-  return Date.now() < parseInt(expiry);
+  try {
+    const token = localStorage.getItem("member_token");
+    const expiry = localStorage.getItem("member_token_expiry");
+    
+    if (!token) return false;
+    if (!expiry) return true;
+    
+    return Date.now() < parseInt(expiry);
+  } catch {
+    // localStorage may throw in private browsing on some mobile browsers
+    return false;
+  }
 };
 
 // Get remaining token time in minutes
 export const getTokenRemainingMinutes = (): number => {
-  const expiry = localStorage.getItem("member_token_expiry");
-  if (!expiry) return 0;
-  const remaining = parseInt(expiry) - Date.now();
-  return Math.max(0, Math.floor(remaining / 60000));
+  try {
+    const expiry = localStorage.getItem("member_token_expiry");
+    if (!expiry) return 0;
+    const remaining = parseInt(expiry) - Date.now();
+    return Math.max(0, Math.floor(remaining / 60000));
+  } catch {
+    return 0;
+  }
 };
 
 export const createEditRequest = async (data: any) => {
