@@ -187,18 +187,28 @@ func seedMemberUser() {
 		return
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("test123"), bcrypt.DefaultCost)
+	email := "subscriber@nammataga.com"
+	password := "test123"
+	if GlobalConfig != nil && GlobalConfig.MemberCredentials.Username != "" {
+		email = GlobalConfig.MemberCredentials.Username
+	}
+	if GlobalConfig != nil && GlobalConfig.MemberCredentials.Password != "" {
+		password = GlobalConfig.MemberCredentials.Password
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		fmt.Printf("WARNING: Failed to hash password: %v\n", err)
 		return
 	}
 
-	email := "sudhantest08@gmail.com"
 	found := false
 	for i, m := range members {
 		if mEmail, ok := m["emailId"].(string); ok && strings.EqualFold(mEmail, email) {
 			members[i]["password"] = string(hashedPassword)
 			members[i]["first_login"] = false
+			members[i]["payment_status"] = "Paid"
+			members[i]["subscription_active"] = true
 			found = true
 			break
 		}
@@ -206,32 +216,33 @@ func seedMemberUser() {
 
 	if !found {
 		newM := map[string]interface{}{
-			"id":                       "d11348e1-9a65-4945-bb1b-f100a5df15cg",
-			"emailId":                  email,
-			"username":                 email,
-			"password":                 string(hashedPassword),
-			"first_login":              false,
-			"name":                     "Test Member Sudhan",
-			"initial":                  "S",
-			"gender":                   "Male",
-			"mobile_number":            "9944637254",
-			"tagaId":                   "TAGA005",
-			"payment_status":           "Paid",
-			"subscription_active":      true,
-			"cps_gpf_number":           "GPF001",
-			"date_of_birth":            "1988-05-15",
-			"designation":              "Agriculture Officer",
-			"educational_qualification": "M.Sc Agriculture",
-			"father_name":              "Rajendran",
-			"mother_name":              "Sita Lakshmi",
-			"native_district":          "Salem",
-			"working_district":         "Salem",
-			"residential_address":      "12 Gandhi Nagar",
-			"permanent_address":        "12 Gandhi Nagar",
-			"tbf_number":               "TBF001",
-			"sno":                      1,
-			"login_count":              6,
-			"created_at":               time.Now().Format(time.RFC3339),
+			"id":                        "ff34e124-f45d-427a-b38b-c1bfeb72df18",
+			"emailId":                   email,
+			"username":                  email,
+			"password":                  string(hashedPassword),
+			"first_login":               false,
+			"name":                      "DONT DELETE",
+			"initial":                   "S",
+			"gender":                    "male",
+			"mobile_number":             "900190012",
+			"tagaId":                    "DUMMY003",
+			"payment_status":            "Paid",
+			"subscription_active":       true,
+			"cps_gpf_number":            "12226",
+			"date_of_birth":             "2026-08-16",
+			"designation":               "TESTER",
+			"educational_qualification":  "bsc Agri",
+			"father_name":               "SUDHAN FATHER",
+			"mother_name":               "SUDHAN MOTHER",
+			"native_district":           "Ariyalur",
+			"working_district":          "Ariyalur",
+			"residential_address":       "28/a V Nagar Road no 1",
+			"permanent_address":         "V Nagar Road no 1",
+			"recruitment_batch":         "2020",
+			"seniority_number":          "1",
+			"tbf_number":                "123",
+			"sno":                       0,
+			"created_at":                time.Now().Format(time.RFC3339),
 		}
 		members = append(members, newM)
 	}
@@ -247,7 +258,7 @@ func seedMemberUser() {
 		return
 	}
 
-	fmt.Println("✅ Successfully seeded member user 'sudhantest08@gmail.com' in database")
+	fmt.Printf("✅ Successfully seeded member user '%s' in database\n", email)
 }
 
 var (

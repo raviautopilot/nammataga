@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from './components/ui/button';
 import { Separator } from './components/ui/separator';
 import { Toaster } from './components/ui/sonner';
@@ -71,6 +71,22 @@ export default function App() {
     const [isInitialized, setIsInitialized] = useState(false);
     const [copyrightClickCount, setCopyrightClickCount] = useState(0);
 
+    // Ref to track whether a page change came from the popstate event (Back/Forward)
+    // so we don't push a duplicate history entry.
+    const isPopstateNav = useRef(false);
+
+    // ==================== BROWSER HISTORY NAVIGATION ====================
+    // navigateTo: use for ALL user-initiated navigation (clicks, login redirects).
+    // This pushes a history entry so Back/Forward buttons work.
+    // For internal redirects (access control, popstate), use setCurrentPage directly.
+    const navigateTo = useCallback((page: Page) => {
+        setCurrentPage(page);
+        if (!isPopstateNav.current) {
+            window.history.pushState({ page }, '', `/#${page}`);
+        }
+        isPopstateNav.current = false;
+    }, []);
+
     const handleCopyrightClick = () => {
         if (!isLoggedIn || !isAdmin) {
             return;
@@ -78,7 +94,7 @@ export default function App() {
         setCopyrightClickCount(prev => {
             const next = prev + 1;
             if (next >= 5) {
-                setCurrentPage('audit-log');
+                navigateTo('audit-log');
                 toast.success("Secret Access Granted: Opening Audit Logs");
                 return 0;
             }
@@ -105,80 +121,113 @@ export default function App() {
             return;
         }
 
-        const savedPage = sessionStorage.getItem('lastPage') as Page;
+        // 5-minute grace buffer to avoid race conditions on slow mobile networks
+        const GRACE_MS = 5 * 60 * 1000;
 
-        const adminToken = localStorage.getItem('admin_token');
-        const adminExpiry = localStorage.getItem('admin_token_expiry');
-        const isAdminValid = adminToken && adminExpiry && Date.now() < parseInt(adminExpiry);
+        try {
+            // Use localStorage for lastPage (sessionStorage is cleared when mobile browsers kill tabs)
+            const savedPage = localStorage.getItem('lastPage') as Page;
 
-        const memberToken = localStorage.getItem('member_token');
-        const memberExpiry = localStorage.getItem('member_token_expiry');
-        const isMemberValid = memberToken && memberExpiry && Date.now() < parseInt(memberExpiry);
+            const adminToken = localStorage.getItem('admin_token');
+            const adminExpiry = localStorage.getItem('admin_token_expiry');
+            const isAdminValid = adminToken && adminExpiry && (Date.now() - GRACE_MS) < parseInt(adminExpiry);
 
-        let restoredPage: Page | null = null;
+            const memberToken = localStorage.getItem('member_token');
+            const memberExpiry = localStorage.getItem('member_token_expiry');
+            const isMemberValid = memberToken && memberExpiry && (Date.now() - GRACE_MS) < parseInt(memberExpiry);
 
-        if (isAdminValid) {
-            setIsLoggedIn(true);
-            setIsAdmin(true);
-            setUserType('subscriber');
+            let restoredPage: Page | null = null;
 
-            if (savedPage && savedPage !== 'member-login' && savedPage !== 'admin-login') {
-                restoredPage = savedPage;
-            } else if (window.location.pathname === '/internal/audit') {
-                restoredPage = 'audit-log';
-            } else {
-                restoredPage = 'members';
+            if (isAdminValid) {
+                setIsLoggedIn(true);
+                setIsAdmin(true);
+                setUserType('subscriber');
+
+                if (savedPage && savedPage !== 'member-login' && savedPage !== 'admin-login') {
+                    restoredPage = savedPage;
+                } else if (window.location.pathname === '/internal/audit') {
+                    restoredPage = 'audit-log';
+                } else {
+                    restoredPage = 'members';
+                }
             }
-        }
-        else if (isMemberValid) {
-            setIsLoggedIn(true);
-            setIsAdmin(false);
+            else if (isMemberValid) {
+                setIsLoggedIn(true);
+                setIsAdmin(false);
 
-            // 🔥 Determine userType from stored data
-            const isPaid = getIsPaidFromStorage();
-            setUserType(isPaid ? 'subscriber' : 'member');
+                // 🔥 Determine userType from stored data
+                const isPaid = getIsPaidFromStorage();
+                setUserType(isPaid ? 'subscriber' : 'member');
 
-            if (savedPage && savedPage !== 'member-login' && savedPage !== 'admin-login') {
-                // 🔥 FIX: If saved page is 'members', redirect to home instead
-                if (savedPage === 'members') {
+                if (savedPage && savedPage !== 'member-login' && savedPage !== 'admin-login') {
+                    // 🔥 FIX: If saved page is 'members', redirect to home instead
+                    if (savedPage === 'members') {
+                        restoredPage = 'home';
+                    }
+                    // If non-paid member, only restore public pages
+                    else if (!isPaid && !publicPages.includes(savedPage)) {
+                        restoredPage = 'membership'; // Go to profile to pay
+                    } else {
+                        restoredPage = savedPage;
+                    }
+                } else {
                     restoredPage = 'home';
                 }
-                // If non-paid member, only restore public pages
-                else if (!isPaid && !publicPages.includes(savedPage)) {
-                    restoredPage = 'membership'; // Go to profile to pay
-                } else {
+            }
+            else {
+                localStorage.removeItem('admin_token');
+                localStorage.removeItem('admin_token_expiry');
+                localStorage.removeItem('admin_role');
+                localStorage.removeItem('member_token');
+                localStorage.removeItem('member_token_expiry');
+                localStorage.removeItem('member_role');
+                localStorage.removeItem('user');
+
+                if (savedPage && publicPages.includes(savedPage)) {
                     restoredPage = savedPage;
                 }
+            }
+
+            if (restoredPage) {
+                setCurrentPage(restoredPage);
+                // Set the initial history entry so the first Back press doesn't exit the site
+                window.history.replaceState({ page: restoredPage }, '', `/#${restoredPage}`);
             } else {
-                restoredPage = 'home';
+                window.history.replaceState({ page: 'home' }, '', `/#home`);
             }
-        }
-        else {
-            localStorage.removeItem('admin_token');
-            localStorage.removeItem('admin_token_expiry');
-            localStorage.removeItem('admin_role');
-            localStorage.removeItem('member_token');
-            localStorage.removeItem('member_token_expiry');
-            localStorage.removeItem('member_role');
-            localStorage.removeItem('user');
-
-            if (savedPage && publicPages.includes(savedPage)) {
-                restoredPage = savedPage;
-            }
-        }
-
-        if (restoredPage) {
-            setCurrentPage(restoredPage);
+        } catch {
+            // localStorage may throw in private browsing on some mobile browsers — treat as logged out
         }
 
         setIsInitialized(true);
     }, []);
 
-    // ==================== SAVE CURRENT PAGE TO SESSION STORAGE ====================
+    // ==================== BROWSER BACK/FORWARD HANDLER ====================
+    useEffect(() => {
+        const handlePopState = (event: PopStateEvent) => {
+            const page = event.state?.page as Page;
+            if (page) {
+                isPopstateNav.current = true;
+                setCurrentPage(page);
+            } else {
+                isPopstateNav.current = true;
+                setCurrentPage('home');
+            }
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
+    // ==================== SAVE CURRENT PAGE TO LOCAL STORAGE ====================
+    // Using localStorage instead of sessionStorage — sessionStorage is cleared when mobile browsers kill tabs
     useEffect(() => {
         if (!isInitialized) return;
         if (currentPage === 'member-login' || currentPage === 'admin-login' || currentPage === 'home') return;
-        sessionStorage.setItem('lastPage', currentPage);
+        try {
+            localStorage.setItem('lastPage', currentPage);
+        } catch {
+            // localStorage may throw in private browsing on some mobile browsers
+        }
     }, [currentPage]);
 
     // ==================== FETCH LOGO ====================
@@ -200,12 +249,12 @@ export default function App() {
         setIsAdmin(isAdminLogin);
         setUserType(isPaid ? 'subscriber' : 'member');
 
-        const lastPage = sessionStorage.getItem('lastPage') as Page;
+        const lastPage = localStorage.getItem('lastPage') as Page;
 
         if (lastPage && lastPage !== 'member-login' && lastPage !== 'admin-login' && (isAdminLogin || (lastPage !== 'members' && lastPage !== 'audit-log'))) {
-            setCurrentPage(lastPage);
+            navigateTo(lastPage);
         } else {
-            setCurrentPage('home');
+            navigateTo('home');
         }
 
         toast.success(isAdminLogin ? 'Admin logged in successfully' : 'Member logged in successfully');
@@ -213,7 +262,8 @@ export default function App() {
 
     // ==================== LOGOUT HANDLER ====================
     const handleLogout = () => {
-        sessionStorage.removeItem('lastPage');
+        localStorage.removeItem('lastPage');
+        sessionStorage.removeItem('lastPage'); // clean up legacy key if present
 
         localStorage.removeItem('admin_token');
         localStorage.removeItem('admin_token_expiry');
@@ -226,7 +276,7 @@ export default function App() {
         setIsLoggedIn(false);
         setIsAdmin(false);
         setUserType('general');
-        setCurrentPage('home');
+        navigateTo('home');
 
         toast.success('Logged out successfully');
     };
@@ -335,7 +385,7 @@ export default function App() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         <div className="flex items-center space-x-3 cursor-pointer"
-                            onClick={() => setCurrentPage('home')}
+                            onClick={() => navigateTo('home')}
                             data-testid="home-link">
                             <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg bg-white flex items-center justify-center">
                                 {logoUrl ? (
@@ -359,7 +409,7 @@ export default function App() {
                                     <Button
                                         key={item.id}
                                         variant={currentPage === item.id ? "default" : "ghost"}
-                                        onClick={() => setCurrentPage(item.id as Page)}
+                                        onClick={() => navigateTo(item.id as Page)}
                                         className="flex items-center space-x-2"
                                         size="sm"
                                         data-testid={`testid-${item.id}-button`}
@@ -397,7 +447,7 @@ export default function App() {
                                             key={item.id}
                                             variant={currentPage === item.id ? "default" : "ghost"}
                                             onClick={() => {
-                                                setCurrentPage(item.id as Page);
+                                                navigateTo(item.id as Page);
                                                 setMobileMenuOpen(false);
                                             }}
                                             className="flex items-center space-x-2 justify-start"
@@ -452,7 +502,7 @@ export default function App() {
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => setCurrentPage('admin-login')}
+                                    onClick={() => navigateTo('admin-login')}
                                     className="text-xs text-muted-foreground hover:text-foreground"
                                     data-testid="testid-admin-login-button"
                                 >

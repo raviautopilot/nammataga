@@ -1397,8 +1397,6 @@ paths:
             additionalProperties:
               type: string
             type: object
-      security:
-      - BearerAuth: []
       summary: Clear mock emails for E2E testing
       tags:
       - Admin Members
@@ -1412,8 +1410,6 @@ paths:
             additionalProperties:
               type: string
             type: object
-      security:
-      - BearerAuth: []
       summary: Get mock emails for E2E testing
       tags:
       - Admin Members

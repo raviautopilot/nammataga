@@ -44,6 +44,7 @@ import {
   confirmPayment,
   cancelBooking,
   createOrder,
+  verifyPayment,
 } from '../api/tagatower';
 import type { Room, BookingResponse, RoomAvailability } from '../api/tagatower';
 import { loadRazorpayScript } from '../utils/razorpay';
@@ -782,20 +783,12 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
         },
         handler: async function (response: any) {
           try {
-            const verifyRes = await fetch(`${API_BASE}/towers/verify-payment`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                bookingId,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }),
+            await verifyPayment({
+              bookingId,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
             });
-
-            if (!verifyRes.ok) {
-              throw new Error('Payment verification failed');
-            }
 
             const roomName = selectedRoom?.name || 'Room';
             toast.success(`🎉 Booking Successful! Your reservation for ${roomName} has been confirmed.`);

@@ -259,6 +259,63 @@ func ValidateUnpaidMemberAccess(mai MemberActionsInterface, cfg *config.Config, 
 	r.Advice = append(r.Advice, "Successfully validated unpaid member access.")
 }
 
+// ValidatePaidMemberAccess verifies that a paid subscriber member can access all member-exclusive pages.
+func ValidatePaidMemberAccess(mai MemberActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Validate Paid Member Access"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// 1. Visit accessible pages for paid member
+	pages := []struct {
+		TestID         string
+		ScreenshotName string
+		Locator        string
+	}{
+		{"testid-home-button", "Home_Page", "css:[data-testid='home-link']"},
+		{"testid-office-bearers-button", "Office_Bearers_Page", "css:[data-testid='testid-office-bearers-district-select']"},
+		{"testid-membership-button", "Member_Profile_Page", "css:body"},
+		{"testid-resources-button", "Resources_Page", "css:body"},
+		{"testid-taga-towers-button", "TAGA_Towers_Page", "css:body"},
+		{"testid-events-button", "Events_Gallery_Page", "css:body"},
+		{"testid-grievance-button", "Grievance_Page", "css:body"},
+	}
+
+	for _, page := range pages {
+		if err := mp.Page.ClickByTestID(page.TestID, mp.DefaultTimeout); err != nil {
+			r.Status = "failed"
+			r.Error = err
+			r.Advice = append(r.Advice, fmt.Sprintf("Advice: Verify '%s' element exists for paid member", page.TestID))
+			return
+		}
+
+		r.WaitForElementAndCapture(mp.Page, page.Locator, 5*time.Second, page.ScreenshotName)
+	}
+
+	// 2. Verify admin restricted pages are NOT accessible to regular paid member
+	restrictedButtons := []string{
+		"testid-members-button",
+		"testid-member-login-button",
+	}
+
+	for _, btn := range restrictedButtons {
+		_, err := mp.Page.WaitUntilClickable(fmt.Sprintf("css:[data-testid='%s']", btn), 2*time.Second)
+		if err == nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("paid member should NOT see the admin/login button: %s", btn)
+			r.Advice = append(r.Advice, fmt.Sprintf("Advice: Ensure regular paid members cannot access %s", btn))
+			return
+		}
+	}
+	r.CaptureScreenshot(mp.Page, "PaidMember_Access_Validated")
+
+	r.Advice = append(r.Advice, "Successfully validated paid member access.")
+}
+
 // PayAnnualSubscription navigates to the subscription page and mocks an annual subscription payment.
 func PayAnnualSubscription(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 	actionName := "Pay Annual Subscription"

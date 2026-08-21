@@ -137,9 +137,11 @@ func SetupRouter() *gin.Engine {
 		auth.POST("/change-password", handler.ChangeMemberPasswordHandler)
 	}
 
-	// Test Email
+	// Test Email & Mock Email Test Hooks (Public for testing)
 	r.POST("/api/test-email", handler.TestEmail)
 	r.GET("/api/test-email", handler.TestEmail)
+	r.GET("/api/admin/mock-emails", handler.GetMockEmails)
+	r.DELETE("/api/admin/mock-emails", handler.ClearMockEmails)
 
 	// ==================== PROTECTED MEMBER ROUTES (JWT Required) ====================
 
@@ -218,10 +220,6 @@ func SetupRouter() *gin.Engine {
 	admin := r.Group("/api/admin")
 	admin.Use(middleware.AdminAuthMiddleware())
 	{
-		// E2E Test Hooks
-		admin.GET("/mock-emails", handler.GetMockEmails)
-		admin.DELETE("/mock-emails", handler.ClearMockEmails)
-
 		// Admin TAGA Towers Occupancy Schedule
 		admin.GET("/towers/bookings", handler.GetAllBookingsAdmin)
 

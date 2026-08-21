@@ -20,6 +20,7 @@
   "contact_file": "data/about/contact.json",
   "objectives_file": "data/about/objectives.json",
   "services_file": "data/about/services.json",
+  "session_duration_hours": 168,
   "jwt_secret": "ilovetaga",
   "admin_api_key": "taga-admin-secret-key-2024",
   "razorpay_key": "rzp_test_SeVBCSMzeFlqy8",

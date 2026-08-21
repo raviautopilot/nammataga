@@ -262,3 +262,28 @@ export const createOrder = async (amount: number, notes?: Record<string, any>): 
     throw error;
   }
 };
+
+export interface VerifyPaymentRequest {
+  bookingId: string;
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+// ✅ Verify Razorpay payment (authenticated)
+export const verifyPayment = async (data: VerifyPaymentRequest): Promise<any> => {
+  try {
+    const res = await fetchWithFallback(
+      `${TOWERS_API}/verify-payment`,
+      {
+        method: "POST",
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(data),
+      }
+    );
+    return await handleResponse(res);
+  } catch (error) {
+    console.error("❌ Error verifying payment:", error);
+    throw error;
+  }
+};
