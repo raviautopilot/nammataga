@@ -304,7 +304,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
   // 🔥 FIX: Max checkout is 10 days from the chosen check-in (not from today),
   // so a user who picks a check-in late in the month can still select a full 10-night stay.
   const maxCheckoutDate = addDays(today, BOOKING_DAYS_LIMIT);
-  const bannerImage = `${API_BASE}/images/taga-towers.jpg`;
+  const bannerImage = `${API_BASE}/images/tagatower_final.png`;
   const advanceAmount = ADVANCE_AMOUNTS[bookingFor];
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -662,11 +662,11 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
 
     const finalGender =
       selectedRoom.type === 'gents-dorm' ? 'male' :
-      selectedRoom.type === 'ladies-dorm' ? 'female' :
-      bookingFor === 'guest'
-        // For guest bookings, gender is derived from guest list (already validated)
-        ? (guestDetails[0]?.gender as 'male' | 'female' | undefined)
-        : bookingGender;
+        selectedRoom.type === 'ladies-dorm' ? 'female' :
+          bookingFor === 'guest'
+            // For guest bookings, gender is derived from guest list (already validated)
+            ? (guestDetails[0]?.gender as 'male' | 'female' | undefined)
+            : bookingGender;
 
     try {
       // 🔒 Double-check live availability immediately before creating the booking
@@ -1057,10 +1057,10 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                       <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
                         <div
                           className={`h-full transition-all rounded-full ${occupancyPercentage >= 80
-                              ? 'bg-red-500'
-                              : occupancyPercentage >= 50
-                                ? 'bg-yellow-400'
-                                : 'bg-green-600'
+                            ? 'bg-red-500'
+                            : occupancyPercentage >= 50
+                              ? 'bg-yellow-400'
+                              : 'bg-green-600'
                             }`}
                           style={{ width: `${occupancyPercentage}%` }}
                         />
@@ -1123,7 +1123,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
             src={bannerImage}
             alt="TAGA Towers Building"
             className="w-full h-full object-cover object-center"
-            style={{ objectPosition: "center 20%" }}
+            style={{ objectPosition: "center 30%" }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-green-900/95 via-green-800/85 to-green-900/90" />
         </div>
@@ -1679,7 +1679,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
               bedCount < selectedRoom.capacity && (
                 <div className="space-y-3">
                   <Label>Gender</Label>
-                  
+
                   {selectedRoom.type === 'gents-dorm' ? (
                     <div className="inline-flex items-center px-3 py-1 rounded-md bg-blue-50 text-blue-700 font-medium text-sm border border-blue-200">
                       Male Only
@@ -1786,11 +1786,10 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                             id={`guest-${index + 1}-male`}
                             data-testid={`testid-guest-${index + 1}-gender-male`}
                             onClick={() => updateGuestDetail(index, 'gender', 'male')}
-                            className={`py-1.5 px-3 rounded-md border text-sm font-medium transition-colors cursor-pointer ${
-                              guest.gender === 'male'
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-input'
-                            }`}
+                            className={`py-1.5 px-3 rounded-md border text-sm font-medium transition-colors cursor-pointer ${guest.gender === 'male'
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-input'
+                              }`}
                           >
                             Male
                           </button>
@@ -1800,11 +1799,10 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                             id={`guest-${index + 1}-female`}
                             data-testid={`testid-guest-${index + 1}-gender-female`}
                             onClick={() => updateGuestDetail(index, 'gender', 'female')}
-                            className={`py-1.5 px-3 rounded-md border text-sm font-medium transition-colors cursor-pointer ${
-                              guest.gender === 'female'
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-input'
-                            }`}
+                            className={`py-1.5 px-3 rounded-md border text-sm font-medium transition-colors cursor-pointer ${guest.gender === 'female'
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-input'
+                              }`}
                           >
                             Female
                           </button>
