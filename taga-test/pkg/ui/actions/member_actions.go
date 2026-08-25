@@ -1899,3 +1899,106 @@ func VerifyBulkUploadedMember(page *ui.Page, cfg *config.Config, email, stepPref
 	VerifyMemberSubscriptionStatus(member, cfg, email, cfg.MemberCredentials.Password, stepPrefix, result)
 }
 
+// ForgotPasswordByEmail triggers forgot password using the email option
+func ForgotPasswordByEmail(mai MemberActionsInterface, cfg *config.Config, email string, r *Result) {
+	mp := mai.GetMemberPersona()
+	actionName := "Forgot Password by Email"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		return
+	}
+
+	homePage := pages.NewHomePage(mp.Page)
+	_ = homePage.OpenMemberLogin(cfg.MemberLoginButtonTestID, mp.DefaultTimeout)
+
+	// Click forgot password button to open the modal
+	if err := mp.Page.ClickByTestID("testid-forgot-password-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	time.Sleep(1 * time.Second)
+
+	// Enter email into forgot password email input
+	if err := mp.Page.SendKeysByTestID("testid-forgot-password-email-input", email, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	// Click reset button
+	if err := mp.Page.ClickByTestID("testid-reset-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	r.WaitForElementAndCapture(mp.Page, "css:li[data-sonner-toast]", 5 * time.Second, "ForgotPasswordByEmail_Success")
+}
+
+// ForgotPasswordByTbf triggers forgot password using the TBF number option
+func ForgotPasswordByTbf(mai MemberActionsInterface, cfg *config.Config, tbfNumber, email string, r *Result) {
+	mp := mai.GetMemberPersona()
+	actionName := "Forgot Password by TBF Number"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		return
+	}
+
+	homePage := pages.NewHomePage(mp.Page)
+	_ = homePage.OpenMemberLogin(cfg.MemberLoginButtonTestID, mp.DefaultTimeout)
+
+	// Click forgot password button to open the modal
+	if err := mp.Page.ClickByTestID("testid-forgot-password-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	time.Sleep(1 * time.Second)
+
+	// Click "Try other way" button
+	if err := mp.Page.ClickByTestID("testid-try-other-way-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	time.Sleep(500 * time.Millisecond)
+
+	// Enter TBF Number into input
+	if err := mp.Page.SendKeysByTestID("testid-forgot-password-tbf-input", tbfNumber, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	// Click reset button
+	if err := mp.Page.ClickByTestID("testid-reset-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	r.WaitForElementAndCapture(mp.Page, "css:li[data-sonner-toast]", 5 * time.Second, "ForgotPasswordByTbf_Success")
+}
+
+// ResetForgotPasswordWithTemporaryPassword retrieves the temporary password from mock emails and performs the password change
+func ResetForgotPasswordWithTemporaryPassword(mai MemberActionsInterface, cfg *config.Config, email, newPassword string, r *Result) {
+	actionName := "Reset Forgot Password with Temporary Password"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		return
+	}
+
+	tempPass := FetchTempPasswordFromMockEmail(cfg, email)
+	if tempPass == "" {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to fetch temporary password from mock email")
+		return
+	}
+
+	ForceChangePassword(mai, cfg, email, tempPass, newPassword, r)
+}
+

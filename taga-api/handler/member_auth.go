@@ -144,13 +144,18 @@ func MemberForgotPasswordHandler(c *gin.Context) {
 		return
 	}
 
-	err := auth.ForgotPassword(data.Email)
+	if data.Email == "" && data.TbfNumber == "" {
+		respondError(c, http.StatusBadRequest, "Email or TBF Number is required")
+		return
+	}
+
+	err := auth.GenerateAndSendTemporaryPassword(data.Email, data.TbfNumber)
 	if err != nil {
 		respondError(c, http.StatusNotFound, err.Error())
 		return
 	}
 
-	respondMessage(c, "Password reset email sent")
+	respondMessage(c, "Temporary password sent to your registered email")
 }
 
 // MemberLoginHandler - JWT based login for members

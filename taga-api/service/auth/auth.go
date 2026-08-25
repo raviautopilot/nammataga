@@ -187,3 +187,57 @@ func ResetPassword(email, oldPassword, newPassword string) error {
 
 	return nil
 }
+
+func GenerateAndSendTemporaryPassword(email, tbfNumber string) error {
+	// Read members
+	members, err := defaultReader.ReadMembers()
+	if err != nil {
+		return fmt.Errorf("failed to read members: %w", err)
+	}
+
+	memberIndex := -1
+	for i, member := range members {
+		if (email != "" && member.EmailId == email) || (tbfNumber != "" && member.TbfNumber == tbfNumber) {
+			memberIndex = i
+			break
+		}
+	}
+
+	if memberIndex == -1 {
+		return &AuthenticationError{"member not found with provided details"}
+	}
+
+	// Generate a 12-char temporary password
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	tempBytes := make([]byte, 12)
+	for i := range tempBytes {
+		b := make([]byte, 1)
+		_, _ = rand.Read(b)
+		tempBytes[i] = charset[int(b[0])%len(charset)]
+	}
+	tempPassword := string(tempBytes)
+
+	// Hash it
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(tempPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash temp password: %w", err)
+	}
+
+	// Update password and force change on next login
+	members[memberIndex].Password = string(hashedPassword)
+	members[memberIndex].FirstLogin = true
+
+	// Write back to file
+	data, err := json.MarshalIndent(members, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal members: %w", err)
+	}
+
+	err = os.WriteFile(config.Config.MembersFile, data, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write members file: %w", err)
+	}
+
+	// Send temporary password email
+	return esrv.SendTemporaryPasswordEmail(members[memberIndex].EmailId, tempPassword)
+}

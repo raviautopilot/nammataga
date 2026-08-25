@@ -58,11 +58,10 @@ const [membershipForm, setMembershipForm] = useState({
 });
 
   const [forgotPasswordForm, setForgotPasswordForm] = useState({
-    membershipId: '',
+    tbfNumber: '',
     email: '',
-    securityQuestion: '',
-    securityAnswer: ''
   });
+  const [useTbfNumber, setUseTbfNumber] = useState(false);
 
   const [districts, setDistricts] = useState<string[]>([]);
 
@@ -255,15 +254,13 @@ const handleChangePasswordSubmit = async (
 
   }
 };
-// ✅ FORGOT PASSWORD
 const handleForgotPasswordSubmit = async (
   e: React.FormEvent
 ) => {
-
   e.preventDefault();
+  setIsLoading(true);
 
   try {
-
     const res = await forgotPassword(
       forgotPasswordForm
     );
@@ -276,11 +273,10 @@ const handleForgotPasswordSubmit = async (
     setShowForgotPasswordDialog(false);
 
     setForgotPasswordForm({
-      membershipId: '',
+      tbfNumber: '',
       email: '',
-      securityQuestion: '',
-      securityAnswer: ''
     });
+    setUseTbfNumber(false);
 
   } catch (err: any) {
 
@@ -289,6 +285,8 @@ const handleForgotPasswordSubmit = async (
       "Failed to reset password"
     );
 
+  } finally {
+    setIsLoading(false);
   }
 };
   return (
@@ -367,41 +365,50 @@ const handleForgotPasswordSubmit = async (
                 <DialogTitle>Reset Password</DialogTitle>
               </DialogHeader>
 
-              <form onSubmit={handleForgotPasswordSubmit} className="space-y-3" data-testid="testid-forgot-password-form">
-
-                <Input placeholder="Membership ID"
-                  value={forgotPasswordForm.membershipId}
-                  onChange={(e) =>
-                    handleForgotPasswordFormChange('membershipId', e.target.value)
-                  }
-                  data-testid="testid-forgot-password-membership-id-input"
-                />
-
-                <Input placeholder="Email"
-                  value={forgotPasswordForm.email}
-                  onChange={(e) =>
-                    handleForgotPasswordFormChange('email', e.target.value)
-                  }
-                  data-testid="testid-forgot-password-email-input"
-                />
-
-                <Input placeholder="Security Question"
-                  value={forgotPasswordForm.securityQuestion}
-                  onChange={(e) =>
-                    handleForgotPasswordFormChange('securityQuestion', e.target.value)
-                  }
-                  data-testid="testid-forgot-password-security-question-input"
-                />
-
-                <Input placeholder="Security Answer"
-                  value={forgotPasswordForm.securityAnswer}
-                  onChange={(e) =>
-                    handleForgotPasswordFormChange('securityAnswer', e.target.value)
-                  }
-                  data-testid="testid-forgot-password-security-answer-input"
-                />
-
-                <Button type="submit" data-testid="testid-reset-button">Reset</Button>
+              <form onSubmit={handleForgotPasswordSubmit} className="space-y-4" data-testid="testid-forgot-password-form">
+                {!useTbfNumber ? (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Registered Email ID</label>
+                    <Input placeholder="Enter your registered email"
+                      value={forgotPasswordForm.email}
+                      onChange={(e) =>
+                        handleForgotPasswordFormChange('email', e.target.value)
+                      }
+                      data-testid="testid-forgot-password-email-input"
+                      required={!useTbfNumber}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">TBF Number</label>
+                    <Input placeholder="Enter your TBF Number"
+                      value={forgotPasswordForm.tbfNumber}
+                      onChange={(e) =>
+                        handleForgotPasswordFormChange('tbfNumber', e.target.value)
+                      }
+                      data-testid="testid-forgot-password-tbf-input"
+                      required={useTbfNumber}
+                    />
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between">
+                  <Button 
+                    type="button" 
+                    variant="link" 
+                    className="px-0"
+                    onClick={() => {
+                      setUseTbfNumber(!useTbfNumber);
+                      setForgotPasswordForm({ tbfNumber: '', email: '' });
+                    }}
+                    data-testid="testid-try-other-way-button"
+                  >
+                    Try other way
+                  </Button>
+                  <Button type="submit" disabled={isLoading} data-testid="testid-reset-button">
+                    {isLoading ? 'Sending...' : 'Reset'}
+                  </Button>
+                </div>
               </form>
             </DialogContent>
           </Dialog>
