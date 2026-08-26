@@ -46,14 +46,16 @@ const [isLoadingDropdowns, setIsLoadingDropdowns] = useState(true);
 
       setSubmitSuccess(true);
 
-      setFormData({
-        subject: '',
-        category: '',
-        priority: '',
-        description: '',
-        contactPhone: '',
-        preferredResponse: 'email'
-      });
+       setFormData({
+         name: '',
+         email: '',
+         subject: '',
+         category: '',
+         priority: '',
+         description: '',
+         contactPhone: '',
+         preferredResponse: 'email'
+       });
 
     } catch (error) {
       console.error("Submit error:", error);
@@ -195,7 +197,7 @@ useEffect(() => {
                 <Input
                 placeholder="Your phone number"
                   value={formData.contactPhone}
-                  onChange={(e) => handleInputChange('contactPhone', e.target.value)}
+                  onChange={(e) => handleInputChange('contactPhone', e.target.value.replace(/\D/g, '').slice(0, 10))}
                   data-testid="testid-grievance-contact-phone-input"
                 />
               </div>

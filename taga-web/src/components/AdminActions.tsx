@@ -37,6 +37,7 @@ import { sortDocuments } from '../api/resources';
 import { MemberListTable } from './MemberListTable';
 import DistrictOfficeBearersManager from './admin/DistrictOfficeBearersManager';
 import AdminEditRequestsButton from './admin/AdminEditRequests';
+import MinimalGrievances from './admin/MinimalGrievances';
 
 interface AdminActionsProps {
   memberStats: {
@@ -1034,11 +1035,22 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
       {/* ===================== QUICK ACTIONS ===================== */}
       <Card>
         <CardHeader>
+          <CardTitle>Admin Notifications</CardTitle>
+          <CardDescription>Pending edit requests and member grievances</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <AdminEditRequestsButton />
+          <MinimalGrievances />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
           <CardDescription>Manage members and communications</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <AdminEditRequestsButton />
+
 
           {/* Add New Member */}
           <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
@@ -1193,10 +1205,10 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
                   <div className="mt-4 p-3 bg-muted/50 rounded flex flex-col items-center border font-mono text-sm">
                     <div className="flex items-center gap-2">
                       <span>Temporary password: <strong data-testid="testid-temp-password">{tempPassword}</strong></span>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
                         data-testid="testid-copy-password-button"
                         onClick={() => {
                           navigator.clipboard.writeText(tempPassword);

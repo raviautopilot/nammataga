@@ -4,6 +4,8 @@ import "time"
 
 type Grievance struct {
 	ID                string    `json:"id"`
+	MemberName        string    `json:"memberName"`
+	MemberEmail       string    `json:"memberEmail"`
 	Subject           string    `json:"subject"`
 	Category          string    `json:"category"`
 	Priority          string    `json:"priority"`
