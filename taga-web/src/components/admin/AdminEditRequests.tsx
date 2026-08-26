@@ -118,7 +118,7 @@ export default function AdminEditRequestsButton() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="w-full justify-start relative">
+        <Button variant="outline" className="w-full justify-start relative" data-testid="testid-pending-edit-requests-button">
           <FileEdit className="w-4 h-4 mr-2" />
           Pending Edit Requests
           {requests.length > 0 && (
@@ -163,7 +163,7 @@ export default function AdminEditRequestsButton() {
                   onOpenChange={() => toggleGroup(memberId)}
                   className="bg-white border rounded-xl shadow-sm overflow-hidden"
                 >
-                  <div className="bg-slate-50 hover:bg-slate-100 transition-colors border-b px-4 py-3 flex items-center justify-between cursor-pointer" onClick={() => toggleGroup(memberId)}>
+                  <div className="bg-slate-50 hover:bg-slate-100 transition-colors border-b px-4 py-3 flex items-center justify-between cursor-pointer" onClick={() => toggleGroup(memberId)} data-testid={"testid-member-group-" + memberId}>
                     <div className="flex items-center gap-3">
                       <CollapsibleTrigger asChild>
                         <Button variant="ghost" size="sm" className="p-0 h-8 w-8 hover:bg-slate-200">
@@ -189,7 +189,7 @@ export default function AdminEditRequestsButton() {
                           size="sm" 
                           onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleBulkSave(memberId, group.fields); }}
                           disabled={decisionsMade === 0 || isSaving}
-                          className={`min-w-[140px] text-white ${isSaving ? 'bg-blue-500 opacity-80 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                          className={`min-w-[140px] text-white ${isSaving ? 'bg-blue-500 opacity-80 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`} data-testid={`testid-save-publish-button-${memberId}`}
                         >
                           {isSaving ? (
                             <>
@@ -245,7 +245,7 @@ export default function AdminEditRequestsButton() {
                                         size="sm" 
                                         variant={decision === 'approved' ? 'default' : 'outline'} 
                                         className={`h-8 px-3 flex-1 ${decision === 'approved' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'hover:bg-emerald-50 hover:text-emerald-700'}`} 
-                                        onClick={() => handleDecision(req.id, 'approved')}
+                                        onClick={() => handleDecision(req.id, 'approved')} data-testid={"testid-approve-button-" + req.field}
                                       >
                                         <Check className="w-4 h-4 mr-1" /> Approve
                                       </Button>
@@ -253,7 +253,7 @@ export default function AdminEditRequestsButton() {
                                         size="sm" 
                                         variant={decision === 'rejected' ? 'default' : 'outline'} 
                                         className={`h-8 px-3 flex-1 ${decision === 'rejected' ? 'bg-red-600 hover:bg-red-700 text-white' : 'hover:bg-red-50 hover:text-red-700'}`} 
-                                        onClick={() => handleDecision(req.id, 'rejected')}
+                                        onClick={() => handleDecision(req.id, 'rejected')} data-testid={"testid-reject-button-" + req.field}
                                       >
                                         <X className="w-4 h-4 mr-1" /> Reject
                                       </Button>
@@ -262,7 +262,7 @@ export default function AdminEditRequestsButton() {
                                       placeholder="Admin remarks (optional)" 
                                       className="h-8 text-xs bg-white"
                                       value={adminRemarks[req.id] || ''}
-                                      onChange={(e) => setAdminRemarks(prev => ({...prev, [req.id]: e.target.value}))}
+                                      onChange={(e) => setAdminRemarks(prev => ({...prev, [req.id]: e.target.value}))} data-testid={"testid-admin-remarks-input-" + req.field}
                                     />
                                   </div>
                                 </td>
