@@ -1676,6 +1676,9 @@ func AdminProcessesEditRequest(aai AdminActionsInterface, cfg *config.Config, r 
 		return
 	}
 	
+	time.Sleep(1 * time.Second)
+	r.CaptureScreenshot(ap.Page, "Admin_Edit_Requests_Expanded_View")
+	
 	// Approve mobile_number
 	if err := ap.Page.ClickByTestID("testid-approve-button-mobile_number", ap.DefaultTimeout); err != nil {
 		r.Status = "failed"
