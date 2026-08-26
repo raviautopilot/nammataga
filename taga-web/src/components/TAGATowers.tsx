@@ -92,6 +92,7 @@ const CARETAKER_INFO = {
   ],
   email: 'tagatower@nammataga.com',
   address: 'TAGA Towers, 123 Agriculture Complex Road, T. Nagar, Chennai - 600017, Tamil Nadu',
+  landline: '044 34919949',
 };
 
 interface TAGATowersProps {
@@ -1578,6 +1579,14 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                 <div>
                   <p className="text-sm text-muted-foreground">Address</p>
                   <p className="font-semibold">{CARETAKER_INFO.address}</p>
+                </div>
+              </div>
+              <Separator className="my-4" />
+              <div className="flex items-start space-x-3">
+                <Phone className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Landline Number of TAGA Tower</p>
+                  <p className="font-semibold">{CARETAKER_INFO.landline}</p>
                 </div>
               </div>
             </CardContent>
