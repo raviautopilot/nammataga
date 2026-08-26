@@ -97,7 +97,7 @@ export default function MinimalGrievances() {
   return (
     <Dialog open={open} onOpenChange={(val: boolean) => { setOpen(val); if (val) { fetchGrievances(); setOpenItems({}); } }}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="w-full justify-start relative shadow-sm">
+        <Button variant="outline" className="w-full justify-start relative shadow-sm" data-testid="testid-manage-grievances-button">
           <MessageSquare className="w-4 h-4 mr-2" />
           Member Grievances
           {unreadCount > 0 && (
@@ -108,7 +108,7 @@ export default function MinimalGrievances() {
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col bg-white border-slate-200 shadow-2xl p-0 gap-0">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col bg-white border-slate-200 shadow-2xl p-0 gap-0" data-testid="testid-grievances-dialog-content">
         {/* Header */}
         <div className="px-5 pt-5 pb-4 border-b border-slate-100">
           <DialogHeader className="space-y-1">
@@ -144,19 +144,20 @@ export default function MinimalGrievances() {
         {/* List */}
         <div className="flex-1 overflow-y-auto px-5 py-3">
           {grievances.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+            <div className="flex flex-col items-center justify-center py-16 text-slate-400" data-testid="testid-no-grievances-message">
               <MessageSquare className="w-10 h-10 mb-3 opacity-40" />
               <p className="text-sm font-medium">No grievances yet</p>
               <p className="text-xs mt-1">When members submit issues, they'll appear here.</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2" data-testid="testid-grievances-list">
               {paginated.map(g => (
                 <Collapsible
                   key={g.id}
                   open={openItems[g.id]}
                   onOpenChange={() => toggleOpen(g)}
                   className="group"
+                  data-testid={`testid-grievance-item-${g.id}`}
                 >
                   {/* Compact trigger row */}
                   <CollapsibleTrigger className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left rounded-lg transition-all cursor-pointer
@@ -165,7 +166,7 @@ export default function MinimalGrievances() {
                       : 'bg-slate-50/60 hover:bg-slate-50 border border-slate-100'
                     }
                     ${openItems[g.id] ? 'rounded-b-none border-b-0' : ''}
-                  `}>
+                  `} data-testid={`testid-grievance-trigger-${g.id}`}>
                     {/* Unread dot */}
                     <div className="w-4 flex-shrink-0 flex justify-center">
                       {g.status === 'Pending' && <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />}

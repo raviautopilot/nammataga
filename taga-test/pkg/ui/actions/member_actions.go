@@ -2098,3 +2098,91 @@ func MemberSubmitsEditRequest(mai MemberActionsInterface, cfg *config.Config, r 
 
 	time.Sleep(2 * time.Second) // wait for modal to close
 }
+
+func MemberSubmitsGrievance(mai MemberActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Member Submits Grievance"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		return
+	}
+	mp := mai.GetMemberPersona()
+
+	// Navigate to Grievance Page
+	if err := mp.Page.ClickByTestID("testid-grievance-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	time.Sleep(1 * time.Second)
+
+	// Fill subject
+	if err := mp.Page.SendKeysByTestID("testid-grievance-subject-input", "E2E Test Grievance Subject", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Wait for category select to be clickable (finish loading dropdowns from API)
+	if _, err := mp.Page.WaitUntilClickable("css:[data-testid='testid-grievance-category-select']", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Select Category
+	if err := mp.Page.SelectCustomDropdownByText("testid-grievance-category-select", "Pay & Allowances", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Select Priority
+	if err := mp.Page.SelectCustomDropdownByText("testid-grievance-priority-select", "High", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Fill phone
+	if err := mp.Page.SendKeysByTestID("testid-grievance-contact-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Fill description (must be > 50 characters)
+	if err := mp.Page.SendKeysByTestID("testid-grievance-description-input", "This is a detailed description of the grievance submitted by E2E test. It has to be more than fifty characters long to pass frontend validation.", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	r.CaptureScreenshot(mp.Page, "Member_Grievance_Form_Filled")
+
+	// Submit
+	if err := mp.Page.ClickByTestID("testid-submit-grievance-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Wait for success message
+	if _, err := mp.Page.WaitUntilVisible("css:[data-testid='testid-success-message']", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	r.CaptureScreenshot(mp.Page, "Member_Grievance_Submitted_Successfully")
+	time.Sleep(2 * time.Second)
+}

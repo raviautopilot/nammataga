@@ -1716,3 +1716,38 @@ func AdminProcessesEditRequest(aai AdminActionsInterface, cfg *config.Config, r 
 	time.Sleep(5 * time.Second) // wait for save API
 	r.CaptureScreenshot(ap.Page, "AdminProcesses_Success_Toast")
 }
+
+func AdminChecksGrievance(aai AdminActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Admin Checks Grievance"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		return
+	}
+	ap := aai.GetAdminPersona()
+
+	// Click Manage Grievances button
+	if err := ap.Page.ClickByTestID("testid-manage-grievances-button", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		aai.GetAdminPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Wait for dialog list
+	if _, err := ap.Page.WaitUntilVisible("css:[data-testid='testid-grievances-dialog-content']", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		aai.GetAdminPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	r.CaptureScreenshot(ap.Page, "Admin_Grievances_List_View")
+
+	// Close the dialog using Escape key
+	body, err := ap.Page.Driver.FindElement(selenium.ByCSSSelector, "body")
+	if err == nil {
+		_ = body.SendKeys(selenium.EscapeKey)
+	}
+
+	time.Sleep(1 * time.Second)
+}

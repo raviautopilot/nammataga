@@ -157,7 +157,7 @@ useEffect(() => {
   onValueChange={(v: string) => handleInputChange('category', v)}
   disabled={isLoadingDropdowns}
 >
-  <SelectTrigger>
+  <SelectTrigger data-testid="testid-grievance-category-select">
     <SelectValue placeholder="Select category" />
   </SelectTrigger>
 
@@ -179,7 +179,7 @@ useEffect(() => {
   onValueChange={(v: string) => handleInputChange('priority', v)}
   disabled={isLoadingDropdowns}
 >
-  <SelectTrigger>
+  <SelectTrigger data-testid="testid-grievance-priority-select">
     <SelectValue placeholder="Select priority" />
   </SelectTrigger>
 
