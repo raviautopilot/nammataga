@@ -14,45 +14,76 @@ func SendAdminEditRequestEmail(memberEmail, memberName string, fields []model.Fi
 	auth := smtp.PlainAuth("", cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPHost)
 	adminURL := cfg.ResetPasswordURL + "/?page=admin-login"
 
-	subject := "TAGA Admin: Pending Profile Edit"
+	subject := "🔔 TAGA Portal - Pending Profile Edit Request"
 	
-	rowsHtml := ""
+	cardsHtml := ""
 	for _, f := range fields {
-		memberRemarksHtml := ""
-		if f.MemberRemarks != "" {
-			memberRemarksHtml = fmt.Sprintf(`
-				<tr>
-					<td colspan="3" style="padding: 0 12px 16px 12px; border-bottom: 1px solid #eaeaea;">
-						<div style="background-color: #fffbeb; padding: 12px; border-radius: 6px; font-size: 13px; color: #92400e; border-left: 3px solid #f59e0b;">
-							<strong>Member Note:</strong> %s
-						</div>
-					</td>
-				</tr>
-			`, f.MemberRemarks)
-		} else {
-			memberRemarksHtml = `
-				<tr>
-					<td colspan="3" style="padding: 0; border-bottom: 1px solid #eaeaea; height: 16px;"></td>
-				</tr>
-			`
-		}
-
 		friendlyField := strings.ReplaceAll(f.Field, "_", " ")
 		friendlyField = strings.Title(friendlyField)
 
 		oldVal := f.OldValue
 		if oldVal == "" {
-			oldVal = "Empty"
+			oldVal = "<span style='color:#cbd5e1;font-style:italic;'>Empty</span>"
 		}
 
-		rowsHtml += fmt.Sprintf(`
-			<tr>
-				<td style="padding: 16px 12px 8px 12px; color: #111827; font-weight: 500; font-size: 14px;">%s</td>
-				<td style="padding: 16px 12px 8px 12px; color: #6b7280; font-family: ui-monospace, monospace; font-size: 13px; text-decoration: line-through;">%s</td>
-				<td style="padding: 16px 12px 8px 12px; color: #111827; font-family: ui-monospace, monospace; font-size: 14px; font-weight: 600;">%s</td>
-			</tr>
-			%s
-		`, friendlyField, oldVal, f.NewValue, memberRemarksHtml)
+		memberRemarksHtml := ""
+		if f.MemberRemarks != "" {
+			memberRemarksHtml = fmt.Sprintf(`
+				<div style="background: #fffbeb; border-left: 3px solid #f59e0b; padding: 10px 12px; border-radius: 4px; margin-top: 12px;">
+                    <p style="margin: 0; font-size: 13px; color: #92400e;">
+                        <strong style="text-transform: uppercase; font-size: 11px;">Member Note:</strong><br/>
+						%s
+                    </p>
+                </div>
+			`, f.MemberRemarks)
+		} else {
+			memberRemarksHtml = `
+				<div style="background: #f8fafc; border-left: 3px solid #cbd5e1; padding: 10px 12px; border-radius: 4px; margin-top: 12px;">
+                    <p style="margin: 0; font-size: 13px; color: #64748b;">
+                        <strong style="text-transform: uppercase; font-size: 11px;">Member Note:</strong><br/>
+						<i>None</i>
+                    </p>
+                </div>
+			`
+		}
+
+		statusBg := "#f1f5f9"
+		statusColor := "#475569"
+		statusText := "PENDING"
+
+		cardsHtml += fmt.Sprintf(`
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+                <div style="margin-bottom: 16px;">
+					<table width="100%%" border="0" cellpadding="0" cellspacing="0">
+						<tr>
+							<td align="left">
+								<p style="margin: 0; color: #1e3a8a; font-size: 15px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em;">%s</p>
+							</td>
+							<td align="right">
+								<span style="background: %s; color: %s; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">%s</span>
+							</td>
+						</tr>
+					</table>
+                </div>
+                
+                <div style="background: #ffffff; border: 1px solid #f1f5f9; border-radius: 8px; padding: 16px;">
+					<table width="100%%" border="0" cellpadding="0" cellspacing="0">
+						<tr>
+							<td width="50%%" valign="top" style="padding-right: 10px; border-right: 1px solid #f1f5f9;">
+								<p style="margin: 0 0 6px 0; font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Previous Value</p>
+                    			<p style="margin: 0; font-family: monospace; font-size: 14px; color: #64748b; text-decoration: line-through; word-break: break-all;">%s</p>
+							</td>
+							<td width="50%%" valign="top" style="padding-left: 14px;">
+								<p style="margin: 0 0 6px 0; font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Requested Value</p>
+                    			<p style="margin: 0; font-family: monospace; font-size: 15px; font-weight: 700; color: #0f172a; word-break: break-all;">%s</p>
+							</td>
+						</tr>
+					</table>
+                </div>
+
+				%s
+            </div>
+		`, friendlyField, statusBg, statusColor, statusText, oldVal, f.NewValue, memberRemarksHtml)
 	}
 
 	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
@@ -61,48 +92,45 @@ func SendAdminEditRequestEmail(memberEmail, memberName string, fields []model.Fi
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #111827; background-color: #f9fafb; margin: 0; padding: 40px 20px;">
-    <div style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e5e7eb;">
         
-        <div style="padding: 40px 40px 24px 40px; border-bottom: 1px solid #eaeaea;">
-            <div style="display: inline-block; background-color: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-bottom: 12px; text-transform: uppercase;">Action Required</div>
-            <h1 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: #111827;">Pending Edit Request</h1>
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%%, #2563eb 100%%); color: white; padding: 32px 24px; text-align: center;">
+            <div style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(255, 255, 255, 0.2); margin-bottom: 12px;">
+                Admin Notification
+            </div>
+            <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em;">Profile Edit Request</h1>
+            <p style="margin: 0; font-size: 15px; opacity: 0.9;">A member wants to update their profile details.</p>
         </div>
 
-        <div style="padding: 32px 40px 40px 40px;">
-            
-            <div style="margin-bottom: 32px; padding: 16px; background-color: #f9fafb; border-radius: 8px; border: 1px solid #eaeaea;">
-                <p style="margin: 0; font-size: 13px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">Member Profile</p>
-                <p style="margin: 4px 0 0 0; font-size: 16px; font-weight: 600; color: #111827;">%s</p>
-                <p style="margin: 0; font-size: 14px; color: #4b5563;">%s</p>
-            </div>
+        <!-- Body -->
+        <div style="padding: 32px 24px;">
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #374151;">
+                Dear Admin,
+            </p>
+            <p style="margin: 0 0 24px 0; font-size: 15px; color: #374151;">
+                <strong>%s</strong> (%s) has submitted a request to edit their member profile. Please review the requested changes below:
+            </p>
 
-            <table style="width: 100%%; border-collapse: collapse; margin-bottom: 32px;">
-                <thead>
-                    <tr>
-                        <th style="text-align: left; padding: 0 12px 12px 12px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Field</th>
-                        <th style="text-align: left; padding: 0 12px 12px 12px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Current</th>
-                        <th style="text-align: left; padding: 0 12px 12px 12px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Requested</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    %s
-                </tbody>
-            </table>
+            %s
 
-            <div style="margin-top: 32px;">
-                <a href="%s" style="background-color: #111827; color: #ffffff; padding: 12px 24px; font-size: 14px; font-weight: 500; text-decoration: none; border-radius: 6px; display: inline-block;">
-                    Open Admin Panel
+            <!-- Action Button -->
+            <div style="text-align: center; margin: 32px 0;">
+                <a href="%s" style="background: linear-gradient(135deg, #1e3a8a 0%%, #2563eb 100%%); color: #ffffff; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);">
+                    Go to Admin Dashboard &rarr;
                 </a>
             </div>
         </div>
-        
-        <div style="padding: 24px 40px; background-color: #f9fafb; border-top: 1px solid #eaeaea; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
-            <p style="margin: 0; font-size: 13px; color: #6b7280;">TAGA System Administrator Notifications</p>
+
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #475569;">Tamil Nadu Agricultural Graduates Association</p>
+            <p style="margin: 0; font-size: 12px; color: #94a3b8;">TAGA Towers, Chennai &bull; &copy; 2026 TAGA. All rights reserved.</p>
         </div>
     </div>
 </body>
-</html>`, memberName, memberEmail, rowsHtml, adminURL)
+</html>`, memberName, memberEmail, cardsHtml, adminURL)
 
 	msg := []byte("To: " + cfg.AdminEmail + "\r\n" +
 		"Subject: " + subject + "\r\n" +
@@ -119,56 +147,86 @@ func SendMemberRequestProcessedEmail(memberEmail, memberName string, fields []mo
 	auth := smtp.PlainAuth("", cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPHost)
 	loginURL := cfg.ResetPasswordURL + "/?page=member-login"
 
-	subject := "TAGA Profile Update Processed"
+	subject := "📝 TAGA Portal - Your Profile Update Results"
 	
-	rowsHtml := ""
+	cardsHtml := ""
 	for _, f := range fields {
 		statusColor := "#10b981"
-		statusText := "APPROVED"
+		statusBg := "#ecfdf5"
 		if f.Status == "rejected" {
 			statusColor = "#ef4444"
-			statusText = "REJECTED"
+			statusBg = "#fef2f2"
 		}
 		
-		adminRemarksHtml := ""
-		if f.AdminRemarks != "" {
-			adminRemarksHtml = fmt.Sprintf(`
-				<tr>
-					<td colspan="4" style="padding: 0 12px 16px 12px; border-bottom: 1px solid #eaeaea;">
-						<div style="background-color: #f9fafb; padding: 12px; border-radius: 6px; font-size: 13px; color: #4b5563;">
-							<strong style="color: #111827;">Admin Note:</strong> %s
-						</div>
-					</td>
-				</tr>
-			`, f.AdminRemarks)
-		} else {
-			// If no remarks, just add a simple bottom border row
-			adminRemarksHtml = `
-				<tr>
-					<td colspan="4" style="padding: 0; border-bottom: 1px solid #eaeaea; height: 16px;"></td>
-				</tr>
-			`
+		remarkBg := "#f0f9ff"
+		remarkBorder := "#3b82f6"
+		remarkText := "#1e40af"
+		
+		if f.Status == "rejected" {
+			remarkBg = "#fef2f2"
+			remarkBorder = "#ef4444"
+			remarkText = "#991b1b"
 		}
+		
+		remarkContent := f.AdminRemarks
+		if remarkContent == "" {
+			// Neutral grey style when empty
+			remarkBg = "#f8fafc"
+			remarkBorder = "#cbd5e1"
+			remarkText = "#64748b"
+			remarkContent = "<i>None</i>"
+		}
+		
+		adminRemarksHtml := fmt.Sprintf(`
+			<div style="background: %s; border-left: 3px solid %s; padding: 10px 12px; border-radius: 4px; margin-top: 12px;">
+				<p style="margin: 0; font-size: 13px; color: %s;">
+					<strong style="text-transform: uppercase; font-size: 11px;">Admin Remarks:</strong><br/>
+					%s
+				</p>
+			</div>
+		`, remarkBg, remarkBorder, remarkText, remarkContent)
 
 		friendlyField := strings.ReplaceAll(f.Field, "_", " ")
 		friendlyField = strings.Title(friendlyField)
 
 		oldVal := f.OldValue
 		if oldVal == "" {
-			oldVal = "Empty"
+			oldVal = "<span style='color:#cbd5e1;font-style:italic;'>Empty</span>"
 		}
 
-		rowsHtml += fmt.Sprintf(`
-			<tr>
-				<td style="padding: 16px 12px 8px 12px; color: #111827; font-weight: 500; font-size: 14px;">%s</td>
-				<td style="padding: 16px 12px 8px 12px; color: #6b7280; font-family: ui-monospace, monospace; font-size: 13px; text-decoration: line-through;">%s</td>
-				<td style="padding: 16px 12px 8px 12px; color: #111827; font-family: ui-monospace, monospace; font-size: 14px; font-weight: 600;">%s</td>
-				<td style="padding: 16px 12px 8px 12px; text-align: right;">
-					<span style="color: %s; font-size: 12px; font-weight: 700; letter-spacing: 0.05em;">%s</span>
-				</td>
-			</tr>
-			%s
-		`, friendlyField, oldVal, f.NewValue, statusColor, statusText, adminRemarksHtml)
+		cardsHtml += fmt.Sprintf(`
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+                <div style="margin-bottom: 16px;">
+					<table width="100%%" border="0" cellpadding="0" cellspacing="0">
+						<tr>
+							<td align="left">
+								<p style="margin: 0; color: #1e3a8a; font-size: 15px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em;">%s</p>
+							</td>
+							<td align="right">
+								<span style="background: %s; color: %s; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">%s</span>
+							</td>
+						</tr>
+					</table>
+                </div>
+                
+                <div style="background: #ffffff; border: 1px solid #f1f5f9; border-radius: 8px; padding: 16px;">
+					<table width="100%%" border="0" cellpadding="0" cellspacing="0">
+						<tr>
+							<td width="50%%" valign="top" style="padding-right: 10px; border-right: 1px solid #f1f5f9;">
+								<p style="margin: 0 0 6px 0; font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Previous Value</p>
+                    			<p style="margin: 0; font-family: monospace; font-size: 14px; color: #64748b; text-decoration: line-through; word-break: break-all;">%s</p>
+							</td>
+							<td width="50%%" valign="top" style="padding-left: 14px;">
+								<p style="margin: 0 0 6px 0; font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Requested Value</p>
+                    			<p style="margin: 0; font-family: monospace; font-size: 15px; font-weight: 700; color: #0f172a; word-break: break-all;">%s</p>
+							</td>
+						</tr>
+					</table>
+                </div>
+
+				%s
+            </div>
+		`, friendlyField, statusBg, statusColor, f.Status, oldVal, f.NewValue, adminRemarksHtml)
 	}
 
 	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
@@ -177,48 +235,52 @@ func SendMemberRequestProcessedEmail(memberEmail, memberName string, fields []mo
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #111827; background-color: #f9fafb; margin: 0; padding: 40px 20px;">
-    <div style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e5e7eb;">
         
-        <!-- Minimalist Header -->
-        <div style="padding: 40px 40px 24px 40px; border-bottom: 1px solid #eaeaea;">
-            <h1 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: #111827;">Profile Update Processed</h1>
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%%, #2563eb 100%%); color: white; padding: 32px 24px; text-align: center;">
+            <div style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(255, 255, 255, 0.2); margin-bottom: 12px;">
+                Profile Update
+            </div>
+            <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em;">Request Processed</h1>
+            <p style="margin: 0; font-size: 15px; opacity: 0.9;">The administration has reviewed your profile edit request.</p>
         </div>
 
-        <div style="padding: 32px 40px 40px 40px;">
-            <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563;">
-                Hi %s,<br><br>
-                The TAGA administration has reviewed your recent profile edit request. The final decisions for your requested changes are detailed below.
+        <!-- Body -->
+        <div style="padding: 32px 24px;">
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #374151;">
+                Dear <strong>%s</strong>,
+            </p>
+            <p style="margin: 0 0 24px 0; font-size: 15px; color: #374151;">
+                Your recent request to update your TAGA member profile has been fully processed by our administrators. Please review the final decisions on each field below:
             </p>
 
-            <table style="width: 100%%; border-collapse: collapse; margin-bottom: 32px;">
-                <thead>
-                    <tr>
-                        <th style="text-align: left; padding: 0 12px 12px 12px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Field</th>
-                        <th style="text-align: left; padding: 0 12px 12px 12px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Previous</th>
-                        <th style="text-align: left; padding: 0 12px 12px 12px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Requested</th>
-                        <th style="text-align: right; padding: 0 12px 12px 12px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    %s
-                </tbody>
-            </table>
+            %s
 
-            <!-- Simple sleek button -->
-            <div style="margin-top: 32px;">
-                <a href="%s" style="background-color: #111827; color: #ffffff; padding: 12px 24px; font-size: 14px; font-weight: 500; text-decoration: none; border-radius: 6px; display: inline-block;">
-                    View Profile
+            <!-- Mandatory Action Notice -->
+            <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px 16px; border-radius: 4px; margin-bottom: 24px;">
+                <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.5;">
+                    <strong>Note:</strong> Approved changes are now live on your TAGA profile. If a request was rejected, please refer to the Admin Remarks for further guidance.
+                </p>
+            </div>
+
+            <!-- Action Button -->
+            <div style="text-align: center; margin: 32px 0;">
+                <a href="%s" style="background: linear-gradient(135deg, #1e3a8a 0%%, #2563eb 100%%); color: #ffffff; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);">
+                    View Your Profile &rarr;
                 </a>
             </div>
         </div>
-        
-        <div style="padding: 24px 40px; background-color: #f9fafb; border-top: 1px solid #eaeaea; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
-            <p style="margin: 0; font-size: 13px; color: #6b7280;">TAGA Towers, Chennai &bull; Tamil Nadu Agricultural Graduates Association</p>
+
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #475569;">Tamil Nadu Agricultural Graduates Association</p>
+            <p style="margin: 0; font-size: 12px; color: #94a3b8;">TAGA Towers, Chennai &bull; &copy; 2026 TAGA. All rights reserved.</p>
         </div>
     </div>
 </body>
-</html>`, memberName, rowsHtml, loginURL)
+</html>`, memberName, cardsHtml, loginURL)
 
 	msg := []byte("To: " + memberEmail + "\r\n" +
 		"Subject: " + subject + "\r\n" +
