@@ -160,40 +160,93 @@ func UpdateMemberProfileHandler(c *gin.Context) {
 // @Success 200 {object} map[string]interface{}
 // @Router /api/member/edit-request [post]
 func CreateEditRequest(c *gin.Context) {
-	var (
-		req      model.EditRequest
-		requests []model.EditRequest
-		err      error
-		data     []byte
-	)
-
-	if err = c.ShouldBindJSON(&req); err != nil {
+	var req model.EditRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	req.ID = uuid.New().String()
-	req.Status = "pending"
-	req.CreatedAt = time.Now().Format(time.RFC3339)
-
-	file, _ := os.ReadFile(editRequestsFilePath)
-	if len(file) > 0 {
-		_ = json.Unmarshal(file, &requests)
-	}
-
-	requests = append(requests, req)
-	data, err = json.MarshalIndent(requests, "", "  ")
+	members, err := readExistingMembers()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to process request")
+		respondError(c, http.StatusInternalServerError, "failed to read members")
 		return
 	}
 
-	if err = os.WriteFile(editRequestsFilePath, data, 0644); err != nil {
+	var currentMember map[string]interface{}
+	for _, m := range members {
+		if email, ok := m["emailId"].(string); ok && email == req.Email {
+			currentMember = m
+			break
+		}
+	}
+
+	if currentMember == nil {
+		respondError(c, http.StatusNotFound, "member not found")
+		return
+	}
+
+	memberID, _ := currentMember["id"].(string)
+	memberName, _ := currentMember["name"].(string)
+
+	requestGroupId := uuid.New().String()
+	now := time.Now().Format(time.RFC3339)
+	var newFields []model.FieldEditRequest
+
+	// Compare fields
+	compareAndAdd := func(fieldKey, frontendValue string) {
+		if frontendValue == "" {
+			return
+		}
+		oldValue := ""
+		if val, ok := currentMember[fieldKey].(string); ok {
+			oldValue = val
+		}
+		if oldValue != frontendValue {
+			newFields = append(newFields, model.FieldEditRequest{
+				ID:             uuid.New().String(),
+				RequestGroupID: requestGroupId,
+				MemberID:       memberID,
+				Email:          req.Email,
+				MemberName:     memberName,
+				Field:          fieldKey,
+				OldValue:       oldValue,
+				NewValue:       frontendValue,
+				MemberRemarks:  req.Remarks,
+				Status:         "pending",
+				CreatedAt:      now,
+			})
+		}
+	}
+
+	compareAndAdd("mobile_number", req.MobileNumber)
+	compareAndAdd("emailId", req.MailId)
+	compareAndAdd("designation", req.Designation)
+	compareAndAdd("working_district", req.WorkingDistrict)
+	compareAndAdd("residential_address", req.ResidentialAddress)
+	compareAndAdd("permanent_address", req.PermanentAddress)
+
+	if len(newFields) == 0 {
+		respondError(c, http.StatusBadRequest, "No changes detected between form and current profile")
+		return
+	}
+
+	// Read pending requests
+	pendingFile := "data/requests/pending_requests.json"
+	var pendingRequests []model.FieldEditRequest
+	file, _ := os.ReadFile(pendingFile)
+	if len(file) > 0 {
+		_ = json.Unmarshal(file, &pendingRequests)
+	}
+
+	pendingRequests = append(pendingRequests, newFields...)
+	data, err := json.MarshalIndent(pendingRequests, "", "  ")
+	if err != nil || os.WriteFile(pendingFile, data, 0644) != nil {
 		respondError(c, http.StatusInternalServerError, "failed to save request")
 		return
 	}
 
-	err = service.SendEditRequestEmail(req)
+	// Send Admin Email (We will write SendAdminEditRequestEmail in mail_service next)
+	err = service.SendAdminEditRequestEmail(req.Email, memberName, newFields)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Request saved but email failed",

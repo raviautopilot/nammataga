@@ -36,6 +36,7 @@ import {
 import { sortDocuments } from '../api/resources';
 import { MemberListTable } from './MemberListTable';
 import DistrictOfficeBearersManager from './admin/DistrictOfficeBearersManager';
+import AdminEditRequestsButton from './admin/AdminEditRequests';
 
 interface AdminActionsProps {
   memberStats: {
@@ -1037,6 +1038,7 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
           <CardDescription>Manage members and communications</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          <AdminEditRequestsButton />
 
           {/* Add New Member */}
           <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
@@ -1388,7 +1390,6 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
               <DialogHeader>
                 <DialogTitle>District Office Bearers Management</DialogTitle>
                 <DialogDescription>
-                  Edit district-level office bearers. Changes will be visible immediately on the public page.
                   Each district has exactly 6 fixed positions. Only name and contact fields can be edited.
                 </DialogDescription>
               </DialogHeader>

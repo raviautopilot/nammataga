@@ -20,6 +20,10 @@ func RegisterAdminRoutes(r *gin.Engine) {
 		admin.POST("/member-registration", handler.HandleMemberRegistration)
 		admin.POST("/init-password", handler.InitPassword)
 
+		// Edit Requests Management
+		admin.GET("/edit-requests", handler.GetPendingEditRequests)
+		admin.POST("/edit-requests/bulk-process", handler.BulkProcessEditRequests)
+
 		// Content Management - Resources
 		admin.POST("/resources/upload", handler.UploadResource)
 		admin.DELETE("/resources/:categoryId/:documentTitle", handler.DeleteResource)

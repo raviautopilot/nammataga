@@ -220,6 +220,10 @@ func SetupRouter() *gin.Engine {
 	admin := r.Group("/api/admin")
 	admin.Use(middleware.AdminAuthMiddleware())
 	{
+		// Edit Requests Management
+		admin.GET("/edit-requests", handler.GetPendingEditRequests)
+		admin.POST("/edit-requests/bulk-process", handler.BulkProcessEditRequests)
+
 		// Admin TAGA Towers Occupancy Schedule
 		admin.GET("/towers/bookings", handler.GetAllBookingsAdmin)
 

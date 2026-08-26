@@ -16,6 +16,7 @@ import (
 	"sync"
 	"taga-api/config"
 	"taga-api/model"
+	"taga-api/service"
 	"taga-api/service/audit"
 	"taga-api/service/member"
 	"time"
@@ -1887,4 +1888,131 @@ func ClearMockEmails(c *gin.Context) {
 	mockEmailFile := "data/emails/mock_emails.json"
 	os.Remove(mockEmailFile)
 	c.JSON(http.StatusOK, gin.H{"status": "cleared"})
+}
+
+// GetPendingEditRequests godoc
+// @Summary Get all pending member edit requests
+// @Tags Admin Edit Requests
+// @Produce json
+// @Security BearerAuth
+// @Router /api/admin/edit-requests [get]
+func GetPendingEditRequests(c *gin.Context) {
+	file, err := os.ReadFile("data/requests/pending_requests.json")
+	if err != nil {
+		c.JSON(http.StatusOK, []model.FieldEditRequest{})
+		return
+	}
+	var reqs []model.FieldEditRequest
+	json.Unmarshal(file, &reqs)
+	if reqs == nil {
+		reqs = []model.FieldEditRequest{}
+	}
+	c.JSON(http.StatusOK, reqs)
+}
+
+type BulkProcessItem struct {
+	ID           string `json:"id"`
+	Status       string `json:"status"` // "approved" or "rejected"
+	AdminRemarks string `json:"adminRemarks"`
+}
+
+type BulkProcessPayload struct {
+	Items []BulkProcessItem `json:"items"`
+}
+
+// BulkProcessEditRequests godoc
+// @Summary Bulk approve or reject field edit requests
+// @Tags Admin Edit Requests
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body BulkProcessPayload true "Bulk Approval Details"
+// @Router /api/admin/edit-requests/bulk-process [post]
+func BulkProcessEditRequests(c *gin.Context) {
+	var payload BulkProcessPayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		respondError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Read pending
+	var pending []model.FieldEditRequest
+	file, err := os.ReadFile("data/requests/pending_requests.json")
+	if err == nil && len(file) > 0 {
+		json.Unmarshal(file, &pending)
+	}
+
+	members, _ := readExistingMembers()
+	membersUpdated := false
+
+	var newPending []model.FieldEditRequest
+	var processedThisBatch []model.FieldEditRequest
+
+	// Process payload
+	now := time.Now().Format(time.RFC3339)
+	for i := range pending {
+		var matchedItem *BulkProcessItem
+		for j := range payload.Items {
+			if payload.Items[j].ID == pending[i].ID {
+				matchedItem = &payload.Items[j]
+				break
+			}
+		}
+
+		if matchedItem != nil {
+			// Found it!
+			pending[i].Status = matchedItem.Status
+			pending[i].AdminRemarks = matchedItem.AdminRemarks
+			pending[i].ProcessedAt = now
+			
+			processedThisBatch = append(processedThisBatch, pending[i])
+
+			if matchedItem.Status == "approved" {
+				// Update member
+				for k, m := range members {
+					if mId, ok := m["id"].(string); ok && mId == pending[i].MemberID {
+						members[k][pending[i].Field] = pending[i].NewValue
+						membersUpdated = true
+						break
+					}
+				}
+			}
+		} else {
+			newPending = append(newPending, pending[i])
+		}
+	}
+
+	// Save members
+	if membersUpdated {
+		data, _ := json.MarshalIndent(members, "", "  ")
+		os.WriteFile(config.Config.MembersFile, data, 0644)
+	}
+
+	// Update pending list
+	pData, _ := json.MarshalIndent(newPending, "", "  ")
+	os.WriteFile("data/requests/pending_requests.json", pData, 0644)
+
+	// Add to processed
+	var processed []model.FieldEditRequest
+	pFile, err := os.ReadFile("data/requests/processed_requests.json")
+	if err == nil && len(pFile) > 0 {
+		json.Unmarshal(pFile, &processed)
+	}
+	processed = append(processed, processedThisBatch...)
+	procData, _ := json.MarshalIndent(processed, "", "  ")
+	os.WriteFile("data/requests/processed_requests.json", procData, 0644)
+
+	// Send emails grouped by Member
+	memberGroups := make(map[string][]model.FieldEditRequest)
+	for _, p := range processedThisBatch {
+		memberGroups[p.Email] = append(memberGroups[p.Email], p)
+	}
+
+	for email, groupFields := range memberGroups {
+		if len(groupFields) > 0 {
+			service.SendMemberRequestProcessedEmail(email, groupFields[0].MemberName, groupFields)
+		}
+	}
+
+	respondMessage(c, "Bulk request processed successfully")
 }
