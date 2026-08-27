@@ -11,6 +11,7 @@ import { CheckCircle, Send, Clock, MessageSquare, AlertCircle } from 'lucide-rea
 
 import { createGrievance, getCategories, getPriorities } from '../api/Grievance';
 import API_BASE_URL from '../config/api';
+import { toast } from 'sonner';
 
 export function Grievance() {
   const [formData, setFormData] = useState({
@@ -45,6 +46,7 @@ const [isLoadingDropdowns, setIsLoadingDropdowns] = useState(true);
       await createGrievance(formData);
 
       setSubmitSuccess(true);
+      toast.success('Grievance submitted successfully');
 
        setFormData({
          name: '',
@@ -59,6 +61,7 @@ const [isLoadingDropdowns, setIsLoadingDropdowns] = useState(true);
 
     } catch (error) {
       console.error("Submit error:", error);
+      toast.error('Failed to submit grievance. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
