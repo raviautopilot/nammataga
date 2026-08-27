@@ -112,13 +112,40 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "-";
 
-    const parts = dateStr.split("-");
-    if (parts.length !== 3) return "-";
-
-    const [day, month, year] = parts;
-    const isoDate = `${year}-${month}-${day}`;
-
-    const date = new Date(isoDate);
+    let date: Date;
+    if (dateStr.includes("-")) {
+      const parts = dateStr.split("-");
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          // YYYY-MM-DD
+          const [year, month, day] = parts.map(Number);
+          date = new Date(year, month - 1, day);
+        } else {
+          // DD-MM-YYYY
+          const [day, month, year] = parts.map(Number);
+          date = new Date(year, month - 1, day);
+        }
+      } else {
+        return "-";
+      }
+    } else if (dateStr.includes("/")) {
+      const parts = dateStr.split("/");
+      if (parts.length === 3) {
+        if (parts[2].length === 4) {
+          // DD/MM/YYYY
+          const [day, month, year] = parts.map(Number);
+          date = new Date(year, month - 1, day);
+        } else {
+          // YYYY/MM/DD
+          const [year, month, day] = parts.map(Number);
+          date = new Date(year, month - 1, day);
+        }
+      } else {
+        return "-";
+      }
+    } else {
+      date = new Date(dateStr);
+    }
 
     return isNaN(date.getTime())
       ? "-"

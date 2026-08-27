@@ -229,7 +229,7 @@ func seedMemberUser() {
 			"payment_status":            "Paid",
 			"subscription_active":       true,
 			"cps_gpf_number":            "12226",
-			"date_of_birth":             "2026-08-16",
+			"date_of_birth":             "1995-10-01",
 			"designation":               "TESTER",
 			"educational_qualification":  "bsc Agri",
 			"father_name":               "SUDHAN FATHER",

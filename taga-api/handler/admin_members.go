@@ -277,6 +277,10 @@ func AddMember(c *gin.Context) {
 	if paymentStatus == "" {
 		paymentStatus = "Unpaid"
 	}
+	dob := req.DateOfBirth
+	if dob == "" {
+		dob = "1995-10-01"
+	}
 	isPaid := strings.EqualFold(paymentStatus, "Paid")
 
 	newMember := model.Member{
@@ -296,7 +300,7 @@ func AddMember(c *gin.Context) {
 		SeniorityNumber:          req.SeniorityNumber,
 		ResidentialAddress:       req.ResidentialAddress,
 		PermanentAddress:         req.PermanentAddress,
-		DateOfBirth:              req.DateOfBirth,
+		DateOfBirth:              dob,
 		MobileNumber:             req.MobileNumber,
 		EmailId:                  req.Email,
 		TbfNumber:                req.TbfNumber,
@@ -859,6 +863,11 @@ func BulkUploadMembers(c *gin.Context) {
 		}
 		isPaid := strings.EqualFold(paymentStatus, "Paid")
 
+		dob := reg.DateOfBirth
+		if dob == "" {
+			dob = "1995-10-01"
+		}
+
 		newMember := map[string]interface{}{
 			"id":                        uuid.New().String(),
 			"tagaId":                    reg.TagaID,
@@ -877,7 +886,7 @@ func BulkUploadMembers(c *gin.Context) {
 			"seniority_number":          reg.SeniorityNumber,
 			"residential_address":       reg.ResidentialAddress,
 			"permanent_address":         reg.PermanentAddress,
-			"date_of_birth":             reg.DateOfBirth,
+			"date_of_birth":             dob,
 			"mobile_number":             reg.MobileNumber,
 			"emailId":                   reg.EmailId,
 			"tbf_number":                reg.TBFNumber,
@@ -1581,6 +1590,11 @@ func storeMemberDetails(req *RegistrationRequest, tempPassword string, existingM
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
+	dob := req.DateOfBirth
+	if dob == "" {
+		dob = "1995-10-01"
+	}
+
 	newMember := map[string]interface{}{
 		"id":                        uuid.New().String(),
 		"tagaId":                    req.TagaID,
@@ -1599,7 +1613,7 @@ func storeMemberDetails(req *RegistrationRequest, tempPassword string, existingM
 		"seniority_number":          req.SeniorityNumber,
 		"residential_address":       req.ResidentialAddress,
 		"permanent_address":         req.PermanentAddress,
-		"date_of_birth":             req.DateOfBirth,
+		"date_of_birth":             dob,
 		"mobile_number":             req.MobileNumber,
 		"emailId":                   req.EmailId,
 		"tbf_number":                req.TBFNumber,
