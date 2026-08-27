@@ -530,7 +530,6 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
         file: resourceForm.file
       });
       toast.success(`Resource uploaded to ${resourceForm.category} for year ${resourceForm.year}`);
-      toast.info('Members have been notified about the new resource');
       setResourceForm({ category: '', year: new Date().getFullYear().toString(), subcategory: '', file: null });
       // Reload resources after upload
       await loadResources();
@@ -571,7 +570,7 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
 
       await createEvent(eventData);
       toast.success(`Event "${eventForm.title}" has been published`);
-      toast.info('Members have been notified about the new event');
+
       setEventForm({ title: '', date: '', time: '', location: '', description: '', image: null });
       await loadEvents();
     } catch (error) {
