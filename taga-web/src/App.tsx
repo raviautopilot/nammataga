@@ -247,7 +247,7 @@ export default function App() {
     const handleLogin = (isAdminLogin: boolean = false, isPaid: boolean = false) => {
         setIsLoggedIn(true);
         setIsAdmin(isAdminLogin);
-        setUserType(isPaid ? 'subscriber' : 'member');
+        setUserType(isAdminLogin || isPaid ? 'subscriber' : 'member');
 
         const lastPage = localStorage.getItem('lastPage') as Page;
 
