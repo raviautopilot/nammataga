@@ -257,6 +257,7 @@ func MemberLoginHandler(c *gin.Context) {
 		"tagaId":                   foundMember["tagaId"],
 		"name":                     foundMember["name"],
 		"initial":                  foundMember["initial"],
+		"gender":                   foundMember["gender"],
 		"emailId":                  foundMember["emailId"],
 		"mobileNumber":             foundMember["mobile_number"],
 		"designation":              foundMember["designation"],
