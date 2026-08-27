@@ -38,6 +38,7 @@ const (
 	ModuleResource = "RESOURCE"
 	ModuleEvent    = "EVENT"
 	ModuleGallery  = "GALLERY"
+	ModuleGrievance = "GRIEVANCE"
 )
 
 // ─── Record structure ────────────────────────────────────────────────────────

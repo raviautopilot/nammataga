@@ -255,6 +255,13 @@ func CreateEditRequest(c *gin.Context) {
 		return
 	}
 
+	tagaID, _ := currentMember["tagaId"].(string)
+	_ = audit.Log(c, tagaID, req.Email,
+		audit.ActionCreate, audit.ModuleMember,
+		"edit_request", requestGroupId,
+		fmt.Sprintf("Member submitted profile edit request: %s", req.Remarks),
+		nil, newFields)
+
 	respondMessage(c, "Edit request submitted successfully")
 }
 

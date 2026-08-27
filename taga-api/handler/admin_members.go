@@ -2028,5 +2028,11 @@ func BulkProcessEditRequests(c *gin.Context) {
 		}
 	}
 
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionUpdate, audit.ModuleMember,
+		"edit_requests", "bulk_process",
+		fmt.Sprintf("Admin processed %d field edit requests in bulk", len(processedThisBatch)),
+		nil, processedThisBatch)
+
 	respondMessage(c, "Bulk request processed successfully")
 }

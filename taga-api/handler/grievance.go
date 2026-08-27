@@ -10,6 +10,7 @@ import (
 	"taga-api/config"
 	"taga-api/model"
 	"taga-api/service"
+	"taga-api/service/audit"
 	"time"
 )
 
@@ -95,6 +96,30 @@ func CreateGrievance(c *gin.Context) {
 	} else {
 		config.Logger.Info("Grievance email sent successfully")
 	}
+
+	actorID := ""
+	actorName := ""
+	if val, ok := c.Get("username"); ok {
+		actorID = "admin"
+		actorName, _ = val.(string)
+	} else {
+		memberID := c.GetString("member_id")
+		if memberID != "" {
+			actorID = getMemberTagaIdByUUID(memberID)
+		} else {
+			actorID = "anonymous"
+		}
+		actorName = c.GetString("member_email")
+		if actorName == "" {
+			actorName = "Anonymous"
+		}
+	}
+
+	_ = audit.Log(c, actorID, actorName,
+		audit.ActionCreate, audit.ModuleGrievance,
+		"grievance", newGrievance.ID,
+		fmt.Sprintf("Submitted grievance: %s", newGrievance.Subject),
+		nil, newGrievance)
 
 	// Return response
 	c.JSON(http.StatusOK, newGrievance)
@@ -229,6 +254,30 @@ func UpdateGrievance(c *gin.Context) {
 			updatedData, _ := json.MarshalIndent(grievances, "", "  ")
 			os.WriteFile("data/grievance/grievanceg.json", updatedData, 0644)
 
+			actorID := ""
+			actorName := ""
+			if val, ok := c.Get("username"); ok {
+				actorID = "admin"
+				actorName, _ = val.(string)
+			} else {
+				memberID := c.GetString("member_id")
+				if memberID != "" {
+					actorID = getMemberTagaIdByUUID(memberID)
+				} else {
+					actorID = "anonymous"
+				}
+				actorName = c.GetString("member_email")
+				if actorName == "" {
+					actorName = "Anonymous"
+				}
+			}
+
+			_ = audit.Log(c, actorID, actorName,
+				audit.ActionUpdate, audit.ModuleGrievance,
+				"grievance", grievances[i].ID,
+				fmt.Sprintf("Updated grievance status to: %s", grievances[i].Status),
+				g, grievances[i])
+
 			c.JSON(http.StatusOK, grievances[i])
 			return
 		}
@@ -254,6 +303,34 @@ func DeleteGrievance(c *gin.Context) {
 		if g.ID == id {
 			// Remove from slice
 			grievances = append(grievances[:i], grievances[i+1:]...)
+
+			// Write back to file
+			updatedData, _ := json.MarshalIndent(grievances, "", "  ")
+			_ = os.WriteFile("data/grievance/grievanceg.json", updatedData, 0644)
+
+			actorID := ""
+			actorName := ""
+			if val, ok := c.Get("username"); ok {
+				actorID = "admin"
+				actorName, _ = val.(string)
+			} else {
+				memberID := c.GetString("member_id")
+				if memberID != "" {
+					actorID = getMemberTagaIdByUUID(memberID)
+				} else {
+					actorID = "anonymous"
+				}
+				actorName = c.GetString("member_email")
+				if actorName == "" {
+					actorName = "Anonymous"
+				}
+			}
+
+			_ = audit.Log(c, actorID, actorName,
+				audit.ActionDelete, audit.ModuleGrievance,
+				"grievance", g.ID,
+				fmt.Sprintf("Deleted grievance: %s", g.Subject),
+				g, nil)
 
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Grievance deleted successfully",
