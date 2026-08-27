@@ -371,8 +371,7 @@ func TeardownSuite() {
 		logger.Info("Test reports generated in '%s' directory.", ExecutionReportDir)
 
 		// Automatically open report in browser if not running in headless mode
-		// and only trigger it during the final 'ui.test' package run.
-		if GlobalConfig != nil && !GlobalConfig.Headless && os.Getenv("E2E_HEADLESS") != "true" && strings.Contains(os.Args[0], "ui.test") {
+		if GlobalConfig != nil && !GlobalConfig.Headless && os.Getenv("E2E_HEADLESS") != "true" {
 			htmlPath := filepath.Join(ExecutionReportDir, "report.html")
 			if absPath, err := filepath.Abs(htmlPath); err == nil {
 				logger.Info("Opening test report: %s", absPath)

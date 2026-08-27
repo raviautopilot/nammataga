@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -137,7 +138,12 @@ func (c *Client) SendHttpRequest(method string, path string, headers map[string]
 	}
 
 	// 4. Create request
-	fullURL := c.BaseURL + path
+	var fullURL string
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		fullURL = path
+	} else {
+		fullURL = strings.TrimRight(c.BaseURL, "/") + "/" + strings.TrimLeft(path, "/")
+	}
 	httpReq, err := http.NewRequest(method, fullURL, bodyReader)
 	if err != nil {
 		return &httpErrorImpl{statusCode: 0, err: fmt.Errorf("failed to create http request: %w", err)}
