@@ -16,10 +16,8 @@ export const memberLogin = async (data: {
 
 // ✅ FORGOT PASSWORD
 export const forgotPassword = async (data: {
-  membershipId: string;
   email: string;
-  securityQuestion: string;
-  securityAnswer: string;
+  tbfNumber: string;
 }) => {
   const res = await API.post("/auth/member-forgot-password", data);
   return res.data;

@@ -8,7 +8,8 @@ type ResetPasswordRequest struct {
 }
 
 type ForgotPasswordRequest struct {
-	Email string `json:"email"`
+	Email     string `json:"email"`
+	TbfNumber string `json:"tbfNumber"`
 }
 
 type LoginRequest struct {

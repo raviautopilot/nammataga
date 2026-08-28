@@ -10,6 +10,7 @@ import (
 	"taga-api/config"
 	"taga-api/model"
 	"taga-api/service"
+	"taga-api/service/audit"
 	"time"
 )
 
@@ -46,8 +47,10 @@ func CreateGrievance(c *gin.Context) {
 		json.Unmarshal(file, &grievances)
 	}
 
-	// 3. Add ID + Dates
+	// 3. Add ID + Dates + User Info
 	newGrievance.ID = fmt.Sprintf("GRV-%d", time.Now().Unix())
+	newGrievance.MemberName = c.GetString("member_name")
+	newGrievance.MemberEmail = c.GetString("member_email")
 	newGrievance.Status = "Pending"
 	newGrievance.SubmittedDate = time.Now()
 	newGrievance.LastUpdate = time.Now()
@@ -80,6 +83,9 @@ func CreateGrievance(c *gin.Context) {
 		newGrievance.Priority,
 		newGrievance.Description,
 		newGrievance.ContactPhone,
+		newGrievance.MemberName,
+		newGrievance.MemberEmail,
+		newGrievance.PreferredResponse,
 	)
 
 	if err != nil {
@@ -90,6 +96,30 @@ func CreateGrievance(c *gin.Context) {
 	} else {
 		config.Logger.Info("Grievance email sent successfully")
 	}
+
+	actorID := ""
+	actorName := ""
+	if val, ok := c.Get("username"); ok {
+		actorID = "admin"
+		actorName, _ = val.(string)
+	} else {
+		memberID := c.GetString("member_id")
+		if memberID != "" {
+			actorID = getMemberTagaIdByUUID(memberID)
+		} else {
+			actorID = "anonymous"
+		}
+		actorName = c.GetString("member_email")
+		if actorName == "" {
+			actorName = "Anonymous"
+		}
+	}
+
+	_ = audit.Log(c, actorID, actorName,
+		audit.ActionCreate, audit.ModuleGrievance,
+		"grievance", newGrievance.ID,
+		fmt.Sprintf("Submitted grievance: %s", newGrievance.Subject),
+		nil, newGrievance)
 
 	// Return response
 	c.JSON(http.StatusOK, newGrievance)
@@ -105,18 +135,49 @@ func CreateGrievance(c *gin.Context) {
 // @Router /api/grievances [get]
 func GetGrievances(c *gin.Context) {
 	filePath := "data/grievance/grievanceg.json"
+	oldFilePath := "data/grievance/old_grievanceg.json"
+	
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		os.WriteFile(filePath, []byte("[]"), 0644)
 	}
 	var grievances []model.Grievance
-
 	file, err := os.ReadFile(filePath)
 	if err != nil {
 		c.JSON(http.StatusOK, []model.Grievance{})
 		return
 	}
-
 	json.Unmarshal(file, &grievances)
+
+	// Auto-Archive logic (older than 6 months = ~4380 hours)
+	var activeGrievances []model.Grievance
+	var archivedGrievances []model.Grievance
+	
+	now := time.Now()
+	for _, g := range grievances {
+		if g.Status == "Read" && now.Sub(g.SubmittedDate).Hours() > 4380 {
+			archivedGrievances = append(archivedGrievances, g)
+		} else {
+			activeGrievances = append(activeGrievances, g)
+		}
+	}
+
+	// If we archived anything, save to both files
+	if len(archivedGrievances) > 0 {
+		var existingOld []model.Grievance
+		oldFile, _ := os.ReadFile(oldFilePath)
+		if len(oldFile) > 0 {
+			json.Unmarshal(oldFile, &existingOld)
+		}
+		existingOld = append(existingOld, archivedGrievances...)
+		
+		oldData, _ := json.MarshalIndent(existingOld, "", "  ")
+		os.WriteFile(oldFilePath, oldData, 0644)
+		
+		activeData, _ := json.MarshalIndent(activeGrievances, "", "  ")
+		os.WriteFile(filePath, activeData, 0644)
+		
+		grievances = activeGrievances
+	}
 
 	c.JSON(http.StatusOK, grievances)
 }
@@ -168,9 +229,18 @@ func UpdateGrievance(c *gin.Context) {
 		return
 	}
 
+	filePath := "data/grievance/grievanceg.json"
+	var grievances []model.Grievance
+	file, err := os.ReadFile(filePath)
+	if err == nil {
+		json.Unmarshal(file, &grievances)
+	}
+
 	for i, g := range grievances {
 		if g.ID == id {
 			// Update fields
+			grievances[i].MemberName = updated.MemberName
+			grievances[i].MemberEmail = updated.MemberEmail
 			grievances[i].Subject = updated.Subject
 			grievances[i].Category = updated.Category
 			grievances[i].Priority = updated.Priority
@@ -180,6 +250,33 @@ func UpdateGrievance(c *gin.Context) {
 			grievances[i].Status = updated.Status
 			grievances[i].AssignedTo = updated.AssignedTo
 			grievances[i].LastUpdate = time.Now()
+
+			updatedData, _ := json.MarshalIndent(grievances, "", "  ")
+			os.WriteFile("data/grievance/grievanceg.json", updatedData, 0644)
+
+			actorID := ""
+			actorName := ""
+			if val, ok := c.Get("username"); ok {
+				actorID = "admin"
+				actorName, _ = val.(string)
+			} else {
+				memberID := c.GetString("member_id")
+				if memberID != "" {
+					actorID = getMemberTagaIdByUUID(memberID)
+				} else {
+					actorID = "anonymous"
+				}
+				actorName = c.GetString("member_email")
+				if actorName == "" {
+					actorName = "Anonymous"
+				}
+			}
+
+			_ = audit.Log(c, actorID, actorName,
+				audit.ActionUpdate, audit.ModuleGrievance,
+				"grievance", grievances[i].ID,
+				fmt.Sprintf("Updated grievance status to: %s", grievances[i].Status),
+				g, grievances[i])
 
 			c.JSON(http.StatusOK, grievances[i])
 			return
@@ -206,6 +303,34 @@ func DeleteGrievance(c *gin.Context) {
 		if g.ID == id {
 			// Remove from slice
 			grievances = append(grievances[:i], grievances[i+1:]...)
+
+			// Write back to file
+			updatedData, _ := json.MarshalIndent(grievances, "", "  ")
+			_ = os.WriteFile("data/grievance/grievanceg.json", updatedData, 0644)
+
+			actorID := ""
+			actorName := ""
+			if val, ok := c.Get("username"); ok {
+				actorID = "admin"
+				actorName, _ = val.(string)
+			} else {
+				memberID := c.GetString("member_id")
+				if memberID != "" {
+					actorID = getMemberTagaIdByUUID(memberID)
+				} else {
+					actorID = "anonymous"
+				}
+				actorName = c.GetString("member_email")
+				if actorName == "" {
+					actorName = "Anonymous"
+				}
+			}
+
+			_ = audit.Log(c, actorID, actorName,
+				audit.ActionDelete, audit.ModuleGrievance,
+				"grievance", g.ID,
+				fmt.Sprintf("Deleted grievance: %s", g.Subject),
+				g, nil)
 
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Grievance deleted successfully",

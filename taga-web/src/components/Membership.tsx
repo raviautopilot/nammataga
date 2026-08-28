@@ -112,13 +112,40 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "-";
 
-    const parts = dateStr.split("-");
-    if (parts.length !== 3) return "-";
-
-    const [day, month, year] = parts;
-    const isoDate = `${year}-${month}-${day}`;
-
-    const date = new Date(isoDate);
+    let date: Date;
+    if (dateStr.includes("-")) {
+      const parts = dateStr.split("-");
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          // YYYY-MM-DD
+          const [year, month, day] = parts.map(Number);
+          date = new Date(year, month - 1, day);
+        } else {
+          // DD-MM-YYYY
+          const [day, month, year] = parts.map(Number);
+          date = new Date(year, month - 1, day);
+        }
+      } else {
+        return "-";
+      }
+    } else if (dateStr.includes("/")) {
+      const parts = dateStr.split("/");
+      if (parts.length === 3) {
+        if (parts[2].length === 4) {
+          // DD/MM/YYYY
+          const [day, month, year] = parts.map(Number);
+          date = new Date(year, month - 1, day);
+        } else {
+          // YYYY/MM/DD
+          const [year, month, day] = parts.map(Number);
+          date = new Date(year, month - 1, day);
+        }
+      } else {
+        return "-";
+      }
+    } else {
+      date = new Date(dateStr);
+    }
 
     return isNaN(date.getTime())
       ? "-"
@@ -260,8 +287,11 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
     }
   }, [memberProfile]);
 
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+
   const handleEditRequest = async () => {
     try {
+      setIsSubmittingEdit(true);
       const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
       await createEditRequest({
@@ -275,6 +305,8 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
     } catch (error) {
       console.error(error);
       toast.error("Failed to submit request");
+    } finally {
+      setIsSubmittingEdit(false);
     }
   };
 
@@ -1132,14 +1164,27 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
                 Cancel
               </button>
               <button
-                className="px-5 py-2 text-sm rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-medium transition-colors flex items-center gap-2"
+                className={`px-5 py-2 text-sm rounded-lg ${isSubmittingEdit ? 'bg-emerald-600 opacity-70 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800'} text-white font-medium transition-colors flex items-center gap-2`}
                 onClick={handleEditRequest}
+                disabled={isSubmittingEdit}
                 data-testid="testid-profile-edit-submit-button"
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                Submit Request
+                {isSubmittingEdit ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Submit Request
+                  </>
+                )}
               </button>
             </div>
 

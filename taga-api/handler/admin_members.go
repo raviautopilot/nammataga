@@ -16,6 +16,7 @@ import (
 	"sync"
 	"taga-api/config"
 	"taga-api/model"
+	"taga-api/service"
 	"taga-api/service/audit"
 	"taga-api/service/member"
 	"time"
@@ -276,6 +277,10 @@ func AddMember(c *gin.Context) {
 	if paymentStatus == "" {
 		paymentStatus = "Unpaid"
 	}
+	dob := req.DateOfBirth
+	if dob == "" {
+		dob = "1995-10-01"
+	}
 	isPaid := strings.EqualFold(paymentStatus, "Paid")
 
 	newMember := model.Member{
@@ -295,7 +300,7 @@ func AddMember(c *gin.Context) {
 		SeniorityNumber:          req.SeniorityNumber,
 		ResidentialAddress:       req.ResidentialAddress,
 		PermanentAddress:         req.PermanentAddress,
-		DateOfBirth:              req.DateOfBirth,
+		DateOfBirth:              dob,
 		MobileNumber:             req.MobileNumber,
 		EmailId:                  req.Email,
 		TbfNumber:                req.TbfNumber,
@@ -858,6 +863,11 @@ func BulkUploadMembers(c *gin.Context) {
 		}
 		isPaid := strings.EqualFold(paymentStatus, "Paid")
 
+		dob := reg.DateOfBirth
+		if dob == "" {
+			dob = "1995-10-01"
+		}
+
 		newMember := map[string]interface{}{
 			"id":                        uuid.New().String(),
 			"tagaId":                    reg.TagaID,
@@ -876,7 +886,7 @@ func BulkUploadMembers(c *gin.Context) {
 			"seniority_number":          reg.SeniorityNumber,
 			"residential_address":       reg.ResidentialAddress,
 			"permanent_address":         reg.PermanentAddress,
-			"date_of_birth":             reg.DateOfBirth,
+			"date_of_birth":             dob,
 			"mobile_number":             reg.MobileNumber,
 			"emailId":                   reg.EmailId,
 			"tbf_number":                reg.TBFNumber,
@@ -1580,6 +1590,11 @@ func storeMemberDetails(req *RegistrationRequest, tempPassword string, existingM
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
+	dob := req.DateOfBirth
+	if dob == "" {
+		dob = "1995-10-01"
+	}
+
 	newMember := map[string]interface{}{
 		"id":                        uuid.New().String(),
 		"tagaId":                    req.TagaID,
@@ -1598,7 +1613,7 @@ func storeMemberDetails(req *RegistrationRequest, tempPassword string, existingM
 		"seniority_number":          req.SeniorityNumber,
 		"residential_address":       req.ResidentialAddress,
 		"permanent_address":         req.PermanentAddress,
-		"date_of_birth":             req.DateOfBirth,
+		"date_of_birth":             dob,
 		"mobile_number":             req.MobileNumber,
 		"emailId":                   req.EmailId,
 		"tbf_number":                req.TBFNumber,
@@ -1887,4 +1902,137 @@ func ClearMockEmails(c *gin.Context) {
 	mockEmailFile := "data/emails/mock_emails.json"
 	os.Remove(mockEmailFile)
 	c.JSON(http.StatusOK, gin.H{"status": "cleared"})
+}
+
+// GetPendingEditRequests godoc
+// @Summary Get all pending member edit requests
+// @Tags Admin Edit Requests
+// @Produce json
+// @Security BearerAuth
+// @Router /api/admin/edit-requests [get]
+func GetPendingEditRequests(c *gin.Context) {
+	file, err := os.ReadFile("data/requests/pending_requests.json")
+	if err != nil {
+		c.JSON(http.StatusOK, []model.FieldEditRequest{})
+		return
+	}
+	var reqs []model.FieldEditRequest
+	json.Unmarshal(file, &reqs)
+	if reqs == nil {
+		reqs = []model.FieldEditRequest{}
+	}
+	c.JSON(http.StatusOK, reqs)
+}
+
+type BulkProcessItem struct {
+	ID           string `json:"id"`
+	Status       string `json:"status"` // "approved" or "rejected"
+	AdminRemarks string `json:"adminRemarks"`
+}
+
+type BulkProcessPayload struct {
+	Items []BulkProcessItem `json:"items"`
+}
+
+// BulkProcessEditRequests godoc
+// @Summary Bulk approve or reject field edit requests
+// @Tags Admin Edit Requests
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body BulkProcessPayload true "Bulk Approval Details"
+// @Router /api/admin/edit-requests/bulk-process [post]
+func BulkProcessEditRequests(c *gin.Context) {
+	var payload BulkProcessPayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		respondError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Read pending
+	var pending []model.FieldEditRequest
+	file, err := os.ReadFile("data/requests/pending_requests.json")
+	if err == nil && len(file) > 0 {
+		json.Unmarshal(file, &pending)
+	}
+
+	members, _ := readExistingMembers()
+	membersUpdated := false
+
+	var newPending []model.FieldEditRequest
+	var processedThisBatch []model.FieldEditRequest
+
+	// Process payload
+	now := time.Now().Format(time.RFC3339)
+	for i := range pending {
+		var matchedItem *BulkProcessItem
+		for j := range payload.Items {
+			if payload.Items[j].ID == pending[i].ID {
+				matchedItem = &payload.Items[j]
+				break
+			}
+		}
+
+		if matchedItem != nil {
+			// Found it!
+			pending[i].Status = matchedItem.Status
+			pending[i].AdminRemarks = matchedItem.AdminRemarks
+			pending[i].ProcessedAt = now
+			
+			processedThisBatch = append(processedThisBatch, pending[i])
+
+			if matchedItem.Status == "approved" {
+				// Update member
+				for k, m := range members {
+					if mId, ok := m["id"].(string); ok && mId == pending[i].MemberID {
+						members[k][pending[i].Field] = pending[i].NewValue
+						membersUpdated = true
+						break
+					}
+				}
+			}
+		} else {
+			newPending = append(newPending, pending[i])
+		}
+	}
+
+	// Save members
+	if membersUpdated {
+		data, _ := json.MarshalIndent(members, "", "  ")
+		os.WriteFile(config.Config.MembersFile, data, 0644)
+	}
+
+	// Update pending list
+	pData, _ := json.MarshalIndent(newPending, "", "  ")
+	os.WriteFile("data/requests/pending_requests.json", pData, 0644)
+
+	// Add to processed
+	var processed []model.FieldEditRequest
+	pFile, err := os.ReadFile("data/requests/processed_requests.json")
+	if err == nil && len(pFile) > 0 {
+		json.Unmarshal(pFile, &processed)
+	}
+	processed = append(processed, processedThisBatch...)
+	procData, _ := json.MarshalIndent(processed, "", "  ")
+	os.WriteFile("data/requests/processed_requests.json", procData, 0644)
+
+	// Send emails grouped by Member
+	memberGroups := make(map[string][]model.FieldEditRequest)
+	for _, p := range processedThisBatch {
+		memberGroups[p.Email] = append(memberGroups[p.Email], p)
+	}
+
+	for email, groupFields := range memberGroups {
+		if len(groupFields) > 0 {
+			service.SendMemberRequestProcessedEmail(email, groupFields[0].MemberName, groupFields)
+		}
+	}
+
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionUpdate, audit.ModuleMember,
+		"edit_requests", "bulk_process",
+		fmt.Sprintf("Admin processed %d field edit requests in bulk", len(processedThisBatch)),
+		nil, processedThisBatch)
+
+	respondMessage(c, "Bulk request processed successfully")
 }

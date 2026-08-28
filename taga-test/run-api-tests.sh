@@ -18,6 +18,11 @@ TEST_EXIT_CODE=$?
 
 echo "========================================="
 echo " API Tests finished with exit code $TEST_EXIT_CODE"
+HTML_REPORT="$SCRIPT_DIR/evidence/run-$E2E_RUN_TIMESTAMP/reports/report.html"
+if [ -f "$HTML_REPORT" ]; then
+    echo "📊 HTML Report: $HTML_REPORT"
+fi
 echo "========================================="
 
 exit $TEST_EXIT_CODE
+

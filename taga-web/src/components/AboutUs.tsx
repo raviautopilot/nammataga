@@ -9,7 +9,6 @@ import {
 import { Badge } from "./ui/badge";
 import { Target, Heart, Mail, Phone, MapPin, Globe } from "lucide-react";
 import { API_BASE_URL } from "../config/api";
-import objectivesImage from "../assets/tagatowerabout.jpg";
 /* ---------------- TYPES ---------------- */
 
 interface ContactData {
@@ -54,6 +53,7 @@ export function AboutUs() {
   const [stats, setStats] = useState<StatData[]>([]);
   const [loading, setLoading] = useState(true);
   const bannerImage = `${API_BASE_URL}/images/about.jpg`;
+  const objectivesImage = `${API_BASE_URL}/images/tagatower_final.png`;
 
   useEffect(() => {
     const fetchAll = async () => {

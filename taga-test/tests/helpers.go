@@ -229,7 +229,7 @@ func seedMemberUser() {
 			"payment_status":            "Paid",
 			"subscription_active":       true,
 			"cps_gpf_number":            "12226",
-			"date_of_birth":             "2026-08-16",
+			"date_of_birth":             "1995-10-01",
 			"designation":               "TESTER",
 			"educational_qualification":  "bsc Agri",
 			"father_name":               "SUDHAN FATHER",
@@ -371,8 +371,7 @@ func TeardownSuite() {
 		logger.Info("Test reports generated in '%s' directory.", ExecutionReportDir)
 
 		// Automatically open report in browser if not running in headless mode
-		// and only trigger it during the final 'ui.test' package run.
-		if GlobalConfig != nil && !GlobalConfig.Headless && os.Getenv("E2E_HEADLESS") != "true" && strings.Contains(os.Args[0], "ui.test") {
+		if GlobalConfig != nil && !GlobalConfig.Headless && os.Getenv("E2E_HEADLESS") != "true" {
 			htmlPath := filepath.Join(ExecutionReportDir, "report.html")
 			if absPath, err := filepath.Abs(htmlPath); err == nil {
 				logger.Info("Opening test report: %s", absPath)

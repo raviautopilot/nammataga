@@ -11,6 +11,7 @@ import { CheckCircle, Send, Clock, MessageSquare, AlertCircle } from 'lucide-rea
 
 import { createGrievance, getCategories, getPriorities } from '../api/Grievance';
 import API_BASE_URL from '../config/api';
+import { toast } from 'sonner';
 
 export function Grievance() {
   const [formData, setFormData] = useState({
@@ -45,18 +46,22 @@ const [isLoadingDropdowns, setIsLoadingDropdowns] = useState(true);
       await createGrievance(formData);
 
       setSubmitSuccess(true);
+      toast.success('Grievance submitted successfully');
 
-      setFormData({
-        subject: '',
-        category: '',
-        priority: '',
-        description: '',
-        contactPhone: '',
-        preferredResponse: 'email'
-      });
+       setFormData({
+         name: '',
+         email: '',
+         subject: '',
+         category: '',
+         priority: '',
+         description: '',
+         contactPhone: '',
+         preferredResponse: 'email'
+       });
 
     } catch (error) {
       console.error("Submit error:", error);
+      toast.error('Failed to submit grievance. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -155,7 +160,7 @@ useEffect(() => {
   onValueChange={(v: string) => handleInputChange('category', v)}
   disabled={isLoadingDropdowns}
 >
-  <SelectTrigger>
+  <SelectTrigger data-testid="testid-grievance-category-select">
     <SelectValue placeholder="Select category" />
   </SelectTrigger>
 
@@ -177,7 +182,7 @@ useEffect(() => {
   onValueChange={(v: string) => handleInputChange('priority', v)}
   disabled={isLoadingDropdowns}
 >
-  <SelectTrigger>
+  <SelectTrigger data-testid="testid-grievance-priority-select">
     <SelectValue placeholder="Select priority" />
   </SelectTrigger>
 
@@ -195,7 +200,7 @@ useEffect(() => {
                 <Input
                 placeholder="Your phone number"
                   value={formData.contactPhone}
-                  onChange={(e) => handleInputChange('contactPhone', e.target.value)}
+                  onChange={(e) => handleInputChange('contactPhone', e.target.value.replace(/\D/g, '').slice(0, 10))}
                   data-testid="testid-grievance-contact-phone-input"
                 />
               </div>

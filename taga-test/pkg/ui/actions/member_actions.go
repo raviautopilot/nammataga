@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"math/rand"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -42,6 +43,7 @@ func MemberLoginAttempt(mai MemberActionsInterface, cfg *config.Config, username
 	if err := homePage.OpenMemberLogin(cfg.MemberLoginButtonTestID, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 
@@ -64,6 +66,7 @@ func MemberLoginAttempt(mai MemberActionsInterface, cfg *config.Config, username
 	if err := loginPage.SubmitLogin(cfg.MemberLoginSubmitButtonTestID, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 
@@ -85,6 +88,7 @@ func LogoutMemberCustom(mai MemberActionsInterface, cfg *config.Config, waitTime
 	if err := homePage.Logout(cfg.LogoutButtonTestID, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 
@@ -161,6 +165,7 @@ func ForceChangePassword(mai MemberActionsInterface, cfg *config.Config, email, 
 	if err := mp.Page.ClickByTestID("testid-change-password-button", mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 
@@ -170,21 +175,25 @@ func ForceChangePassword(mai MemberActionsInterface, cfg *config.Config, email, 
 	if err := mp.Page.SendKeysByTestID("testid-change-password-email-input", email, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 	if err := mp.Page.SendKeysByTestID("testid-change-password-old-input", tempPassword, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 	if err := mp.Page.SendKeysByTestID("testid-change-password-new-input", newPassword, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 	if err := mp.Page.SendKeysByTestID("testid-change-password-confirm-input", newPassword, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 
@@ -193,6 +202,7 @@ func ForceChangePassword(mai MemberActionsInterface, cfg *config.Config, email, 
 	if err := mp.Page.ClickByTestID("testid-change-password-submit-button", mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 
@@ -592,16 +602,19 @@ func BookRoomForGuest(mai MemberActionsInterface, cfg *config.Config, r *Result,
 	if err := mp.Page.SendKeysByTestID("testid-guest-1-name-input", guestName, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 	if err := mp.Page.SendKeysByTestID("testid-guest-1-age-input", guestAge, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 	if err := mp.Page.SendKeysByTestID("testid-guest-1-contact-input", guestContact, mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 	// Select Guest 1 Gender (Male)
@@ -680,6 +693,7 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 
@@ -687,6 +701,7 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 	if _, err := mp.Page.Driver.ExecuteScript("const g = document.getElementById('guest'); if(g) { g.click(); }", nil); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -766,6 +781,7 @@ func BookAllBedsInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result
 	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 	r.WaitForElementAndCapture(mp.Page, "css:li[data-sonner-toast]", 5 * time.Second, fmt.Sprintf("TAGATower_AllRoomBooking_Complete_%s", roomID))
@@ -816,6 +832,7 @@ func TryBookRoomAsSelfMultibooking(mai MemberActionsInterface, cfg *config.Confi
 	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 
@@ -823,6 +840,7 @@ func TryBookRoomAsSelfMultibooking(mai MemberActionsInterface, cfg *config.Confi
 	if _, err := mp.Page.Driver.ExecuteScript("document.getElementById('self').click();", nil); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 	time.Sleep(1 * time.Second)
@@ -1194,6 +1212,7 @@ func BookSingleBedWithGender(mai MemberActionsInterface, cfg *config.Config, r *
 	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 
@@ -1237,6 +1256,7 @@ func BookSingleBedWithGender(mai MemberActionsInterface, cfg *config.Config, r *
 	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 	r.WaitForElementAndCapture(mp.Page, "xpath://li[@data-sonner-toast and contains(., 'Booking Successful')]", 5 * time.Second, fmt.Sprintf("TAGATower_GenderBooking_Complete_%s_%s", roomID, gender))
@@ -1285,6 +1305,7 @@ func TryBookSingleBedWithGenderOpposite(mai MemberActionsInterface, cfg *config.
 	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 
@@ -1590,6 +1611,7 @@ func BookRoomForTenDays(mai MemberActionsInterface, cfg *config.Config, r *Resul
 	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 
@@ -1603,6 +1625,7 @@ func BookRoomForTenDays(mai MemberActionsInterface, cfg *config.Config, r *Resul
 	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
 		r.Status = "failed"
 		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
 		return
 	}
 	r.WaitForElementAndCapture(mp.Page, "css:li[data-sonner-toast]", 5 * time.Second, fmt.Sprintf("TAGATower_10DaysBooking_Complete_%s", roomID))
@@ -1899,3 +1922,267 @@ func VerifyBulkUploadedMember(page *ui.Page, cfg *config.Config, email, stepPref
 	VerifyMemberSubscriptionStatus(member, cfg, email, cfg.MemberCredentials.Password, stepPrefix, result)
 }
 
+// ForgotPasswordByEmail triggers forgot password using the email option
+func ForgotPasswordByEmail(mai MemberActionsInterface, cfg *config.Config, email string, r *Result) {
+	mp := mai.GetMemberPersona()
+	actionName := "Forgot Password by Email"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		return
+	}
+
+	homePage := pages.NewHomePage(mp.Page)
+	_ = homePage.OpenMemberLogin(cfg.MemberLoginButtonTestID, mp.DefaultTimeout)
+
+	// Click forgot password button to open the modal
+	if err := mp.Page.ClickByTestID("testid-forgot-password-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	time.Sleep(1 * time.Second)
+
+	// Enter email into forgot password email input
+	if err := mp.Page.SendKeysByTestID("testid-forgot-password-email-input", email, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Click reset button
+	if err := mp.Page.ClickByTestID("testid-reset-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	r.WaitForElementAndCapture(mp.Page, "css:li[data-sonner-toast]", 5 * time.Second, "ForgotPasswordByEmail_Success")
+}
+
+// ForgotPasswordByTbf triggers forgot password using the TBF number option
+func ForgotPasswordByTbf(mai MemberActionsInterface, cfg *config.Config, tbfNumber, email string, r *Result) {
+	mp := mai.GetMemberPersona()
+	actionName := "Forgot Password by TBF Number"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		return
+	}
+
+	homePage := pages.NewHomePage(mp.Page)
+	_ = homePage.OpenMemberLogin(cfg.MemberLoginButtonTestID, mp.DefaultTimeout)
+
+	// Click forgot password button to open the modal
+	if err := mp.Page.ClickByTestID("testid-forgot-password-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	time.Sleep(1 * time.Second)
+
+	// Click "Try other way" button
+	if err := mp.Page.ClickByTestID("testid-try-other-way-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	time.Sleep(500 * time.Millisecond)
+
+	// Enter TBF Number into input
+	if err := mp.Page.SendKeysByTestID("testid-forgot-password-tbf-input", tbfNumber, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Click reset button
+	if err := mp.Page.ClickByTestID("testid-reset-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	r.WaitForElementAndCapture(mp.Page, "css:li[data-sonner-toast]", 5 * time.Second, "ForgotPasswordByTbf_Success")
+}
+
+// ResetForgotPasswordWithTemporaryPassword retrieves the temporary password from mock emails and performs the password change
+func ResetForgotPasswordWithTemporaryPassword(mai MemberActionsInterface, cfg *config.Config, email, newPassword string, r *Result) {
+	actionName := "Reset Forgot Password with Temporary Password"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		return
+	}
+
+	tempPass := FetchTempPasswordFromMockEmail(cfg, email)
+	if tempPass == "" {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to fetch temporary password from mock email")
+		return
+	}
+
+	ForceChangePassword(mai, cfg, email, tempPass, newPassword, r)
+}
+
+
+// MemberSubmitsEditRequest submits a profile edit request as a logged-in member.
+func MemberSubmitsEditRequest(mai MemberActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Member Submits Edit Request"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		return
+	}
+	mp := mai.GetMemberPersona()
+	
+	rand.Seed(time.Now().UnixNano())
+	randomMobile := fmt.Sprintf("9%09d", rand.Intn(1000000000))
+	designations := []string{"Agricultural Officer", "Assistant Director of Agriculture", "Deputy Director of Agriculture", "Joint Director of Agriculture", "Additional Director of Agriculture"}
+	randomDesignation := designations[rand.Intn(len(designations))]
+
+
+	// Navigate to Membership Page
+	if err := mp.Page.ClickByTestID("testid-membership-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Click "Edit Profile" button
+	if err := mp.Page.ClickByTestID("testid-request-profile-edit-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Fill mobile number
+	if err := mp.Page.SendKeysByTestID("testid-profile-edit-mobile-input", randomMobile, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+	// Fill working district
+	if err := mp.Page.SendKeysByTestID("testid-profile-edit-designation-input", randomDesignation, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+	// Fill remarks
+	if err := mp.Page.SendKeysByTestID("testid-profile-edit-remarks-input", "E2E Test Member Remarks", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	r.CaptureScreenshot(mp.Page, "Member_Edit_Request_Form_Filled")
+
+	// Submit
+	if err := mp.Page.ClickByTestID("testid-profile-edit-submit-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	time.Sleep(2 * time.Second) // wait for modal to close
+}
+
+func MemberSubmitsGrievance(mai MemberActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Member Submits Grievance"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		return
+	}
+	mp := mai.GetMemberPersona()
+
+	// Navigate to Grievance Page
+	if err := mp.Page.ClickByTestID("testid-grievance-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	time.Sleep(1 * time.Second)
+
+	// Fill subject
+	if err := mp.Page.SendKeysByTestID("testid-grievance-subject-input", "E2E Test Grievance Subject", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Wait for category select to be clickable (finish loading dropdowns from API)
+	if _, err := mp.Page.WaitUntilClickable("css:[data-testid='testid-grievance-category-select']", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Select Category
+	if err := mp.Page.SelectCustomDropdownByText("testid-grievance-category-select", "Pay & Allowances", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Select Priority
+	if err := mp.Page.SelectCustomDropdownByText("testid-grievance-priority-select", "High", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Fill phone
+	if err := mp.Page.SendKeysByTestID("testid-grievance-contact-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Fill description (must be > 50 characters)
+	if err := mp.Page.SendKeysByTestID("testid-grievance-description-input", "This is a detailed description of the grievance submitted by E2E test. It has to be more than fifty characters long to pass frontend validation.", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	r.CaptureScreenshot(mp.Page, "Member_Grievance_Form_Filled")
+
+	// Submit
+	if err := mp.Page.ClickByTestID("testid-submit-grievance-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Wait for success message
+	if _, err := mp.Page.WaitUntilVisible("css:[data-testid='testid-success-message']", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		mai.GetMemberPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	r.CaptureScreenshot(mp.Page, "Member_Grievance_Submitted_Successfully")
+	time.Sleep(2 * time.Second)
+}

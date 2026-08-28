@@ -1650,3 +1650,107 @@ func EditMemberDetails(aai AdminActionsInterface, cfg *config.Config, creds *Mem
 
 	r.Advice = append(r.Advice, fmt.Sprintf("Member '%s' details updated to Designation='%s' and verified successfully.", cleanMobile, updatedDesignation))
 }
+
+// AdminProcessesEditRequest processes the first pending edit request.
+func AdminProcessesEditRequest(aai AdminActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Admin Processes Edit Request"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		return
+	}
+	ap := aai.GetAdminPersona()
+	
+	// Open Pending Edit Requests
+	if err := ap.Page.ClickByTestID("testid-pending-edit-requests-button", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		aai.GetAdminPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+	
+	// Click the first member group to expand using prefix selector
+	if err := ap.Page.Click("css:[data-testid^='testid-member-group-']", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		aai.GetAdminPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+	
+	time.Sleep(1 * time.Second)
+	r.CaptureScreenshot(ap.Page, "Admin_Edit_Requests_Expanded_View")
+	
+	// Approve mobile_number
+	if err := ap.Page.ClickByTestID("testid-approve-button-mobile_number", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		aai.GetAdminPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+	if err := ap.Page.SendKeysByTestID("testid-admin-remarks-input-mobile_number", "Number verified via E2E.", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		aai.GetAdminPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Reject designation
+	if err := ap.Page.ClickByTestID("testid-reject-button-designation", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		aai.GetAdminPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+	if err := ap.Page.SendKeysByTestID("testid-admin-remarks-input-designation", "Need proof of transfer via E2E.", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		aai.GetAdminPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+	
+	// Save & Publish
+	_, err := ap.Page.Driver.ExecuteScript("document.querySelector(\"[data-testid^='testid-save-publish-button-']\").click()", nil)
+	if err != nil {
+		r.Status = "failed"
+		r.Error = err
+		aai.GetAdminPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+	
+	time.Sleep(5 * time.Second) // wait for save API
+	r.CaptureScreenshot(ap.Page, "AdminProcesses_Success_Toast")
+}
+
+func AdminChecksGrievance(aai AdminActionsInterface, cfg *config.Config, r *Result) {
+	actionName := "Admin Checks Grievance"
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		return
+	}
+	ap := aai.GetAdminPersona()
+
+	// Click Manage Grievances button
+	if err := ap.Page.ClickByTestID("testid-manage-grievances-button", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		aai.GetAdminPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	// Wait for dialog list
+	if _, err := ap.Page.WaitUntilVisible("css:[data-testid='testid-grievances-dialog-content']", ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		aai.GetAdminPersona().Page.CaptureScreenshot("Failure_" + actionName)
+		return
+	}
+
+	r.CaptureScreenshot(ap.Page, "Admin_Grievances_List_View")
+
+	// Close the dialog using Escape key
+	body, err := ap.Page.Driver.FindElement(selenium.ByCSSSelector, "body")
+	if err == nil {
+		_ = body.SendKeys(selenium.EscapeKey)
+	}
+
+	time.Sleep(1 * time.Second)
+}

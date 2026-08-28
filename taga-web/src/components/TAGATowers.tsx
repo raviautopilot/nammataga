@@ -60,7 +60,7 @@ const ADVANCE_AMOUNTS = {
 
 const BOOKING_DAYS_LIMIT = 10;
 const MIN_STAY_DAYS = 1;
-const PHONE_REGEX = /^(\+91|0)?[6-9]\d{9}$/;
+const PHONE_REGEX = /^(\+\d{1,4})?[0-9]{7,14}$/;
 const PHONE_PLACEHOLDER = '+91 9876543210';
 const INITIAL_PHONE_PREFIX = '+91 ';
 
@@ -92,6 +92,7 @@ const CARETAKER_INFO = {
   ],
   email: 'tagatower@nammataga.com',
   address: 'TAGA Towers, 123 Agriculture Complex Road, T. Nagar, Chennai - 600017, Tamil Nadu',
+  landline: '044 34919949',
 };
 
 interface TAGATowersProps {
@@ -111,6 +112,9 @@ interface LoggedInUser {
   name: string;
   tagaId: string;
   email: string;
+  gender?: string;
+  mobileNumber?: string;
+  dateOfBirth?: string;
 }
 
 interface BookingStatusConfig {
@@ -124,6 +128,28 @@ interface BookingStatusConfig {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
+ * Calculates age from birth date string (DD/MM/YYYY or YYYY-MM-DD)
+ */
+function calculateAge(dobStr?: string): number {
+  if (!dobStr) return 0;
+  let birthDate: Date;
+  if (dobStr.includes('/')) {
+    const [day, month, year] = dobStr.split('/').map(Number);
+    birthDate = new Date(year, month - 1, day);
+  } else {
+    birthDate = new Date(dobStr);
+  }
+  if (isNaN(birthDate.getTime())) return 0;
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+/**
  * Safely retrieves logged-in user from localStorage
  */
 function getLoggedInUser(): LoggedInUser {
@@ -135,6 +161,9 @@ function getLoggedInUser(): LoggedInUser {
       name: u.name || 'Member',
       tagaId: u.tagaId || '',
       email: u.emailId || u.username || '',
+      gender: u.gender,
+      mobileNumber: u.mobileNumber || u.mobile_number,
+      dateOfBirth: u.dateOfBirth || u.date_of_birth,
     };
   } catch (error) {
     console.warn('Failed to parse user from localStorage:', error);
@@ -154,7 +183,7 @@ function validateMobileNumber(phone: string): { isValid: boolean; error?: string
   if (!PHONE_REGEX.test(cleaned)) {
     return {
       isValid: false,
-      error: 'Enter a valid 10-digit mobile number (e.g., 9876543210)',
+      error: 'Enter a valid mobile number (e.g., +91 9876543210)',
     };
   }
   return { isValid: true };
@@ -304,7 +333,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
   // 🔥 FIX: Max checkout is 10 days from the chosen check-in (not from today),
   // so a user who picks a check-in late in the month can still select a full 10-night stay.
   const maxCheckoutDate = addDays(today, BOOKING_DAYS_LIMIT);
-  const bannerImage = `${API_BASE}/images/taga-towers.jpg`;
+  const bannerImage = `${API_BASE}/images/tagatower_final.png`;
   const advanceAmount = ADVANCE_AMOUNTS[bookingFor];
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -622,6 +651,14 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
           toast.error(`Please fill in all details for Guest ${i + 1}`);
           return;
         }
+        if (g.name.length < 3) {
+          toast.error(`Name for Guest ${i + 1} must be at least 3 characters`);
+          return;
+        }
+        if (g.age <= 0 || g.age > 120) {
+          toast.error(`Invalid age for Guest ${i + 1}. Must be between 1 and 120`);
+          return;
+        }
         if (!g.gender) {
           toast.error(`Please select the gender for Guest ${i + 1} (${g.name})`);
           return;
@@ -662,11 +699,11 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
 
     const finalGender =
       selectedRoom.type === 'gents-dorm' ? 'male' :
-      selectedRoom.type === 'ladies-dorm' ? 'female' :
-      bookingFor === 'guest'
-        // For guest bookings, gender is derived from guest list (already validated)
-        ? (guestDetails[0]?.gender as 'male' | 'female' | undefined)
-        : bookingGender;
+        selectedRoom.type === 'ladies-dorm' ? 'female' :
+          bookingFor === 'guest'
+            // For guest bookings, gender is derived from guest list (already validated)
+            ? (guestDetails[0]?.gender as 'male' | 'female' | undefined)
+            : bookingGender;
 
     try {
       // 🔒 Double-check live availability immediately before creating the booking
@@ -1057,10 +1094,10 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                       <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
                         <div
                           className={`h-full transition-all rounded-full ${occupancyPercentage >= 80
-                              ? 'bg-red-500'
-                              : occupancyPercentage >= 50
-                                ? 'bg-yellow-400'
-                                : 'bg-green-600'
+                            ? 'bg-red-500'
+                            : occupancyPercentage >= 50
+                              ? 'bg-yellow-400'
+                              : 'bg-green-600'
                             }`}
                           style={{ width: `${occupancyPercentage}%` }}
                         />
@@ -1123,7 +1160,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
             src={bannerImage}
             alt="TAGA Towers Building"
             className="w-full h-full object-cover object-center"
-            style={{ objectPosition: "center 20%" }}
+            style={{ objectPosition: "center 30%" }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-green-900/95 via-green-800/85 to-green-900/90" />
         </div>
@@ -1580,6 +1617,14 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                   <p className="font-semibold">{CARETAKER_INFO.address}</p>
                 </div>
               </div>
+              <Separator className="my-4" />
+              <div className="flex items-start space-x-3">
+                <Phone className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Landline Number of TAGA Tower</p>
+                  <p className="font-semibold">{CARETAKER_INFO.landline}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1663,11 +1708,14 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: selectedRoom.capacity }, (_, i) => (
-                      <SelectItem key={i + 1} value={(i + 1).toString()}>
-                        {i + 1} bed{i + 1 > 1 ? 's' : ''}
-                      </SelectItem>
-                    ))}
+                    {Array.from(
+                      { length: availabilityMap[selectedRoom.id]?.availableBeds || selectedRoom.capacity },
+                      (_, i) => (
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                          {i + 1} bed{i + 1 > 1 ? 's' : ''}
+                        </SelectItem>
+                      )
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -1679,7 +1727,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
               bedCount < selectedRoom.capacity && (
                 <div className="space-y-3">
                   <Label>Gender</Label>
-                  
+
                   {selectedRoom.type === 'gents-dorm' ? (
                     <div className="inline-flex items-center px-3 py-1 rounded-md bg-blue-50 text-blue-700 font-medium text-sm border border-blue-200">
                       Male Only
@@ -1740,14 +1788,47 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                   <Card key={index} className="p-4" data-testid={`testid-guest-${index + 1}-details-card`}>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="col-span-2">
-                        <Label>Guest {index + 1} Name</Label>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <Label>Guest {index + 1} Name</Label>
+                          {index === 0 && (
+                            <div className="flex items-center space-x-1.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                id="self-guest-checkbox"
+                                data-testid="testid-self-guest-checkbox"
+                                className="rounded border-gray-300 w-3.5 h-3.5 cursor-pointer"
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    const user = getLoggedInUser();
+                                    const age = calculateAge(user.dateOfBirth);
+                                    updateGuestDetail(0, 'name', user.name);
+                                    if (age > 0) updateGuestDetail(0, 'age', age);
+                                    if (user.mobileNumber) updateGuestDetail(0, 'contact', user.mobileNumber);
+                                    const g = user.gender?.toLowerCase();
+                                    if (g === 'male' || g === 'female') updateGuestDetail(0, 'gender', g);
+                                  } else {
+                                    updateGuestDetail(0, 'name', '');
+                                    updateGuestDetail(0, 'age', 0);
+                                    updateGuestDetail(0, 'contact', '');
+                                    updateGuestDetail(0, 'gender', '');
+                                  }
+                                }}
+                              />
+                              <Label htmlFor="self-guest-checkbox" className="text-xs font-semibold cursor-pointer text-muted-foreground">Self</Label>
+                            </div>
+                          )}
+                        </div>
                         <Input
                           value={guest.name}
                           data-testid={`testid-guest-${index + 1}-name-input`}
                           onChange={(e) => updateGuestDetail(index, 'name', e.target.value)}
                           placeholder="Enter guest name"
                           aria-label={`Guest ${index + 1} name`}
+                          className={guest.name && guest.name.length < 3 ? "border-red-500" : ""}
                         />
+                        {guest.name && guest.name.length < 3 && (
+                          <p className="text-xs text-red-500 mt-1">Name must be at least 3 characters</p>
+                        )}
                       </div>
                       <div>
                         <Label>Age</Label>
@@ -1760,7 +1841,11 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                           }
                           placeholder="Age"
                           aria-label={`Guest ${index + 1} age`}
+                          className={guest.age && (guest.age <= 0 || guest.age > 120) ? "border-red-500" : ""}
                         />
+                        {guest.age ? (guest.age <= 0 || guest.age > 120) && (
+                          <p className="text-xs text-red-500 mt-1">Invalid age (1-120)</p>
+                        ) : null}
                       </div>
                       <div>
                         <Label>Contact Number</Label>
@@ -1772,7 +1857,11 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                           }
                           placeholder={PHONE_PLACEHOLDER}
                           aria-label={`Guest ${index + 1} contact`}
+                          className={guest.contact && !validateMobileNumber(guest.contact).isValid ? "border-red-500" : ""}
                         />
+                        {guest.contact && !validateMobileNumber(guest.contact).isValid && (
+                          <p className="text-xs text-red-500 mt-1">{validateMobileNumber(guest.contact).error}</p>
+                        )}
                       </div>
                       {/* Gender Selection Buttons — Minimal */}
                       <div className="col-span-2 space-y-1.5">
@@ -1786,11 +1875,10 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                             id={`guest-${index + 1}-male`}
                             data-testid={`testid-guest-${index + 1}-gender-male`}
                             onClick={() => updateGuestDetail(index, 'gender', 'male')}
-                            className={`py-1.5 px-3 rounded-md border text-sm font-medium transition-colors cursor-pointer ${
-                              guest.gender === 'male'
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-input'
-                            }`}
+                            className={`py-1.5 px-3 rounded-md border text-sm font-medium transition-colors cursor-pointer ${guest.gender === 'male'
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-input'
+                              }`}
                           >
                             Male
                           </button>
@@ -1800,11 +1888,10 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                             id={`guest-${index + 1}-female`}
                             data-testid={`testid-guest-${index + 1}-gender-female`}
                             onClick={() => updateGuestDetail(index, 'gender', 'female')}
-                            className={`py-1.5 px-3 rounded-md border text-sm font-medium transition-colors cursor-pointer ${
-                              guest.gender === 'female'
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-input'
-                            }`}
+                            className={`py-1.5 px-3 rounded-md border text-sm font-medium transition-colors cursor-pointer ${guest.gender === 'female'
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-input'
+                              }`}
                           >
                             Female
                           </button>
