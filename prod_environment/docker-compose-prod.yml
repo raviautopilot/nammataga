@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # Backend API Container (Go Service)
+  # ==========================================
+  taga-backend:
+    image: taga-api:prd
+    container_name: taga-api-prod
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - PORT=8080
+      - ENVIRONMENT=production
+    volumes:
+      # Maps local data folder to container /app/data
+      - ./data:/app/data
+      # Maps local audit logs folder to container /app/audit-logs
+      - ./audit-logs:/app/audit-logs
+    restart: unless-stopped
+
+  # ==========================================
+  # Frontend UI Container (Nginx Static Server)
+  # ==========================================
+  taga-frontend:
+    image: taga-web:prd
+    container_name: taga-web-prod
+    ports:
+      - "8081:80"
+    environment:
+      - VITE_API_BASE_URL=https://api.nammataga.com/api
+    depends_on:
+      - taga-backend
+    restart: unless-stopped
