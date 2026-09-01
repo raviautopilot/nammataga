@@ -91,7 +91,7 @@ const CARETAKER_INFO = {
     { name: 'Mr. Mariyappan', phone: '96770 10300' }
   ],
   email: 'tagatower@nammataga.com',
-  address: 'TAGA Towers, 123 Agriculture Complex Road, T. Nagar, Chennai - 600017, Tamil Nadu',
+  address: 'Velanmai Illam, 45, Sait Colony, II Street, Egmore, Chennai - 600008, Tamil Nadu, India',
   landline: '044 34919949',
 };
 
