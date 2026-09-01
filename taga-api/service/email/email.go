@@ -78,21 +78,41 @@ func SendPasswordResetEmail(to, resetToken string) error {
 // SendHTMLEmail sends an HTML formatted email.
 func SendHTMLEmail(to, subject, htmlBody string) error {
 	cfg := config.Config
-	auth := smtp.PlainAuth("", cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPHost)
+	from := cfg.FromEmail
+	if from == "" {
+		from = cfg.SMTPUsername
+	}
 
-	msg := []byte("To: " + to + "\r\n" +
-		"Subject: " + subject + "\r\n" +
-		"MIME-Version: 1.0\r\n" +
-		"Content-Type: text/html; charset=\"UTF-8\"\r\n" +
-		"\r\n" +
-		htmlBody)
+	headers := make(map[string]string)
+	headers["From"] = fmt.Sprintf("Nammataga Association <%s>", from)
+	headers["To"] = to
+	if cfg.AdminEmail != "" {
+		headers["Reply-To"] = fmt.Sprintf("Nammataga Association <%s>", cfg.AdminEmail)
+	}
+	headers["Subject"] = subject
+	headers["MIME-Version"] = "1.0"
+	headers["Content-Type"] = "text/html; charset=UTF-8"
+
+	recipients := []string{to}
+	if cfg.CCEmail != "" && cfg.CCEmail != to {
+		headers["Cc"] = cfg.CCEmail
+		recipients = append(recipients, cfg.CCEmail)
+	}
+
+	message := ""
+	for k, v := range headers {
+		message += fmt.Sprintf("%s: %s\r\n", k, v)
+	}
+	message += "\r\n" + htmlBody
+
+	auth := smtp.PlainAuth("", cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPHost)
 
 	return smtp.SendMail(
 		fmt.Sprintf("%s:%d", cfg.SMTPHost, cfg.SMTPPort),
 		auth,
-		cfg.FromEmail,
-		[]string{to},
-		msg,
+		from,
+		recipients,
+		[]byte(message),
 	)
 }
 

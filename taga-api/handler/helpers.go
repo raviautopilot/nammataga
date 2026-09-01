@@ -170,27 +170,40 @@ func sendSuccessEmail(memberEmail, tempPassword string) error {
 func sendEmail(to, subject, body string) error {
 	cfg := config.GetConfig()
 
-	// ADD THIS LOG - Attempting to send email
-	config.Logger.Info("📧 Sending email",
-		zap.String("to", to),
-		zap.String("subject", subject),
-		zap.String("smtp_host", cfg.SMTPHost),
-		zap.Int("smtp_port", cfg.SMTPPort),
-	)
-
 	from := cfg.FromEmail
+	if from == "" {
+		from = cfg.SMTPUsername
+	}
 	smtpHost := cfg.SMTPHost
 	smtpPort := cfg.SMTPPort
 	smtpUser := cfg.SMTPUsername
-	smtpPass := cfg.SMTPPassword
+	smtpPass := strings.ReplaceAll(cfg.SMTPPassword, " ", "")
 
 	// Setup headers
 	headers := make(map[string]string)
-	headers["From"] = from
+	headers["From"] = fmt.Sprintf("Nammataga Association <%s>", from)
 	headers["To"] = to
+	if cfg.AdminEmail != "" {
+		headers["Reply-To"] = fmt.Sprintf("Nammataga Association <%s>", cfg.AdminEmail)
+	}
 	headers["Subject"] = subject
 	headers["MIME-Version"] = "1.0"
 	headers["Content-Type"] = "text/html; charset=UTF-8"
+
+	recipients := []string{to}
+	if cfg.CCEmail != "" && cfg.CCEmail != to {
+		headers["Cc"] = cfg.CCEmail
+		recipients = append(recipients, cfg.CCEmail)
+	}
+
+	config.Logger.Info("📧 Sending email",
+		zap.String("to", to),
+		zap.String("cc", cfg.CCEmail),
+		zap.String("from", from),
+		zap.String("subject", subject),
+		zap.String("smtp_host", smtpHost),
+		zap.Int("smtp_port", smtpPort),
+	)
 
 	// Build message
 	message := ""
@@ -204,9 +217,8 @@ func sendEmail(to, subject, body string) error {
 
 	// Send email
 	addr := fmt.Sprintf("%s:%d", smtpHost, smtpPort)
-	err := smtp.SendMail(addr, auth, from, []string{to}, []byte(message))
+	err := smtp.SendMail(addr, auth, from, recipients, []byte(message))
 	if err != nil {
-		// ADD THIS ERROR LOG
 		config.Logger.Error("❌ Failed to send email",
 			zap.String("to", to),
 			zap.String("subject", subject),
@@ -215,7 +227,6 @@ func sendEmail(to, subject, body string) error {
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
-	// ADD THIS SUCCESS LOG
 	config.Logger.Info("✅ Email sent successfully",
 		zap.String("to", to),
 		zap.String("subject", subject),
