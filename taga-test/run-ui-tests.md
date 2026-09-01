@@ -231,6 +231,8 @@ Below is the summary reference table for all 22 UI tests in [taga-test/tests/ui/
 | 20 | `TestUI_20_TAGATower_LadiesDormRestriction` | [20-tagatower-ladiesdorm-restriction_test.go](file:///home/ubuntu/code/github/raviautopilot/nammataga/taga-test/tests/ui/20-tagatower-ladiesdorm-restriction_test.go) | Dormitory restriction validation: Ladies dorm access control |
 | 21 | `TestUI_21_TAGATower_TenDaysBooking` | [21-tagatower-tendaysbooking_test.go](file:///home/ubuntu/code/github/raviautopilot/nammataga/taga-test/tests/ui/21-tagatower-tendaysbooking_test.go) | Maximum stay duration validation: 10-day booking limit enforcement |
 | 22 | `TestUI_22_TAGATower_OverlappingBooking` | [22-tagatower-overlappingbooking_test.go](file:///home/ubuntu/code/github/raviautopilot/nammataga/taga-test/tests/ui/22-tagatower-overlappingbooking_test.go) | Date overlap validation: preventing double booking of identical rooms |
+| 23 | `TestUI_23_TAGATower_IncompleteGuestDetails` | [23-tagatower-incomplete-guest-details_test.go](file:///home/ubuntu/code/github/raviautopilot/nammataga/taga-test/tests/ui/23-tagatower-incomplete-guest-details_test.go) | Guest details validation: required fields enforcement |
+| 28 | `TestUI_28_TAGATower_MixedGenderCoupleBooking` | [28-tagatower-mixed-gender-couple-booking_test.go](file:///home/ubuntu/code/github/raviautopilot/nammataga/taga-test/tests/ui/28-tagatower-mixed-gender-couple-booking_test.go) | Mixed gender couple booking passes & blocks 3rd bed in Apex Suite |
 
 ---
 

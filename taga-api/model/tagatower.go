@@ -53,6 +53,7 @@ type Gender string
 const (
 	GenderMale   Gender = "male"
 	GenderFemale Gender = "female"
+	GenderMixed  Gender = "mixed"
 )
 
 type PaymentStatus string
