@@ -56,8 +56,8 @@ import { loadRazorpayScript } from '../utils/razorpay';
 // ═══════════════════════════════════════════════════════════════════════════
 
 const ADVANCE_AMOUNTS = {
-  self: 1,
-  guest: 1,
+  self: 100,
+  guest: 100,
 } as const;
 
 const BOOKING_DAYS_LIMIT = 10;
@@ -87,15 +87,13 @@ const ROOM_NUMBER_MAP: Record<string, number> = {
 
 const TOTAL_BED_CAPACITY = 35;
 
-const CARETAKER_INFO = {
-  caretakers: [
-    { name: 'Mr. Muthu', phone: '96007 63744' },
-    { name: 'Mr. Mariyappan', phone: '96770 10300' }
-  ],
+const CONTACT_INFO = {
+  phone: '044 34919949',
   email: 'tagatower@nammataga.com',
   address: 'Velanmai Illam, 45, Sait Colony, II Street, Egmore, Chennai - 600008, Tamil Nadu, India',
-  landline: '044 34919949',
 };
+
+const CARETAKER_INFO = CONTACT_INFO;
 
 interface TAGATowersProps {
   isLoggedIn: boolean;
@@ -1597,71 +1595,68 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
             </CardContent>
           </Card>
 
-          {/* Caretaker Contact */}
+          {/* Contact Information */}
           <Card
-            className="bg-gradient-to-r from-primary/5 to-primary/10"
+            className="bg-gradient-to-r from-primary/5 to-accent/20 border border-[#e2e4db] shadow-md"
             data-testid="testid-caretaker-contact-card"
           >
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Phone className="w-5 h-5" />
-                <span>Caretaker Contact</span>
-              </CardTitle>
-              <CardDescription>For inquiries and assistance during your stay</CardDescription>
+              <CardTitle className="text-primary text-xl font-bold">Contact Us</CardTitle>
+              <CardDescription>
+                For inquiries and assistance during your stay
+              </CardDescription>
             </CardHeader>
+
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="flex items-start space-x-3">
-                  <User className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                  <div className="space-y-1.5 w-full">
-                    <p className="text-sm text-muted-foreground">Name</p>
-                    {CARETAKER_INFO.caretakers.map((caretaker, idx) => (
-                      <p key={idx} className="font-semibold h-6 flex items-center">{caretaker.name}</p>
-                    ))}
+              <div className="grid md:grid-cols-2 gap-8">
+                {/* LEFT SIDE */}
+                <div className="space-y-6">
+                  {/* PHONE */}
+                  <div className="flex items-start space-x-3">
+                    <Phone className="w-5 h-5 text-primary mt-1 shrink-0" />
+                    <div>
+                      <h4 className="font-semibold mb-1">Phone</h4>
+                      <p className="text-sm text-muted-foreground">
+                        <a
+                          href={`tel:${CONTACT_INFO.phone.replace(/\s+/g, '')}`}
+                          className="hover:text-primary transition-colors font-medium text-foreground"
+                        >
+                          {CONTACT_INFO.phone}
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* EMAIL */}
+                  <div className="flex items-start space-x-3">
+                    <Mail className="w-5 h-5 text-primary mt-1 shrink-0" />
+                    <div>
+                      <h4 className="font-semibold mb-1">Email</h4>
+                      <p className="text-sm text-muted-foreground">
+                        <a
+                          href={`mailto:${CONTACT_INFO.email}`}
+                          className="text-primary hover:underline"
+                        >
+                          {CONTACT_INFO.email}
+                        </a>
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-start space-x-3">
-                  <Phone className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                  <div className="space-y-1.5 w-full">
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                    {CARETAKER_INFO.caretakers.map((caretaker, idx) => (
-                      <a
-                        key={idx}
-                        href={`tel:${caretaker.phone.replace(/\s+/g, '')}`}
-                        className="font-semibold text-sm hover:text-primary h-6 flex items-center"
-                      >
-                        {caretaker.phone}
-                      </a>
-                    ))}
+
+                {/* RIGHT SIDE (ADDRESS) */}
+                <div className="space-y-6">
+                  <div className="flex items-start space-x-3">
+                    <MapPin className="w-5 h-5 text-primary mt-1 shrink-0" />
+                    <div>
+                      <h4 className="font-semibold mb-2">Address</h4>
+                      <div className="bg-white/50 dark:bg-gray-800/50 p-4 rounded-lg border border-primary/20 max-w-sm">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {CONTACT_INFO.address}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Mail className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                  <div className="space-y-1.5 w-full">
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <a
-                      href={`mailto:${CARETAKER_INFO.email}`}
-                      className="font-semibold hover:text-primary break-all h-6 flex items-center"
-                    >
-                      {CARETAKER_INFO.email}
-                    </a>
-                  </div>
-                </div>
-              </div>
-              <Separator className="my-4" />
-              <div className="flex items-start space-x-3">
-                <MapPin className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Address</p>
-                  <p className="font-semibold">{CARETAKER_INFO.address}</p>
-                </div>
-              </div>
-              <Separator className="my-4" />
-              <div className="flex items-start space-x-3">
-                <Phone className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Landline Number of TAGA Tower</p>
-                  <p className="font-semibold">{CARETAKER_INFO.landline}</p>
                 </div>
               </div>
             </CardContent>

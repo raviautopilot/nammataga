@@ -274,8 +274,8 @@ The TAGA Towers engine manages **9 rooms / 35 total beds**:
    > *"This room is partially occupied by male guests — only male guests can book the remaining beds."*
 4. **Dormitory Rules:** Gents Dorm (12 beds) strictly rejects females and mixed couples. Ladies Dorm (8 beds) strictly rejects males and mixed couples.
 5. **Advance Price Multipliers:**
-   - **Self Booking:** `AdvanceAmount = ratePerBed * 1` (Currently ₹1; future ₹100).
-   - **Guest Booking:** `AdvanceAmount = ratePerBed * bedCount` (e.g. 2 beds = ₹2, 5 beds = ₹5, 8 beds = ₹8; future ₹100/₹200 per bed).
+   - **Self Booking:** `AdvanceAmount = ₹100` (1 bed = ₹100).
+   - **Guest Booking:** `AdvanceAmount = ₹100 × bedCount` (e.g., 1 bed = `₹100`, 2 beds = `₹200`, 3 beds = `₹300`, 5 beds = `₹500`).
 6. **Non-Refundable Cancellation Advisory:** Displayed in the booking checkout modal:
    > ℹ️ *Cancellation Policy: Please note that the advance booking payment is non-refundable upon cancellation.*
 7. **Maximum Stay Limit:** The system strictly rejects reservations exceeding 10 consecutive nights.
@@ -527,20 +527,22 @@ graph TD
 
 ---
 
-### 7.2 Changing Room Booking Advance Rates (e.g. ₹1 to ₹100/₹200)
+### 7.2 Changing Room Booking Advance Rates
 
-Currently, the booking advance rate is set to **₹1 per bed** for testing. When moving to the final pricing (e.g., ₹100 for Self, ₹200 for Guest):
+The booking advance rates are configured to **₹100 for Self** (1 bed) and **₹100 per bed for Guests** (e.g. 2 beds = ₹200). If this pricing needs to be updated in the future:
 
 1. **Backend Update ([`taga-api/service/tagatower.go`](file:///home/sudhan_dev/Downloads/code/nammataga/taga-api/service/tagatower.go)):**
    ```go
    // Update advance rate constants:
-   advanceRate := 100 // Set to 100 for ₹100 per bed (or calculate dynamic rate)
+   advanceRatePerBed := 100 // Set to desired rate per bed
    ```
 2. **Frontend Update ([`taga-web/src/components/TAGATowers.tsx`](file:///home/sudhan_dev/Downloads/code/nammataga/taga-web/src/components/TAGATowers.tsx)):**
    ```typescript
-   // Update pricing display variables:
-   const ADVANCE_RATE_SELF = 100;
-   const ADVANCE_RATE_GUEST = 200;
+   // Update pricing constants:
+   const ADVANCE_AMOUNTS = {
+     self: 100,
+     guest: 100,
+   } as const;
    ```
 3. **Rebuild & Publish:**
    Run `./prod-docker-publish.sh` in `prod_environment/`.

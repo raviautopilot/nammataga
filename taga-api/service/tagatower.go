@@ -206,10 +206,10 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 		return nil, err
 	}
 
-	// Determine advance amount: 1 per bed (configurable base, future: 100/200)
-	advanceRatePerBed := 1
+	// Determine advance amount: 100 per bed (Self: 100, Guest: 100 per bed)
+	advanceRatePerBed := 100
 	if req.BookingFor == model.BookingForGuest {
-		advanceRatePerBed = 1
+		advanceRatePerBed = 100
 	}
 	effectiveBeds := req.BedCount
 	if !room.AllowSingleBed {

@@ -513,8 +513,8 @@ func TestAPI_Tower_MixedGenderRulesAndAdvanceCalculation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mixed gender couple booking in 2-bed room should succeed, got: %v", err)
 	}
-	if resKurinchi.AdvanceAmount != 2 {
-		t.Errorf("Expected advance amount for 2 beds to be 2, got %d", resKurinchi.AdvanceAmount)
+	if resKurinchi.AdvanceAmount != 200 {
+		t.Errorf("Expected advance amount for 2 beds to be 200, got %d", resKurinchi.AdvanceAmount)
 	}
 	if resKurinchi.Gender != model.GenderMixed {
 		t.Errorf("Expected booking gender to be 'mixed', got %s", resKurinchi.Gender)
@@ -537,8 +537,8 @@ func TestAPI_Tower_MixedGenderRulesAndAdvanceCalculation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mixed couple booking in Apex Suite should succeed, got: %v", err)
 	}
-	if resApex.AdvanceAmount != 2 {
-		t.Errorf("Expected advance amount for 2 beds in Apex to be 2, got %d", resApex.AdvanceAmount)
+	if resApex.AdvanceAmount != 200 {
+		t.Errorf("Expected advance amount for 2 beds in Apex to be 200, got %d", resApex.AdvanceAmount)
 	}
 
 	// 3. Verify Apex Suite availability: the 3rd bed must be blocked and room marked fully booked
@@ -610,7 +610,7 @@ func TestAPI_Tower_MixedGenderRulesAndAdvanceCalculation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("5 beds booking in Gents Dorm failed: %v", err)
 	}
-	if resDorm5.AdvanceAmount != 5 {
-		t.Errorf("Expected advance for 5 beds to be 5, got %d", resDorm5.AdvanceAmount)
+	if resDorm5.AdvanceAmount != 500 {
+		t.Errorf("Expected advance for 5 beds to be 500, got %d", resDorm5.AdvanceAmount)
 	}
 }
