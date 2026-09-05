@@ -540,7 +540,7 @@ func getMemberNameByTagaID(tagaID string) string {
 }
 
 func buildRoomBookingEmailBody(data AdminRoomBookingData) string {
-	amountInRupees := float64(data.Amount) / 100
+	amountInRupees := float64(data.Amount)
 
 	var body strings.Builder
 
@@ -778,7 +778,7 @@ func VerifyPayment(c *gin.Context) {
 		}
 
 		// Build email subject
-		amountInRupees := float64(booking.AdvanceAmount) / 100
+		amountInRupees := float64(booking.AdvanceAmount)
 		subject := fmt.Sprintf("🏨 TAGA Room Booking - %s - ₹%.2f", roomName, amountInRupees)
 
 		// Get email body

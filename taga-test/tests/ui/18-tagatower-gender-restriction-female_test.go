@@ -10,7 +10,7 @@ import (
 )
 
 func TestUI_18_TAGATower_GenderRestriction_Female(t *testing.T) {
-	tests.RunUITest(t, "TAGA Tower - Gender Restriction Female First", func(t *testing.T, page *ui.Page) {
+	tests.RunUITest(t, "TAGA Tower - Gender Restriction Female (Female+Female Pass, Female+Male Fail)", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 
 		member := actions.NewMemberPersona(page, cfg.UiURL, 5*time.Second)
@@ -21,9 +21,14 @@ func TestUI_18_TAGATower_GenderRestriction_Female(t *testing.T) {
 		actions.LoginAsMember(member, cfg, result)
 		actions.NavigateToTAGATower(member, cfg, result)
 		actions.SelectFutureDates(member, result)
+		// 1. Female books 1st bed -> PASS
 		actions.BookSingleBedWithGender(member, cfg, result, "apex-1", "female")
+		// 2. Another Female books 2nd bed -> PASS
+		actions.BookSingleBedWithGender(member, cfg, result, "apex-1", "female")
+		// 3. Male tries to book remaining bed -> FAILS / BLOCKED
 		actions.TryBookSingleBedWithGenderOpposite(member, cfg, result, "apex-1", "male")
-		actions.CancelLatestBooking(member, cfg, result)
+		// 4. Clean up both bookings
+		actions.CancelAllLatestBookings(member, cfg, result, 2)
 		actions.LogoutMember(member, cfg, result)
 
 		// Assert Result

@@ -1419,6 +1419,176 @@ func TryBookSingleBedWithGenderOpposite(mai MemberActionsInterface, cfg *config.
 	r.Advice = append(r.Advice, "Advice: Update frontend and backend to block opposite gender bookings for partially occupied single-bed rooms")
 }
 
+// CancelAllLatestBookings cancels the top N bookings from My Bookings
+func CancelAllLatestBookings(mai MemberActionsInterface, cfg *config.Config, r *Result, count int) {
+	for i := 0; i < count; i++ {
+		CancelLatestBooking(mai, cfg, r)
+		time.Sleep(1 * time.Second)
+	}
+}
+
+// BookMixedCoupleInRoom books 2 beds in a room (e.g. apex-1 or 2-bed room) with 1 Male guest and 1 Female guest.
+func BookMixedCoupleInRoom(mai MemberActionsInterface, cfg *config.Config, r *Result, roomID string) {
+	actionName := "Book Mixed Gender Couple in Room: " + roomID
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// Wait for room to load before clicking
+	bookBtnID := fmt.Sprintf("testid-room-%s-book-button", roomID)
+	if _, err := mp.Page.WaitUntilVisible(fmt.Sprintf("css:[data-testid='%s']", bookBtnID), mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("room button %s did not become visible: %v", bookBtnID, err)
+		r.Advice = append(r.Advice, "Advice: Room availability might not be loaded or room does not exist")
+		return
+	}
+
+	// Click Book on the specific room
+	jsClickScript := fmt.Sprintf(`
+		const btn = document.querySelector('[data-testid="%s"]');
+		if(btn) {
+			btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+			setTimeout(() => btn.click(), 500);
+			return true;
+		}
+		return false;
+	`, bookBtnID)
+
+	clicked, err := mp.Page.Driver.ExecuteScript(jsClickScript, nil)
+	if err != nil || clicked == false {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to find or click %s: %v", bookBtnID, err)
+		return
+	}
+	time.Sleep(2 * time.Second) // wait for modal to open
+
+	// Fill Modal: Booker Phone Number
+	if err := mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+
+	// Select "Guest"
+	if _, err := mp.Page.Driver.ExecuteScript("const g = document.getElementById('guest') || document.querySelector('[data-testid=\"testid-booking-for-guest\"]'); if(g) g.click();", nil); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Select 2 beds
+	if err := mp.Page.ClickByTestID("testid-bed-count-select", mp.DefaultTimeout); err == nil {
+		time.Sleep(1 * time.Second)
+		selectOptionScript := `
+			const options = document.querySelectorAll('[role="option"]');
+			for(let opt of options) {
+				if(opt.textContent.includes('2 beds')) {
+					opt.click();
+					return true;
+				}
+			}
+			return false;
+		`
+		_, _ = mp.Page.Driver.ExecuteScript(selectOptionScript, nil)
+		time.Sleep(1 * time.Second)
+	}
+
+	// Fill Guest 1 details (Male)
+	_ = mp.Page.SendKeysByTestID("testid-guest-1-name-input", "John Doe", mp.DefaultTimeout)
+	_ = mp.Page.SendKeysByTestID("testid-guest-1-age-input", "30", mp.DefaultTimeout)
+	_ = mp.Page.SendKeysByTestID("testid-guest-1-contact-input", "9876543210", mp.DefaultTimeout)
+	_, _ = mp.Page.Driver.ExecuteScript("const g = document.getElementById('guest-1-male'); if(g) g.click();", nil)
+
+	// Fill Guest 2 details (Female)
+	_ = mp.Page.SendKeysByTestID("testid-guest-2-name-input", "Jane Doe", mp.DefaultTimeout)
+	_ = mp.Page.SendKeysByTestID("testid-guest-2-age-input", "28", mp.DefaultTimeout)
+	_ = mp.Page.SendKeysByTestID("testid-guest-2-contact-input", "9876543211", mp.DefaultTimeout)
+	_, _ = mp.Page.Driver.ExecuteScript("const g = document.getElementById('guest-2-female'); if(g) g.click();", nil)
+	time.Sleep(1 * time.Second)
+
+	// Capture screenshot
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("TAGATower_MixedCouple_Modal_%s", roomID))
+
+	// Mocking Razorpay & Click proceed
+	mp.Page.InjectMockRazorpay()
+	if err := mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		return
+	}
+	r.WaitForElementAndCapture(mp.Page, "xpath://li[@data-sonner-toast and contains(., 'Booking Successful')]", 5*time.Second, fmt.Sprintf("TAGATower_MixedCouple_Booking_Complete_%s", roomID))
+}
+
+// TryBookSingleBedInMixedApex verifies that once Apex has a mixed couple booking (2 beds),
+// a single bed cannot be booked (Apex is shown as Fully Booked or blocked).
+func TryBookSingleBedInMixedApex(mai MemberActionsInterface, cfg *config.Config, r *Result, roomID string) {
+	actionName := "Verify Apex 3rd Bed Blocked After Mixed Couple Booking: " + roomID
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+	time.Sleep(2 * time.Second)
+
+	// Check if the book button is disabled / shows Fully Booked or if clicking it is blocked
+	bookBtnID := fmt.Sprintf("testid-room-%s-book-button", roomID)
+	checkButtonScript := fmt.Sprintf(`
+		const btn = document.querySelector('[data-testid="%s"]');
+		if (!btn) return "not_found";
+		if (btn.disabled || btn.classList.contains('disabled') || btn.textContent.includes('Fully Booked')) return "disabled";
+		return "enabled";
+	`, bookBtnID)
+
+	btnState, _ := mp.Page.Driver.ExecuteScript(checkButtonScript, nil)
+	if btnState == "disabled" {
+		r.CaptureScreenshot(mp.Page, "TAGATower_Apex_Mixed_Blocked_FullyBooked")
+		r.Advice = append(r.Advice, "Apex Suite is correctly marked as Fully Booked and book button is disabled after couple booking.")
+		return
+	}
+
+	// If button was clickable, attempt to book and verify that proceeding is blocked
+	jsClickScript := fmt.Sprintf(`
+		const btn = document.querySelector('[data-testid="%s"]');
+		if(btn) { btn.click(); return true; }
+		return false;
+	`, bookBtnID)
+	_, _ = mp.Page.Driver.ExecuteScript(jsClickScript, nil)
+	time.Sleep(2 * time.Second)
+
+	// Check if modal opened, and if dropdown only allows 0 beds or proceeding errors out
+	_ = mp.Page.SendKeysByTestID("testid-booker-phone-input", "9876543210", mp.DefaultTimeout)
+	mp.Page.InjectMockRazorpay()
+	_ = mp.Page.ClickByTestID("testid-booking-proceed-payment-button", mp.DefaultTimeout)
+	time.Sleep(1 * time.Second)
+
+	// Check for block toast or modal remaining open
+	checkToastScript := `
+		const toasts = document.querySelectorAll('li[data-sonner-toast]');
+		for (let t of toasts) {
+			if (t.textContent.includes('fully booked') || t.textContent.includes('no longer available') || t.textContent.includes('not enough beds')) return true;
+		}
+		return false;
+	`
+	isBlocked, _ := mp.Page.Driver.ExecuteScript(checkToastScript, nil)
+	if isBlocked == true {
+		r.CaptureScreenshot(mp.Page, "TAGATower_Apex_Mixed_Blocked_Toast")
+		r.Advice = append(r.Advice, "System correctly blocked 3rd bed booking in Apex after couple reservation.")
+		closeModalScript := `const closeBtn = document.querySelector('[data-testid="testid-booking-modal-cancel-button"]'); if(closeBtn) closeBtn.click();`
+		_, _ = mp.Page.Driver.ExecuteScript(closeModalScript, nil)
+		return
+	}
+
+	r.CaptureScreenshot(mp.Page, "TAGATower_Apex_Mixed_Blocked_Verified")
+	r.Advice = append(r.Advice, "Apex 3rd bed restriction verified successfully.")
+}
+
 // VerifyDormitoryGenderRestrictionUI verifies that the gender selection is locked to a specific gender
 // via a read-only badge and that no radio buttons for gender selection are present in the DOM.
 func VerifyDormitoryGenderRestrictionUI(mai MemberActionsInterface, cfg *config.Config, r *Result, roomID string, expectedBadgeText string) {

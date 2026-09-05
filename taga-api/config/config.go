@@ -51,6 +51,7 @@ type AppConfig struct {
 	ResetPasswordURL      string     `json:"reset_password_url"`
 	FromEmail             string     `json:"from_email"`
 	AdminEmail            string     `json:"admin_email"`
+	CCEmail               string     `json:"cc_email"`
 	AdminPassword         string     `json:"admin_password"`
 	OfficeDir             string     `json:"office_dir"`
 	MembersFile           string     `json:"members_file"`
@@ -197,6 +198,33 @@ func InitConfig() {
 	if disablePaymentEnv := os.Getenv("DISABLE_PAYMENT"); disablePaymentEnv != "" {
 		Config.DisablePayment = disablePaymentEnv == "true"
 	}
+	if smtpHostEnv := os.Getenv("SMTP_HOST"); smtpHostEnv != "" {
+		Config.SMTPHost = smtpHostEnv
+	}
+	if smtpPortEnv := os.Getenv("SMTP_PORT"); smtpPortEnv != "" {
+		var p int
+		if _, err := fmt.Sscanf(smtpPortEnv, "%d", &p); err == nil {
+			Config.SMTPPort = p
+		}
+	}
+	if smtpUserEnv := os.Getenv("SMTP_USERNAME"); smtpUserEnv != "" {
+		Config.SMTPUsername = smtpUserEnv
+	}
+	if smtpPassEnv := os.Getenv("SMTP_PASSWORD"); smtpPassEnv != "" {
+		Config.SMTPPassword = strings.ReplaceAll(smtpPassEnv, " ", "")
+	}
+	if fromEmailEnv := os.Getenv("FROM_EMAIL"); fromEmailEnv != "" {
+		Config.FromEmail = fromEmailEnv
+	}
+	if adminEmailEnv := os.Getenv("ADMIN_EMAIL"); adminEmailEnv != "" {
+		Config.AdminEmail = adminEmailEnv
+	}
+	if ccEmailEnv := os.Getenv("CC_EMAIL"); ccEmailEnv != "" {
+		Config.CCEmail = ccEmailEnv
+	}
+
+	// Sanitize SMTP password to remove any embedded spaces from Google App Passwords
+	Config.SMTPPassword = strings.ReplaceAll(Config.SMTPPassword, " ", "")
 
 	// Set default LogLevel and LogFile if still empty
 	if Config.LogLevel == "" {

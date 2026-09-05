@@ -9,26 +9,24 @@ import (
 	"e2e-template/tests"
 )
 
-func TestUI_17_TAGATower_GenderRestriction_Male(t *testing.T) {
-	tests.RunUITest(t, "TAGA Tower - Gender Restriction Male (Male+Male Pass, Male+Female Fail)", func(t *testing.T, page *ui.Page) {
+func TestUI_28_TAGATower_MixedGenderCoupleBooking(t *testing.T) {
+	tests.RunUITest(t, "TAGA Tower - Mixed Gender Couple Booking & Apex 3rd Bed Block", func(t *testing.T, page *ui.Page) {
 		cfg := tests.GlobalConfig
 
 		member := actions.NewMemberPersona(page, cfg.UiURL, 5*time.Second)
-		result := actions.NewResult("TestUI_17_TAGATower_GenderRestriction_Male")
+		result := actions.NewResult("TestUI_28_TAGATower_MixedGenderCoupleBooking")
 
 		// Declarative Persona Action Flow
 		actions.GoToHome(member, result)
 		actions.LoginAsMember(member, cfg, result)
 		actions.NavigateToTAGATower(member, cfg, result)
 		actions.SelectFutureDates(member, result)
-		// 1. Male books 1st bed -> PASS
-		actions.BookSingleBedWithGender(member, cfg, result, "apex-1", "male")
-		// 2. Another Male books 2nd bed -> PASS
-		actions.BookSingleBedWithGender(member, cfg, result, "apex-1", "male")
-		// 3. Female tries to book remaining bed -> FAILS / BLOCKED
-		actions.TryBookSingleBedWithGenderOpposite(member, cfg, result, "apex-1", "female")
-		// 4. Clean up both bookings
-		actions.CancelAllLatestBookings(member, cfg, result, 2)
+		// 1. Mixed couple (1 Male + 1 Female) books 2 beds in Apex Suite -> PASS
+		actions.BookMixedCoupleInRoom(member, cfg, result, "apex-1")
+		// 2. Single person tries to book 3rd bed in Apex Suite -> FAILS / BLOCKED (Apex is fully booked)
+		actions.TryBookSingleBedInMixedApex(member, cfg, result, "apex-1")
+		// 3. Clean up couple booking
+		actions.CancelLatestBooking(member, cfg, result)
 		actions.LogoutMember(member, cfg, result)
 
 		// Assert Result

@@ -132,14 +132,20 @@ func SendAdminEditRequestEmail(memberEmail, memberName string, fields []model.Fi
 </body>
 </html>`, memberName, memberEmail, cardsHtml, adminURL)
 
-	msg := []byte("To: " + cfg.AdminEmail + "\r\n" +
+	from := cfg.FromEmail
+	if from == "" {
+		from = cfg.SMTPUsername
+	}
+
+	msg := []byte("From: Nammataga Association <" + from + ">\r\n" +
+		"To: " + cfg.AdminEmail + "\r\n" +
 		"Subject: " + subject + "\r\n" +
 		"MIME-Version: 1.0\r\n" +
 		"Content-Type: text/html; charset=\"UTF-8\"\r\n" +
 		"\r\n" +
 		htmlBody)
 
-	return smtp.SendMail(fmt.Sprintf("%s:%d", cfg.SMTPHost, cfg.SMTPPort), auth, cfg.FromEmail, []string{cfg.AdminEmail}, msg)
+	return smtp.SendMail(fmt.Sprintf("%s:%d", cfg.SMTPHost, cfg.SMTPPort), auth, from, []string{cfg.AdminEmail}, msg)
 }
 
 func SendMemberRequestProcessedEmail(memberEmail, memberName string, fields []model.FieldEditRequest) error {
@@ -282,12 +288,19 @@ func SendMemberRequestProcessedEmail(memberEmail, memberName string, fields []mo
 </body>
 </html>`, memberName, cardsHtml, loginURL)
 
-	msg := []byte("To: " + memberEmail + "\r\n" +
+	from := cfg.FromEmail
+	if from == "" {
+		from = cfg.SMTPUsername
+	}
+
+	msg := []byte("From: Nammataga Association <" + from + ">\r\n" +
+		"To: " + memberEmail + "\r\n" +
+		"Reply-To: Nammataga Association <" + cfg.AdminEmail + ">\r\n" +
 		"Subject: " + subject + "\r\n" +
 		"MIME-Version: 1.0\r\n" +
 		"Content-Type: text/html; charset=\"UTF-8\"\r\n" +
 		"\r\n" +
 		htmlBody)
 
-	return smtp.SendMail(fmt.Sprintf("%s:%d", cfg.SMTPHost, cfg.SMTPPort), auth, cfg.FromEmail, []string{memberEmail}, msg)
+	return smtp.SendMail(fmt.Sprintf("%s:%d", cfg.SMTPHost, cfg.SMTPPort), auth, from, []string{memberEmail}, msg)
 }

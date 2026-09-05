@@ -31,6 +31,8 @@ import {
   ShieldCheck,
   ChevronDown,
   Loader2,
+  UserCheck,
+  Info,
 } from 'lucide-react';
 import { format, addDays, isBefore, startOfDay, isAfter } from 'date-fns';
 import { toast } from 'sonner';
@@ -54,8 +56,8 @@ import { loadRazorpayScript } from '../utils/razorpay';
 // ═══════════════════════════════════════════════════════════════════════════
 
 const ADVANCE_AMOUNTS = {
-  self: 1,
-  guest: 1,
+  self: 100,
+  guest: 100,
 } as const;
 
 const BOOKING_DAYS_LIMIT = 10;
@@ -85,15 +87,13 @@ const ROOM_NUMBER_MAP: Record<string, number> = {
 
 const TOTAL_BED_CAPACITY = 35;
 
-const CARETAKER_INFO = {
-  caretakers: [
-    { name: 'Mr. Muthu', phone: '96007 63744' },
-    { name: 'Mr. Mariyappan', phone: '96770 10300' }
-  ],
+const CONTACT_INFO = {
+  phone: '044 34919949',
   email: 'tagatower@nammataga.com',
   address: 'Velanmai Illam, 45, Sait Colony, II Street, Egmore, Chennai - 600008, Tamil Nadu, India',
-  landline: '044 34919949',
 };
+
+const CARETAKER_INFO = CONTACT_INFO;
 
 interface TAGATowersProps {
   isLoggedIn: boolean;
@@ -334,7 +334,8 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
   // so a user who picks a check-in late in the month can still select a full 10-night stay.
   const maxCheckoutDate = addDays(today, BOOKING_DAYS_LIMIT);
   const bannerImage = `${API_BASE}/images/tagatower_final.png`;
-  const advanceAmount = ADVANCE_AMOUNTS[bookingFor];
+  const effectiveBeds = bookingFor === 'self' ? 1 : (selectedRoom?.allowSingleBed ? bedCount : (selectedRoom?.capacity || 1));
+  const advanceAmount = (bookingFor === 'self' ? ADVANCE_AMOUNTS.self : ADVANCE_AMOUNTS.guest) * effectiveBeds;
 
   // ─────────────────────────────────────────────────────────────────────────
   // EVENT HANDLERS: Phone Input
@@ -644,7 +645,9 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
         return;
       }
       // Check every guest card is fully filled in (including gender)
-      let derivedGuestGender: 'male' | 'female' | null = null;
+      let hasMale = false;
+      let hasFemale = false;
+
       for (let i = 0; i < guestDetails.length; i++) {
         const g = guestDetails[i];
         if (!g.name || !g.age || !g.contact) {
@@ -663,26 +666,46 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
           toast.error(`Please select the gender for Guest ${i + 1} (${g.name})`);
           return;
         }
+        if (g.gender === 'male') hasMale = true;
+        if (g.gender === 'female') hasFemale = true;
+
         const guestPhoneValidation = validateMobileNumber(g.contact);
         if (!guestPhoneValidation.isValid) {
           toast.error(`Invalid phone number for Guest ${i + 1} (${g.name})`);
           return;
         }
-        // Enforce same gender for all guests in this booking
-        if (derivedGuestGender === null) {
-          derivedGuestGender = g.gender;
-        } else if (g.gender !== derivedGuestGender) {
-          toast.error(
-            `All guests must be of the same gender. Guest ${i + 1} (${g.name}) has a different gender — mixed-gender groups cannot share a room.`
-          );
-          return;
-        }
       }
+
+      let derivedGuestGender: 'male' | 'female' | 'mixed' | null = null;
+      if (hasMale && hasFemale) {
+        derivedGuestGender = 'mixed';
+      } else if (hasMale) {
+        derivedGuestGender = 'male';
+      } else if (hasFemale) {
+        derivedGuestGender = 'female';
+      }
+
+      // Enforce strictly single gender for Dormitories
+      if (selectedRoom.type === 'gents-dorm' && derivedGuestGender !== 'male') {
+        toast.error('Gents Dormitory is strictly for male guests only.');
+        return;
+      }
+      if (selectedRoom.type === 'ladies-dorm' && derivedGuestGender !== 'female') {
+        toast.error('Ladies Dormitory is strictly for female guests only.');
+        return;
+      }
+
       // Also check gender restriction from availability data for guests
       const avail = availabilityMap[selectedRoom.id];
-      if (avail?.genderRestriction && derivedGuestGender && avail.genderRestriction !== derivedGuestGender) {
+      if (avail?.genderRestriction && derivedGuestGender && derivedGuestGender !== 'mixed' && avail.genderRestriction !== derivedGuestGender) {
         toast.error(
           `This room is partially occupied by ${avail.genderRestriction} guests — only ${avail.genderRestriction} guests can book the remaining beds.`
+        );
+        return;
+      }
+      if (avail?.genderRestriction && derivedGuestGender === 'mixed') {
+        toast.error(
+          `This room is partially occupied by ${avail.genderRestriction} guests — mixed groups cannot share with existing single occupants.`
         );
         return;
       }
@@ -697,13 +720,22 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
       }
     }
 
-    const finalGender =
-      selectedRoom.type === 'gents-dorm' ? 'male' :
-        selectedRoom.type === 'ladies-dorm' ? 'female' :
-          bookingFor === 'guest'
-            // For guest bookings, gender is derived from guest list (already validated)
-            ? (guestDetails[0]?.gender as 'male' | 'female' | undefined)
-            : bookingGender;
+    let finalGender: 'male' | 'female' | 'mixed' | undefined = bookingGender;
+    if (selectedRoom.type === 'gents-dorm') {
+      finalGender = 'male';
+    } else if (selectedRoom.type === 'ladies-dorm') {
+      finalGender = 'female';
+    } else if (bookingFor === 'guest') {
+      const hasMale = guestDetails.some((g) => g.gender === 'male');
+      const hasFemale = guestDetails.some((g) => g.gender === 'female');
+      if (hasMale && hasFemale) {
+        finalGender = 'mixed';
+      } else if (hasMale) {
+        finalGender = 'male';
+      } else if (hasFemale) {
+        finalGender = 'female';
+      }
+    }
 
     try {
       // 🔒 Double-check live availability immediately before creating the booking
@@ -718,8 +750,13 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
           refreshAvailability();
           return;
         }
-        if (liveAvail.genderRestriction && finalGender && liveAvail.genderRestriction !== finalGender) {
+        if (liveAvail.genderRestriction && finalGender && finalGender !== 'mixed' && liveAvail.genderRestriction !== finalGender) {
           toast.error(`This room is partially occupied by ${liveAvail.genderRestriction} guests — only ${liveAvail.genderRestriction} guests can book the remaining beds.`);
+          refreshAvailability();
+          return;
+        }
+        if (liveAvail.genderRestriction && finalGender === 'mixed') {
+          toast.error(`This room is partially occupied by ${liveAvail.genderRestriction} guests — mixed groups cannot share with existing single occupants.`);
           refreshAvailability();
           return;
         }
@@ -1558,71 +1595,68 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
             </CardContent>
           </Card>
 
-          {/* Caretaker Contact */}
+          {/* Contact Information */}
           <Card
-            className="bg-gradient-to-r from-primary/5 to-primary/10"
+            className="bg-gradient-to-r from-primary/5 to-accent/20 border border-[#e2e4db] shadow-md"
             data-testid="testid-caretaker-contact-card"
           >
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Phone className="w-5 h-5" />
-                <span>Caretaker Contact</span>
-              </CardTitle>
-              <CardDescription>For inquiries and assistance during your stay</CardDescription>
+              <CardTitle className="text-primary text-xl font-bold">Contact Us</CardTitle>
+              <CardDescription>
+                For inquiries and assistance during your stay
+              </CardDescription>
             </CardHeader>
+
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="flex items-start space-x-3">
-                  <User className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                  <div className="space-y-1.5 w-full">
-                    <p className="text-sm text-muted-foreground">Name</p>
-                    {CARETAKER_INFO.caretakers.map((caretaker, idx) => (
-                      <p key={idx} className="font-semibold h-6 flex items-center">{caretaker.name}</p>
-                    ))}
+              <div className="grid md:grid-cols-2 gap-8">
+                {/* LEFT SIDE */}
+                <div className="space-y-6">
+                  {/* PHONE */}
+                  <div className="flex items-start space-x-3">
+                    <Phone className="w-5 h-5 text-primary mt-1 shrink-0" />
+                    <div>
+                      <h4 className="font-semibold mb-1">Phone</h4>
+                      <p className="text-sm text-muted-foreground">
+                        <a
+                          href={`tel:${CONTACT_INFO.phone.replace(/\s+/g, '')}`}
+                          className="hover:text-primary transition-colors font-medium text-foreground"
+                        >
+                          {CONTACT_INFO.phone}
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* EMAIL */}
+                  <div className="flex items-start space-x-3">
+                    <Mail className="w-5 h-5 text-primary mt-1 shrink-0" />
+                    <div>
+                      <h4 className="font-semibold mb-1">Email</h4>
+                      <p className="text-sm text-muted-foreground">
+                        <a
+                          href={`mailto:${CONTACT_INFO.email}`}
+                          className="text-primary hover:underline"
+                        >
+                          {CONTACT_INFO.email}
+                        </a>
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-start space-x-3">
-                  <Phone className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                  <div className="space-y-1.5 w-full">
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                    {CARETAKER_INFO.caretakers.map((caretaker, idx) => (
-                      <a
-                        key={idx}
-                        href={`tel:${caretaker.phone.replace(/\s+/g, '')}`}
-                        className="font-semibold text-sm hover:text-primary h-6 flex items-center"
-                      >
-                        {caretaker.phone}
-                      </a>
-                    ))}
+
+                {/* RIGHT SIDE (ADDRESS) */}
+                <div className="space-y-6">
+                  <div className="flex items-start space-x-3">
+                    <MapPin className="w-5 h-5 text-primary mt-1 shrink-0" />
+                    <div>
+                      <h4 className="font-semibold mb-2">Address</h4>
+                      <div className="bg-white/50 dark:bg-gray-800/50 p-4 rounded-lg border border-primary/20 max-w-sm">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {CONTACT_INFO.address}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Mail className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                  <div className="space-y-1.5 w-full">
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <a
-                      href={`mailto:${CARETAKER_INFO.email}`}
-                      className="font-semibold hover:text-primary break-all h-6 flex items-center"
-                    >
-                      {CARETAKER_INFO.email}
-                    </a>
-                  </div>
-                </div>
-              </div>
-              <Separator className="my-4" />
-              <div className="flex items-start space-x-3">
-                <MapPin className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Address</p>
-                  <p className="font-semibold">{CARETAKER_INFO.address}</p>
-                </div>
-              </div>
-              <Separator className="my-4" />
-              <div className="flex items-start space-x-3">
-                <Phone className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Landline Number of TAGA Tower</p>
-                  <p className="font-semibold">{CARETAKER_INFO.landline}</p>
                 </div>
               </div>
             </CardContent>
@@ -1677,23 +1711,64 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
 
             <Separator />
 
-            {/* Booking For */}
-            <div className="space-y-3">
-              <Label>Booking For</Label>
-              <RadioGroup
-                value={bookingFor}
-                data-testid="testid-booking-for-radio-group"
-                onValueChange={(value: string) => setBookingFor(value as 'self' | 'guest')}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="self" id="self" />
-                  <Label htmlFor="self">Self (Advance: ₹{ADVANCE_AMOUNTS.self})</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="guest" id="guest" />
-                  <Label htmlFor="guest">Guest (Advance: ₹{ADVANCE_AMOUNTS.guest})</Label>
-                </div>
-              </RadioGroup>
+            {/* Booking For — High Visibility Cards */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Booking For</Label>
+              <div className="grid grid-cols-2 gap-3" data-testid="testid-booking-for-radio-group">
+                <button
+                  type="button"
+                  id="self"
+                  data-testid="testid-booking-for-self"
+                  onClick={() => setBookingFor('self')}
+                  className={`flex flex-col items-start p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${
+                    bookingFor === 'self'
+                      ? 'border-primary bg-primary/10 text-primary font-semibold shadow-sm ring-2 ring-primary/20'
+                      : 'border-input bg-card hover:bg-muted/60 text-muted-foreground'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-semibold text-foreground flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-primary" />
+                      Self Booking
+                    </span>
+                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      bookingFor === 'self' ? 'border-primary bg-primary' : 'border-muted-foreground/40'
+                    }`}>
+                      {bookingFor === 'self' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground mt-1">
+                    Advance: ₹{ADVANCE_AMOUNTS.self} (1 Bed)
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  id="guest"
+                  data-testid="testid-booking-for-guest"
+                  onClick={() => setBookingFor('guest')}
+                  className={`flex flex-col items-start p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${
+                    bookingFor === 'guest'
+                      ? 'border-primary bg-primary/10 text-primary font-semibold shadow-sm ring-2 ring-primary/20'
+                      : 'border-input bg-card hover:bg-muted/60 text-muted-foreground'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-semibold text-foreground flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-primary" />
+                      Guest Booking
+                    </span>
+                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      bookingFor === 'guest' ? 'border-primary bg-primary' : 'border-muted-foreground/40'
+                    }`}>
+                      {bookingFor === 'guest' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground mt-1">
+                    Advance: ₹{ADVANCE_AMOUNTS.guest} / bed
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Bed Count Selection — guest mode only; self is always 1 bed */}
@@ -1791,31 +1866,36 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                         <div className="flex items-center justify-between mb-1.5">
                           <Label>Guest {index + 1} Name</Label>
                           {index === 0 && (
-                            <div className="flex items-center space-x-1.5 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                id="self-guest-checkbox"
-                                data-testid="testid-self-guest-checkbox"
-                                className="rounded border-gray-300 w-3.5 h-3.5 cursor-pointer"
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    const user = getLoggedInUser();
-                                    const age = calculateAge(user.dateOfBirth);
-                                    updateGuestDetail(0, 'name', user.name);
-                                    if (age > 0) updateGuestDetail(0, 'age', age);
-                                    if (user.mobileNumber) updateGuestDetail(0, 'contact', user.mobileNumber);
-                                    const g = user.gender?.toLowerCase();
-                                    if (g === 'male' || g === 'female') updateGuestDetail(0, 'gender', g);
-                                  } else {
-                                    updateGuestDetail(0, 'name', '');
-                                    updateGuestDetail(0, 'age', 0);
-                                    updateGuestDetail(0, 'contact', '');
-                                    updateGuestDetail(0, 'gender', '');
-                                  }
-                                }}
-                              />
-                              <Label htmlFor="self-guest-checkbox" className="text-xs font-semibold cursor-pointer text-muted-foreground">Self</Label>
-                            </div>
+                            <button
+                              type="button"
+                              id="self-guest-checkbox"
+                              data-testid="testid-self-guest-checkbox"
+                              onClick={() => {
+                                const user = getLoggedInUser();
+                                const isSelfFilled = guest.name === user.name && guest.contact === (user.mobileNumber || '');
+                                if (!isSelfFilled) {
+                                  const age = calculateAge(user.dateOfBirth);
+                                  updateGuestDetail(0, 'name', user.name);
+                                  if (age > 0) updateGuestDetail(0, 'age', age);
+                                  if (user.mobileNumber) updateGuestDetail(0, 'contact', user.mobileNumber);
+                                  const g = user.gender?.toLowerCase();
+                                  if (g === 'male' || g === 'female') updateGuestDetail(0, 'gender', g);
+                                } else {
+                                  updateGuestDetail(0, 'name', '');
+                                  updateGuestDetail(0, 'age', 0);
+                                  updateGuestDetail(0, 'contact', '');
+                                  updateGuestDetail(0, 'gender', '');
+                                }
+                              }}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-2xs ${
+                                guest.name && guest.name === getLoggedInUser().name
+                                  ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary/20'
+                                  : 'bg-muted/80 hover:bg-muted text-foreground border-input'
+                              }`}
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
+                              <span>{guest.name && guest.name === getLoggedInUser().name ? '✓ Self Applied' : 'Fill as Self'}</span>
+                            </button>
                           )}
                         </div>
                         <Input
@@ -1941,6 +2021,15 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                 <p className="text-xs text-muted-foreground">
                   Remaining amount to be paid after stay
                 </p>
+
+                <div className="rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 p-2.5 mt-2.5">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-amber-700 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed font-medium">
+                      <strong>Cancellation Policy:</strong> Please note that the advance booking payment is non-refundable upon cancellation.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

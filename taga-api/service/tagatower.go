@@ -166,6 +166,22 @@ func GetRoomByID(roomID string) (*model.Room, error) {
 
 
 
+func isBookingMixed(b model.Booking) bool {
+	if b.Gender == model.GenderMixed {
+		return true
+	}
+	hasMale := false
+	hasFemale := false
+	for _, g := range b.GuestDetails {
+		if g.Gender == model.GenderMale {
+			hasMale = true
+		} else if g.Gender == model.GenderFemale {
+			hasFemale = true
+		}
+	}
+	return hasMale && hasFemale
+}
+
 /*
 	---------------------------
 	  Create Booking
@@ -190,31 +206,52 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 		return nil, err
 	}
 
-	// Determine advance amount
-	advanceAmount := 100
+	// Determine advance amount: 100 per bed (Self: 100, Guest: 100 per bed)
+	advanceRatePerBed := 100
 	if req.BookingFor == model.BookingForGuest {
-		advanceAmount = 200
+		advanceRatePerBed = 100
 	}
+	effectiveBeds := req.BedCount
+	if !room.AllowSingleBed {
+		effectiveBeds = room.Capacity
+	}
+	if req.BookingFor == model.BookingForSelf {
+		effectiveBeds = 1
+	}
+	advanceAmount := advanceRatePerBed * effectiveBeds
 
-	// ── VALIDATION 0: Guest gender consistency ────────────────────────────────
-	// For guest bookings, every GuestDetail must have a gender set, all guests
-	// must share the same gender (mixed groups cannot share a partially-occupied
-	// room), and that common gender becomes the booking-level Gender field so the
-	// existing gender-restriction checks in VALIDATION 1.5 and 2 work correctly.
+	// ── VALIDATION 0: Guest gender processing ────────────────────────────────
 	if req.BookingFor == model.BookingForGuest && len(req.GuestDetails) > 0 {
-		var derivedGender model.Gender
+		hasMale := false
+		hasFemale := false
 		for i, g := range req.GuestDetails {
 			if g.Gender != model.GenderMale && g.Gender != model.GenderFemale {
 				return nil, fmt.Errorf("please specify the gender for Guest %d (%s)", i+1, g.Name)
 			}
-			if derivedGender == "" {
-				derivedGender = g.Gender
-			} else if g.Gender != derivedGender {
-				return nil, fmt.Errorf("all guests must be of the same gender — Guest %d (%s) has a different gender. Mixed-gender groups cannot share a room", i+1, g.Name)
+			if g.Gender == model.GenderMale {
+				hasMale = true
+			} else if g.Gender == model.GenderFemale {
+				hasFemale = true
 			}
 		}
-		// Override the top-level Gender with the guest-derived value so the
-		// downstream partial-occupancy check (VALIDATION 2) works correctly.
+
+		var derivedGender model.Gender
+		if hasMale && hasFemale {
+			derivedGender = model.GenderMixed
+		} else if hasMale {
+			derivedGender = model.GenderMale
+		} else if hasFemale {
+			derivedGender = model.GenderFemale
+		}
+
+		// Dormitories are strictly single-gender
+		if room.Type == "gents-dorm" && derivedGender != model.GenderMale {
+			return nil, fmt.Errorf("this room is strictly for male guests only")
+		}
+		if room.Type == "ladies-dorm" && derivedGender != model.GenderFemale {
+			return nil, fmt.Errorf("this room is strictly for female guests only")
+		}
+
 		req.Gender = derivedGender
 	}
 
@@ -251,6 +288,7 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 	// ── VALIDATION 1: Bed capacity overlap check (Confirmed + Active Pending holds) ──
 	for d := checkInDate; d.Before(checkOutDate); d = d.AddDate(0, 0, 1) {
 		occupiedBeds := 0
+		hasActiveMixedBooking := false
 
 		for _, b := range allBookingsData {
 			if b.RoomID != req.RoomID {
@@ -263,7 +301,15 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 			// Check date overlap: existing booking overlaps day d
 			if d.Before(b.CheckOutDate) && d.After(b.CheckInDate.Add(-time.Second)) {
 				occupiedBeds += b.BedCount
+				if room.ID == "apex-1" && (b.Gender == model.GenderMixed || isBookingMixed(b)) {
+					hasActiveMixedBooking = true
+				}
 			}
+		}
+
+		// If Apex Suite has an active mixed couple booking, the 3rd bed is completely blocked
+		if room.ID == "apex-1" && hasActiveMixedBooking {
+			occupiedBeds = room.Capacity
 		}
 
 		requestedBeds := req.BedCount
@@ -301,11 +347,17 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 			if checkInDate.Before(existingBooking.CheckOutDate) &&
 				checkOutDate.After(existingBooking.CheckInDate) {
 
-				// If existing booking has a gender set and it doesn't match the new request
-				if existingBooking.Gender != "" && req.Gender != "" &&
-					existingBooking.Gender != req.Gender {
-					return nil, fmt.Errorf("this room is partially occupied by %s guests — only %s guests can book the remaining beds",
-						existingBooking.Gender, existingBooking.Gender)
+				// If existing booking is mixed in Apex, the room is fully reserved
+				if room.ID == "apex-1" && (existingBooking.Gender == model.GenderMixed || isBookingMixed(existingBooking)) {
+					return nil, fmt.Errorf("Apex Suite is fully booked for these dates (couple reservation)")
+				}
+
+				// If existing booking is single-gender and new booking has a different gender or is mixed
+				if existingBooking.Gender != "" && existingBooking.Gender != model.GenderMixed && req.Gender != "" {
+					if req.Gender != existingBooking.Gender {
+						return nil, fmt.Errorf("this room is partially occupied by %s guests — only %s guests can book the remaining beds",
+							existingBooking.Gender, existingBooking.Gender)
+					}
 				}
 			}
 		}
@@ -367,20 +419,31 @@ func CheckRoomAvailability(room *model.Room, date time.Time, bookings []model.Bo
 	// ✅ Count occupied beds
 	occupiedBeds := 0
 	var roomGender model.Gender
+	hasMixedBooking := false
 
 	for i, b := range filtered {
 		occupiedBeds += b.BedCount
 
-		if i == 0 && b.Gender != "" {
+		if b.Gender == model.GenderMixed || isBookingMixed(b) {
+			hasMixedBooking = true
+		} else if i == 0 && b.Gender != "" {
 			roomGender = b.Gender
 		}
 	}
 
+	// If Apex Suite has a mixed couple booking, block the 3rd bed completely
+	if room.ID == "apex-1" && hasMixedBooking {
+		occupiedBeds = room.Capacity
+	}
+
 	availableBeds := room.Capacity - occupiedBeds
+	if availableBeds < 0 {
+		availableBeds = 0
+	}
 
 	// ✅ Gender restriction (AC rooms with partial booking)
 	var genderRestriction string
-	if room.AllowSingleBed && occupiedBeds > 0 && availableBeds > 0 {
+	if room.AllowSingleBed && occupiedBeds > 0 && availableBeds > 0 && !hasMixedBooking {
 		genderRestriction = string(roomGender)
 	}
 
@@ -895,6 +958,7 @@ func CheckAllRoomsAvailabilityRange(checkIn, checkOut time.Time) (map[string]mod
 		for d := checkIn; d.Before(checkOut); d = d.AddDate(0, 0, 1) {
 			occupiedBeds := 0
 			var dayGender model.Gender
+			hasMixedBooking := false
 
 			for _, b := range relevantBookings {
 				if b.RoomID != room.ID {
@@ -903,17 +967,26 @@ func CheckAllRoomsAvailabilityRange(checkIn, checkOut time.Time) (map[string]mod
 				// d is within [b.checkIn, b.checkOut)
 				if !d.Before(b.CheckInDate) && d.Before(b.CheckOutDate) {
 					occupiedBeds += b.BedCount
-					if dayGender == "" && b.Gender != "" {
+					if b.Gender == model.GenderMixed || isBookingMixed(b) {
+						hasMixedBooking = true
+					} else if dayGender == "" && b.Gender != "" {
 						dayGender = b.Gender
 					}
 				}
 			}
 
+			// If Apex Suite has a mixed couple booking on day d, the 3rd bed is completely blocked
+			if room.ID == "apex-1" && hasMixedBooking {
+				occupiedBeds = room.Capacity
+			}
+
 			availOnDay := room.Capacity - occupiedBeds
 			if availOnDay < minAvailableBeds {
 				minAvailableBeds = availOnDay
-				if dayGender != "" {
+				if dayGender != "" && !hasMixedBooking {
 					genderRestriction = dayGender
+				} else if hasMixedBooking {
+					genderRestriction = ""
 				}
 			}
 		}

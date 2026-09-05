@@ -52,7 +52,7 @@ export interface CreateBookingRequest {
   bookerPhone: string;
   bookingFor: 'self' | 'guest';
   bedCount: number;
-  gender?: 'male' | 'female';
+  gender?: 'male' | 'female' | 'mixed';
   guestDetails?: GuestDetail[];
   upiId?: string;
 }
@@ -67,7 +67,7 @@ export interface BookingResponse {
   bookerId: string;
   bookingFor: 'self' | 'guest';
   bedCount: number;
-  gender?: 'male' | 'female';
+  gender?: 'male' | 'female' | 'mixed';
   guestDetails?: GuestDetail[];
   paymentStatus: 'pending' | 'confirmed' | 'cancelled' | 'refunded';
   advanceAmount: number;
