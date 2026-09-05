@@ -1291,18 +1291,98 @@ func ExportMembersToExcel(c *gin.Context) {
 	}
 }
 
+// formatReportDate formats date strings cleanly as YYYY-MM-DD or returns "N/A"
+func formatReportDate(dateStr string) string {
+	dateStr = strings.TrimSpace(dateStr)
+	if dateStr == "" {
+		return "N/A"
+	}
+	if t, err := time.Parse(time.RFC3339, dateStr); err == nil {
+		return t.Format("2006-01-02")
+	}
+	if t, err := time.Parse(time.RFC3339Nano, dateStr); err == nil {
+		return t.Format("2006-01-02")
+	}
+	if t, err := time.Parse("2006-01-02", dateStr); err == nil {
+		return t.Format("2006-01-02")
+	}
+	if t, err := time.Parse("02/01/2006", dateStr); err == nil {
+		return t.Format("2006-01-02")
+	}
+	if len(dateStr) >= 10 && dateStr[4] == '-' && dateStr[7] == '-' {
+		return dateStr[:10]
+	}
+	return dateStr
+}
+
+func getReportValue(val string) string {
+	val = strings.TrimSpace(val)
+	if val == "" {
+		return "N/A"
+	}
+	return val
+}
+
+func getMemberReportTagaID(member map[string]interface{}) string {
+	if tagaID := strings.TrimSpace(getString(member, "tagaId")); tagaID != "" {
+		return tagaID
+	}
+	if tagaID := strings.TrimSpace(getString(member, "taga_id")); tagaID != "" {
+		return tagaID
+	}
+	return "N/A"
+}
+
+func matchesPeriod(createdAtStr, period string) bool {
+	if period == "" || period == "all_time" {
+		return true
+	}
+	createdAtStr = strings.TrimSpace(createdAtStr)
+	if createdAtStr == "" {
+		return false
+	}
+	var t time.Time
+	var err error
+	if t, err = time.Parse(time.RFC3339, createdAtStr); err != nil {
+		if t, err = time.Parse(time.RFC3339Nano, createdAtStr); err != nil {
+			if t, err = time.Parse("2006-01-02", createdAtStr); err != nil {
+				if t, err = time.Parse("02/01/2006", createdAtStr); err != nil {
+					return true
+				}
+			}
+		}
+	}
+	now := time.Now()
+	switch period {
+	case "current_month":
+		return t.Year() == now.Year() && t.Month() == now.Month()
+	case "last_month":
+		lastMonth := now.AddDate(0, -1, 0)
+		return t.Year() == lastMonth.Year() && t.Month() == lastMonth.Month()
+	case "current_quarter":
+		currentQ := (int(now.Month()) - 1) / 3
+		tQ := (int(t.Month()) - 1) / 3
+		return t.Year() == now.Year() && currentQ == tQ
+	case "current_year":
+		return t.Year() == now.Year()
+	default:
+		return true
+	}
+}
+
 // GenerateMemberReport godoc
 // @Summary Generate member report
 // @Tags Admin Reports
 // @Accept json
-// @Produce text/csv
+// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 // @Security BearerAuth
 // @Param report_type query string false "Report type (membership, financial, etc.)" default(membership)
+// @Param period query string false "Period filter (current_month, last_month, current_quarter, current_year, all_time)" default(all_time)
 // @Success 200 {file} file
 // @Router /api/admin/reports/members [get]
 func GenerateMemberReport(c *gin.Context) {
 	reportType := c.DefaultQuery("report_type", "membership")
-	_ = reportType
+	period := c.DefaultQuery("period", "all_time")
 
 	members, err := readExistingMembers()
 	if err != nil {
@@ -1310,47 +1390,101 @@ func GenerateMemberReport(c *gin.Context) {
 		return
 	}
 
-	filename := fmt.Sprintf("TAGA_%s_report_%s.csv", reportType, time.Now().Format("2006-01-02"))
-	c.Header("Content-Type", "text/csv")
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	var filteredMembers []map[string]interface{}
+	for _, member := range members {
+		if matchesPeriod(getString(member, "created_at"), period) {
+			filteredMembers = append(filteredMembers, member)
+		}
+	}
 
-	writer := csv.NewWriter(c.Writer)
-	defer writer.Flush()
+	f := excelize.NewFile()
+	defer func() {
+		_ = f.Close()
+	}()
+
+	sheetName := "Membership Report"
+	index, err := f.NewSheet(sheetName)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "Failed to create sheet")
+		return
+	}
+	f.SetActiveSheet(index)
 
 	headers := []string{
-		"Member ID", "Name", "Initial", "Gender", "Father Name", "Mother Name",
+		"TAGA ID", "Name", "Initial", "Gender", "Father Name", "Mother Name",
 		"Educational Qualification", "Designation", "Working District", "Native District",
 		"Recruitment Batch", "Seniority Number", "Mobile Number", "Email ID",
 		"TBF Number", "CPS/GPF Number", "Registration Date",
 	}
-	_ = writer.Write(headers)
 
-	for _, member := range members {
-		row := []string{
-			getString(member, "id"),
-			getString(member, "name"),
-			getString(member, "initial"),
-			getString(member, "gender"),
-			getString(member, "father_name"),
-			getString(member, "mother_name"),
-			getString(member, "educational_qualification"),
-			getString(member, "designation"),
-			getString(member, "working_district"),
-			getString(member, "native_district"),
-			getString(member, "recruitment_batch"),
-			getString(member, "seniority_number"),
-			getString(member, "mobile_number"),
-			getString(member, "emailId"),
-			getString(member, "tbf_number"),
-			getString(member, "cps_gpf_number"),
-			getString(member, "created_at"),
+	headerStyle, _ := f.NewStyle(&excelize.Style{
+		Font:      &excelize.Font{Bold: true, Size: 11, Color: "#FFFFFF"},
+		Fill:      excelize.Fill{Type: "pattern", Color: []string{"#2E7D32"}, Pattern: 1},
+		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center"},
+		Border: []excelize.Border{
+			{Type: "left", Color: "#000000", Style: 1},
+			{Type: "right", Color: "#000000", Style: 1},
+			{Type: "top", Color: "#000000", Style: 1},
+			{Type: "bottom", Color: "#000000", Style: 1},
+		},
+	})
+
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		_ = f.SetCellValue(sheetName, cell, header)
+		if headerStyle != 0 {
+			_ = f.SetCellStyle(sheetName, cell, cell, headerStyle)
 		}
-		_ = writer.Write(row)
 	}
 
-	_ = writer.Write([]string{})
-	_ = writer.Write([]string{"SUMMARY"})
-	_ = writer.Write([]string{fmt.Sprintf("Total Members,%d", len(members))})
+	for rowIdx, member := range filteredMembers {
+		rowNum := rowIdx + 2
+
+		tagaID := getMemberReportTagaID(member)
+		regDate := formatReportDate(getString(member, "created_at"))
+
+		rowValues := []interface{}{
+			tagaID,
+			getReportValue(getString(member, "name")),
+			getReportValue(getString(member, "initial")),
+			getReportValue(getString(member, "gender")),
+			getReportValue(getString(member, "father_name")),
+			getReportValue(getString(member, "mother_name")),
+			getReportValue(getString(member, "educational_qualification")),
+			getReportValue(getString(member, "designation")),
+			getReportValue(getString(member, "working_district")),
+			getReportValue(getString(member, "native_district")),
+			getReportValue(getString(member, "recruitment_batch")),
+			getReportValue(getString(member, "seniority_number")),
+			getReportValue(getString(member, "mobile_number")),
+			getReportValue(getString(member, "emailId")),
+			getReportValue(getString(member, "tbf_number")),
+			getReportValue(getString(member, "cps_gpf_number")),
+			regDate,
+		}
+
+		for colIdx, val := range rowValues {
+			cell, _ := excelize.CoordinatesToCellName(colIdx+1, rowNum)
+			_ = f.SetCellValue(sheetName, cell, val)
+		}
+	}
+
+	// Set column widths
+	for i := range headers {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		_ = f.SetColWidth(sheetName, colName, colName, 20)
+	}
+
+	_ = f.DeleteSheet("Sheet1")
+
+	filename := fmt.Sprintf("TAGA_%s_report_%s_%s.xlsx", reportType, period, time.Now().Format("2006-01-02"))
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+
+	if err := f.Write(c.Writer); err != nil {
+		respondError(c, http.StatusInternalServerError, "Failed to generate Excel file")
+		return
+	}
 }
 
 // Helpers for registration and bulk parsing

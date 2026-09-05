@@ -709,7 +709,7 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `TAGA_${reportForm.type}_report_${reportForm.period}_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `TAGA_${reportForm.type}_report_${reportForm.period}_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

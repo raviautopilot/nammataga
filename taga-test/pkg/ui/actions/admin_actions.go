@@ -594,7 +594,7 @@ func DownloadExcelReports(aai AdminActionsInterface, cfg *config.Config, r *Resu
 		captureNetworkEvidence(ap, r)
 		return
 	}
-	r.WaitForElementAndCapture(ap.Page, "css:[data-testid='testid-membership-report-download-button']", 5 * time.Second, "MembershipReport_PeriodSelected")
+	r.WaitForElementAndCapture(ap.Page, "css:[data-testid='testid-download-excel-report-button']", 5 * time.Second, "MembershipReport_PeriodSelected")
 
 	// Click download
 	if err := ap.Page.ClickByTestID("testid-download-excel-report-button", ap.DefaultTimeout); err != nil {
