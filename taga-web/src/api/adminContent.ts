@@ -552,7 +552,7 @@ export interface DistrictOption {
 
 export const getMembersList = async (
   page: number = 1,
-  limit: number = 10,
+  limit: number = 25,
   search: string = '',
   district: string = '',
   paymentStatus: string = ''

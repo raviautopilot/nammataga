@@ -36,6 +36,7 @@ export interface Room {
   type: 'apex-suite' | 'ac-room' | 'gents-dorm' | 'ladies-dorm';
   capacity: number;
   allowSingleBed: boolean;
+  hide?: boolean;
 }
 
 export interface GuestDetail {

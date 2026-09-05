@@ -206,9 +206,11 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 		return nil, err
 	}
 
-	// Determine advance amount: 100 per bed (Self: 100, Guest: 100 per bed)
-	advanceRatePerBed := 100
-	if req.BookingFor == model.BookingForGuest {
+	// Determine advance rate per bed based on room type:
+	// Dormitory rooms (Gents & Ladies Dorm): ₹100 per bed
+	// Other rooms (Apex Suite, A/C rooms): ₹200 per bed
+	advanceRatePerBed := 200
+	if room.Type == model.RoomTypeGentsDorm || room.Type == model.RoomTypeLadiesDorm || room.ID == "gents-dorm" || room.ID == "ladies-dorm" {
 		advanceRatePerBed = 100
 	}
 	effectiveBeds := req.BedCount

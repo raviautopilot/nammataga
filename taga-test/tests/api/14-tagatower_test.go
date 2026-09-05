@@ -484,7 +484,8 @@ func TestAPI_Tower_MixedGenderRulesAndAdvanceCalculation(t *testing.T) {
 	// Seed standard rooms
 	rooms := []model.Room{
 		{ID: "apex-1", Name: "Apex Suite A/C", Type: model.RoomTypeApexSuite, Capacity: 3, AllowSingleBed: true},
-		{ID: "kurinchi", Name: "Kurinchi", Type: model.RoomTypeACRoom, Capacity: 2, AllowSingleBed: true},
+		{ID: "kurinchi", Name: "Kurinchi", Type: model.RoomTypeACRoom, Capacity: 2, AllowSingleBed: true, Hide: true},
+		{ID: "pasumai", Name: "Pasumai", Type: model.RoomTypeACRoom, Capacity: 2, AllowSingleBed: true, Hide: true},
 		{ID: "gents-dorm", Name: "Gents Dormitory", Type: model.RoomTypeGentsDorm, Capacity: 12, AllowSingleBed: true},
 		{ID: "ladies-dorm", Name: "Ladies Dormitory", Type: model.RoomTypeLadiesDorm, Capacity: 8, AllowSingleBed: true},
 	}
@@ -513,8 +514,8 @@ func TestAPI_Tower_MixedGenderRulesAndAdvanceCalculation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mixed gender couple booking in 2-bed room should succeed, got: %v", err)
 	}
-	if resKurinchi.AdvanceAmount != 200 {
-		t.Errorf("Expected advance amount for 2 beds to be 200, got %d", resKurinchi.AdvanceAmount)
+	if resKurinchi.AdvanceAmount != 400 {
+		t.Errorf("Expected advance amount for 2 beds to be 400, got %d", resKurinchi.AdvanceAmount)
 	}
 	if resKurinchi.Gender != model.GenderMixed {
 		t.Errorf("Expected booking gender to be 'mixed', got %s", resKurinchi.Gender)
@@ -537,8 +538,8 @@ func TestAPI_Tower_MixedGenderRulesAndAdvanceCalculation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mixed couple booking in Apex Suite should succeed, got: %v", err)
 	}
-	if resApex.AdvanceAmount != 200 {
-		t.Errorf("Expected advance amount for 2 beds in Apex to be 200, got %d", resApex.AdvanceAmount)
+	if resApex.AdvanceAmount != 400 {
+		t.Errorf("Expected advance amount for 2 beds in Apex to be 400, got %d", resApex.AdvanceAmount)
 	}
 
 	// 3. Verify Apex Suite availability: the 3rd bed must be blocked and room marked fully booked
@@ -612,5 +613,88 @@ func TestAPI_Tower_MixedGenderRulesAndAdvanceCalculation(t *testing.T) {
 	}
 	if resDorm5.AdvanceAmount != 500 {
 		t.Errorf("Expected advance for 5 beds to be 500, got %d", resDorm5.AdvanceAmount)
+	}
+
+	// 7. Test Self Booking Advance calculation in Dormitory (1 bed * ₹100 = ₹100)
+	reqDormSelf := model.CreateBookingRequest{
+		RoomID:       "gents-dorm",
+		CheckInDate:  now.AddDate(0, 2, 0).Format("2006-01-02"),
+		CheckOutDate: now.AddDate(0, 2, 1).Format("2006-01-02"),
+		BookerPhone:  "+919876543210",
+		BookingFor:   model.BookingForSelf,
+		BedCount:     1,
+		Gender:       model.GenderMale,
+	}
+	resDormSelf, err := service.CreateBooking(reqDormSelf, "Member User", "M001")
+	if err != nil {
+		t.Fatalf("Self booking in Gents Dorm failed: %v", err)
+	}
+	if resDormSelf.AdvanceAmount != 100 {
+		t.Errorf("Expected advance for self dorm booking to be 100, got %d", resDormSelf.AdvanceAmount)
+	}
+
+	// 8. Test Self Booking Advance calculation in Non-Dormitory Room (1 bed * ₹200 = ₹200)
+	reqApexSelf := model.CreateBookingRequest{
+		RoomID:       "apex-1",
+		CheckInDate:  now.AddDate(0, 2, 0).Format("2006-01-02"),
+		CheckOutDate: now.AddDate(0, 2, 1).Format("2006-01-02"),
+		BookerPhone:  "+919876543210",
+		BookingFor:   model.BookingForSelf,
+		BedCount:     1,
+		Gender:       model.GenderMale,
+	}
+	resApexSelf, err := service.CreateBooking(reqApexSelf, "Member User", "M001")
+	if err != nil {
+		t.Fatalf("Self booking in Apex Suite failed: %v", err)
+	}
+	if resApexSelf.AdvanceAmount != 200 {
+		t.Errorf("Expected advance for self non-dorm booking to be 200, got %d", resApexSelf.AdvanceAmount)
+	}
+
+	// 9. Test Guest Booking Advance calculation with 1 bed in Non-Dormitory (1 bed * ₹200 = ₹200)
+	reqApex1Bed := model.CreateBookingRequest{
+		RoomID:       "apex-1",
+		CheckInDate:  now.AddDate(0, 3, 0).Format("2006-01-02"),
+		CheckOutDate: now.AddDate(0, 3, 1).Format("2006-01-02"),
+		BookerPhone:  "+919876543210",
+		BookingFor:   model.BookingForGuest,
+		BedCount:     1,
+		GuestDetails: []model.GuestDetail{
+			{Name: "G1", Age: 25, Contact: "+919876543210", Gender: model.GenderMale},
+		},
+	}
+	resApex1Bed, err := service.CreateBooking(reqApex1Bed, "Member User", "M001")
+	if err != nil {
+		t.Fatalf("1 bed guest booking in Apex failed: %v", err)
+	}
+	if resApex1Bed.AdvanceAmount != 200 {
+		t.Errorf("Expected advance for 1 bed in Apex to be 200, got %d", resApex1Bed.AdvanceAmount)
+	}
+
+	// 10. Verify Kurinchi and Pasumai hide config in rooms json
+	allRooms, err := service.ReadRooms()
+	if err != nil {
+		t.Fatalf("GetAllRooms failed: %v", err)
+	}
+	var kurinchiFound, pasumaiFound bool
+	for _, r := range allRooms {
+		if r.ID == "kurinchi" {
+			kurinchiFound = true
+			if !r.Hide {
+				t.Errorf("Expected kurinchi room to have Hide=true, got %v", r.Hide)
+			}
+		}
+		if r.ID == "pasumai" {
+			pasumaiFound = true
+			if !r.Hide {
+				t.Errorf("Expected pasumai room to have Hide=true, got %v", r.Hide)
+			}
+		}
+	}
+	if !kurinchiFound {
+		t.Errorf("kurinchi room not found in GetAllRooms")
+	}
+	if !pasumaiFound {
+		t.Errorf("pasumai room not found in GetAllRooms")
 	}
 }
