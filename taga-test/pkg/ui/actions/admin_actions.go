@@ -1197,6 +1197,280 @@ func ManageResourceDocument(aai AdminActionsInterface, cfg *config.Config, r *Re
 	r.Advice = append(r.Advice, "Resource document uploaded, verified on Resources page, and cleaned up successfully.")
 }
 
+// ManageResourceExternalLink handles adding, verifying, and deleting an external link inside the single External Links CSV file.
+func ManageResourceExternalLink(aai AdminActionsInterface, cfg *config.Config, r *Result) {
+	linkTitle := "AA E2E Test Agriculture Portal"
+	linkURL := "https://e2e-agri-portal.tn.gov.in"
+	categoryName := "Links"
+	actionName := fmt.Sprintf("Manage Resource External Link (%s)", linkTitle)
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	ap := aai.GetAdminPersona()
+	ap.Page.InjectNetworkInterceptor()
+
+	// 1. Click Manage Content button
+	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click manage content button: %w", err)
+		r.CaptureScreenshot(ap.Page, "ResourceLink_OpenFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// 2. Click Resources Tab inside Manage Content modal
+	tabXPath := "//div[@data-testid='testid-content-management-modal']//button[@data-testid='testid-resources-button' or text()='Resources']"
+	if err := ap.Page.Click(tabXPath, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.ClickByTestID(cfg.AdminResourcesTabButtonTestID, ap.DefaultTimeout)
+	}
+	r.WaitForElementAndCapture(ap.Page, "css:[role='dialog']", 5*time.Second, "ResourceLink_ModalOpen")
+
+	// 3. Select Category (Links)
+	if err := ap.Page.SelectCustomDropdownByText(cfg.AdminResourceCategorySelectTestID, categoryName, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to select category '%s': %w", categoryName, err)
+		r.CaptureScreenshot(ap.Page, "ResourceLink_CategoryFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// 4. Fill in Link Title
+	titleElem, err := ap.Page.FindElementByTestID(cfg.AdminLinkTitleInputTestID, ap.DefaultTimeout)
+	if err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to find link title input: %w", err)
+		r.CaptureScreenshot(ap.Page, "ResourceLink_TitleInputFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	_ = titleElem.Clear()
+	if err := titleElem.SendKeys(linkTitle); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to enter link title: %w", err)
+		return
+	}
+
+	// 5. Fill in Link URL
+	urlElem, err := ap.Page.FindElementByTestID(cfg.AdminLinkURLInputTestID, ap.DefaultTimeout)
+	if err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to find link url input: %w", err)
+		r.CaptureScreenshot(ap.Page, "ResourceLink_URLInputFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	_ = urlElem.Clear()
+	if err := urlElem.SendKeys(linkURL); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to enter link url: %w", err)
+		return
+	}
+
+	// Screenshot Step 01: Form Filled with Title and URL
+	r.CaptureScreenshot(ap.Page, "ResourceLink_FormFilled")
+
+	// 6. Click Add External Link Button
+	if err := ap.Page.ClickByTestID(cfg.AdminAddLinkButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to click add external link button: %w", err)
+		r.CaptureScreenshot(ap.Page, "ResourceLink_SubmitFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	time.Sleep(2 * time.Second)
+
+	// Screenshot Step 02: Link Added in Admin View
+	r.CaptureScreenshot(ap.Page, "ResourceLink_Submitted")
+	captureNetworkEvidence(ap, r)
+
+	// 7. Verify link is visible under Existing Resources -> Links
+	jsOpenLinksAccordion := `
+		const modal = document.querySelector('[data-testid="testid-content-management-modal"]');
+		if (modal) modal.scrollTop = modal.scrollHeight;
+		const btns = Array.from(document.querySelectorAll('div.overflow-hidden button'));
+		const linkCatBtn = btns.find(b => {
+			const isCombobox = b.getAttribute('role') === 'combobox';
+			return !isCombobox && b.textContent && b.textContent.includes('Links');
+		});
+		if (linkCatBtn) {
+			linkCatBtn.scrollIntoView({block: 'center'});
+			linkCatBtn.click();
+		}
+	`
+	_, _ = ap.Page.Driver.ExecuteScript(jsOpenLinksAccordion, nil)
+	time.Sleep(1 * time.Second)
+
+	linkItemXPath := fmt.Sprintf("//div[contains(@class, 'overflow-hidden')]//p[contains(text(), '%s')]", linkTitle)
+	if _, err := ap.Page.WaitUntilVisible(linkItemXPath, ap.DefaultTimeout); err != nil {
+		// Retry opening accordion if initial render was reloading
+		_, _ = ap.Page.Driver.ExecuteScript(jsOpenLinksAccordion, nil)
+		time.Sleep(1 * time.Second)
+		if _, err2 := ap.Page.WaitUntilVisible(linkItemXPath, ap.DefaultTimeout); err2 != nil {
+			r.Status = "failed"
+			r.Error = fmt.Errorf("newly added link '%s' not found under Existing Resources: %w", linkTitle, err2)
+			r.CaptureScreenshot(ap.Page, "ResourceLink_NotFoundInAdmin")
+			captureNetworkEvidence(ap, r)
+			return
+		}
+	}
+	jsScrollToLink := fmt.Sprintf(`
+		const rows = Array.from(document.querySelectorAll('div.overflow-hidden div.flex.items-center.justify-between'));
+		const targetRow = rows.find(r => r.textContent && r.textContent.includes('%s'));
+		if (targetRow) targetRow.scrollIntoView({block: 'center'});
+	`, linkTitle)
+	_, _ = ap.Page.Driver.ExecuteScript(jsScrollToLink, nil)
+	time.Sleep(500 * time.Millisecond)
+	r.CaptureScreenshot(ap.Page, "ResourceLink_VerifiedInAdmin")
+
+	// 8. Close Modal and verify on Member Resources Page
+	jsCloseModal := `
+		const modal = document.querySelector('[data-testid="testid-content-management-modal"]');
+		if (modal) {
+			const closeBtn = modal.querySelector('button.absolute');
+			if (closeBtn) closeBtn.click();
+		}
+	`
+	_, _ = ap.Page.Driver.ExecuteScript(jsCloseModal, nil)
+	time.Sleep(1 * time.Second)
+
+	if err := ap.Page.ClickByTestID(cfg.ResourcesNavButtonTestID, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.Driver.Get(cfg.UiURL + "/#/resources")
+	}
+	time.Sleep(2 * time.Second)
+
+	// Click Category "Links" on public resources page
+	jsClickPublicLinksCat := `
+		const catBtns = Array.from(document.querySelectorAll('button[data-testid^="testid-resource-category-"]'));
+		const linkCat = catBtns.find(b => b.textContent && b.textContent.includes('Links'));
+		if (linkCat) {
+			linkCat.scrollIntoView({block: 'center'});
+			linkCat.click();
+		}
+	`
+	_, _ = ap.Page.Driver.ExecuteScript(jsClickPublicLinksCat, nil)
+	time.Sleep(2 * time.Second)
+
+	// Verify link button is present on public resources page
+	publicLinkXPath := fmt.Sprintf("//button[contains(text(), '%s') or contains(., '%s')]", linkTitle, linkTitle)
+	if _, err := ap.Page.WaitUntilVisible(publicLinkXPath, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("newly added link '%s' not found on public resources page: %w", linkTitle, err)
+		r.CaptureScreenshot(ap.Page, "ResourceLink_PublicVerifyFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	jsScrollPublicLink := fmt.Sprintf(`
+		const btns = Array.from(document.querySelectorAll('button'));
+		const b = btns.find(x => x.textContent && x.textContent.includes('%s'));
+		if (b) b.scrollIntoView({block: 'center'});
+	`, linkTitle)
+	_, _ = ap.Page.Driver.ExecuteScript(jsScrollPublicLink, nil)
+	time.Sleep(500 * time.Millisecond)
+	r.CaptureScreenshot(ap.Page, "ResourceLink_VerifiedOnPublicPage")
+
+	// 9. Return to Admin Panel to Delete the Link
+	if err := ap.Page.ClickByTestID(cfg.AdminPanelButtonTestID, ap.DefaultTimeout); err != nil {
+		_ = ap.Page.Driver.Get(cfg.UiURL + "/#/admin")
+	}
+	time.Sleep(2 * time.Second)
+
+	// 10. Click Manage Content -> Resources tab
+	if err := ap.Page.ClickByTestID(cfg.AdminManageContentButtonTestID, ap.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to re-open manage content modal for deletion: %w", err)
+		r.CaptureScreenshot(ap.Page, "ResourceLink_ReopenFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	time.Sleep(1 * time.Second)
+	_ = ap.Page.Click(tabXPath, ap.DefaultTimeout)
+	time.Sleep(1 * time.Second)
+
+	// Expand "Links" category accordion under Existing Resources
+	_, _ = ap.Page.Driver.ExecuteScript(jsOpenLinksAccordion, nil)
+	time.Sleep(1 * time.Second)
+
+	// Click delete trash icon for the link
+	jsClickDeleteLink := fmt.Sprintf(`
+		const rows = Array.from(document.querySelectorAll('div.overflow-hidden div.flex.items-center.justify-between'));
+		const targetRow = rows.find(r => r.textContent && r.textContent.includes('%s'));
+		if (targetRow) {
+			const trashBtn = targetRow.querySelector('button');
+			if (trashBtn) {
+				trashBtn.scrollIntoView({block: 'center'});
+				trashBtn.click();
+				return true;
+			}
+		}
+		return false;
+	`, linkTitle)
+	clickedDel, err := ap.Page.Driver.ExecuteScript(jsClickDeleteLink, nil)
+	if err != nil || clickedDel == false {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("failed to locate or click delete button for external link '%s': %v", linkTitle, err)
+		r.CaptureScreenshot(ap.Page, "ResourceLink_DeleteClickFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// Screenshot: Confirm Modal Open
+	r.CaptureScreenshot(ap.Page, "ResourceLink_ConfirmModalOpen")
+
+	// Confirm delete in ConfirmDeleteDialog
+	jsConfirmDelete := `
+		const dialogs = Array.from(document.querySelectorAll('[role="dialog"], [role="alertdialog"]'));
+		for (const d of dialogs) {
+			if (d.getAttribute('data-testid') === 'testid-content-management-modal') continue;
+			const btns = Array.from(d.querySelectorAll('button'));
+			const delBtn = btns.find(b => b.textContent && b.textContent.trim() === 'Delete');
+			if (delBtn) {
+				delBtn.click();
+				return true;
+			}
+		}
+		return false;
+	`
+	_, _ = ap.Page.Driver.ExecuteScript(jsConfirmDelete, nil)
+	time.Sleep(2 * time.Second)
+
+	// Screenshot Step 04: Link Deleted
+	r.CaptureScreenshot(ap.Page, "ResourceLink_Deleted")
+	captureNetworkEvidence(ap, r)
+
+	// 11. Verify the link has disappeared from the list
+	err = ap.Page.Driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
+		el, err := wd.FindElement(selenium.ByXPATH, linkItemXPath)
+		if err != nil {
+			return true, nil // successfully disappeared
+		}
+		disp, err := el.IsDisplayed()
+		if err != nil || !disp {
+			return true, nil
+		}
+		return false, nil
+	}, 5*time.Second)
+
+	if err != nil {
+		r.Status = "failed"
+		r.Error = fmt.Errorf("external link was not deleted and is still present in the list: %w", err)
+		r.CaptureScreenshot(ap.Page, "ResourceLink_StillPresentFailure")
+		captureNetworkEvidence(ap, r)
+		return
+	}
+
+	// Close Modal
+	_, _ = ap.Page.Driver.ExecuteScript(jsCloseModal, nil)
+	time.Sleep(1 * time.Second)
+
+	r.Advice = append(r.Advice, "Resource external link added to CSV file, verified on Resources page, and cleaned up successfully.")
+}
+
 // ManageEventAction handles creating an event, verifying on upcoming events page, deleting it, and taking screenshots.
 func ManageEventAction(aai AdminActionsInterface, cfg *config.Config, r *Result) {
 	title := "AA Test Annual Conference 2026"

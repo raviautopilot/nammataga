@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { UserPlus, FileText, MessageSquare, Download, Send, Plus, Upload, Calendar, Image as ImageIcon, Link as LinkIcon, Trash2, Pencil, ChevronDown, ChevronRight, Loader2, AlertTriangle, Users, CheckCircle, Copy } from 'lucide-react';
+import { UserPlus, FileText, MessageSquare, Download, Send, Plus, Upload, Calendar, Image as ImageIcon, Link as LinkIcon, Trash2, Pencil, ChevronDown, ChevronRight, Loader2, AlertTriangle, Users, CheckCircle, Copy, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   createEvent,
@@ -17,6 +17,9 @@ import {
   deleteEvent,
   uploadResource,
   deleteResource,
+  addExternalLink,
+  deleteExternalLink,
+  ExternalLinkItem,
   uploadGalleryImage,
   deleteGalleryImage,
   getResourceCategoriesWithDocs,
@@ -33,7 +36,7 @@ import {
   generateMemberReport,
   sendAnnouncement
 } from '../api/adminContent';
-import { sortDocuments } from '../api/resources';
+import { sortDocuments, sortExternalLinks, getExternalLinks } from '../api/resources';
 import { MemberListTable } from './MemberListTable';
 import DistrictOfficeBearersManager from './admin/DistrictOfficeBearersManager';
 import AdminEditRequestsButton from './admin/AdminEditRequests';
@@ -119,6 +122,13 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [deleteResourceConfirm, setDeleteResourceConfirm] = useState<{ open: boolean; categoryId: string; title: string } | null>(null);
   const [isDeletingResource, setIsDeletingResource] = useState(false);
+
+  // External Links (stored in data/docs/External Links.csv)
+  const [externalLinksList, setExternalLinksList] = useState<ExternalLinkItem[]>([]);
+  const [linkForm, setLinkForm] = useState({ title: '', url: '' });
+  const [isAddingLink, setIsAddingLink] = useState(false);
+  const [deleteExternalLinkConfirm, setDeleteExternalLinkConfirm] = useState<{ open: boolean; title: string } | null>(null);
+  const [isDeletingLink, setIsDeletingLink] = useState(false);
 
   // Events
   const [eventsList, setEventsList] = useState<Event[]>([]);
@@ -255,6 +265,14 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
         documents: sortDocuments(category.documents || [])
       }));
       setResourceCategories(sortedData);
+
+      // Load external links from CSV file
+      try {
+        const links = await getExternalLinks();
+        setExternalLinksList(sortExternalLinks(links || []));
+      } catch (linkErr) {
+        console.error('Failed to load external links:', linkErr);
+      }
     } catch (error) {
       toast.error('Failed to load resources');
       console.error(error);
@@ -541,6 +559,45 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
     }
   };
 
+  // ==================== EXTERNAL LINK ACTIONS ====================
+  const handleAddExternalLink = async () => {
+    if (!linkForm.title.trim() || !linkForm.url.trim()) {
+      toast.error('Please enter both link title and URL');
+      return;
+    }
+    setIsAddingLink(true);
+    try {
+      await addExternalLink({
+        title: linkForm.title.trim(),
+        url: linkForm.url.trim()
+      });
+      toast.success(`External link "${linkForm.title.trim()}" added to External Links file`);
+      setLinkForm({ title: '', url: '' });
+      await loadResources();
+    } catch (error) {
+      console.error('Add external link error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to add external link');
+    } finally {
+      setIsAddingLink(false);
+    }
+  };
+
+  const handleDeleteExternalLink = async () => {
+    if (!deleteExternalLinkConfirm) return;
+    setIsDeletingLink(true);
+    try {
+      await deleteExternalLink(deleteExternalLinkConfirm.title);
+      toast.success('External link deleted successfully');
+      setDeleteExternalLinkConfirm(null);
+      await loadResources();
+    } catch (error) {
+      console.error('Delete external link error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete external link');
+    } finally {
+      setIsDeletingLink(false);
+    }
+  };
+
   // ==================== EVENT UPLOAD ====================
   const handleEventUpload = async () => {
     if (!eventForm.title || !eventForm.date) {
@@ -725,48 +782,82 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="resourceYear">Year *</Label>
-                      <Input
-                        id="resourceYear"
-                        type="text"
-                        value={resourceForm.year}
-                        onChange={(e) => setResourceForm({ ...resourceForm, year: e.target.value })}
-                        placeholder="2025"
-                        data-testid="testid-resource-year-input"
-                      />
-                    </div>
-                    {resourceForm.category === 'Scheme G.Os' && (
-                      <div className="space-y-2">
-                        <Label>Subcategory</Label>
-                        <Select value={resourceForm.subcategory} onValueChange={(value: string) => setResourceForm({ ...resourceForm, subcategory: value })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select subcategory" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Central">Central</SelectItem>
-                            <SelectItem value="State">State</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    {/* Form fields conditional on category */}
+                    {resourceForm.category === 'Links' ? (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="linkTitle">Link Title *</Label>
+                          <Input
+                            id="linkTitle"
+                            type="text"
+                            value={linkForm.title}
+                            onChange={(e) => setLinkForm({ ...linkForm, title: e.target.value })}
+                            placeholder="e.g. Agriculture Department"
+                            data-testid="testid-link-title-input"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="linkUrl">Link URL *</Label>
+                          <Input
+                            id="linkUrl"
+                            type="url"
+                            value={linkForm.url}
+                            onChange={(e) => setLinkForm({ ...linkForm, url: e.target.value })}
+                            placeholder="https://www.example.com"
+                            data-testid="testid-link-url-input"
+                          />
+                        </div>
+                        <Button onClick={handleAddExternalLink} className="w-full" disabled={isAddingLink} data-testid="testid-add-link-button">
+                          <Plus className="w-4 h-4 mr-2" />
+                          {isAddingLink ? 'Adding Link...' : 'Add External Link'}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="resourceYear">Year *</Label>
+                          <Input
+                            id="resourceYear"
+                            type="text"
+                            value={resourceForm.year}
+                            onChange={(e) => setResourceForm({ ...resourceForm, year: e.target.value })}
+                            placeholder="2025"
+                            data-testid="testid-resource-year-input"
+                          />
+                        </div>
+                        {resourceForm.category === 'Scheme G.Os' && (
+                          <div className="space-y-2">
+                            <Label>Subcategory</Label>
+                            <Select value={resourceForm.subcategory} onValueChange={(value: string) => setResourceForm({ ...resourceForm, subcategory: value })}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select subcategory" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Central">Central</SelectItem>
+                                <SelectItem value="State">State</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        <div className="space-y-2">
+                          <Label htmlFor="resourceFile">Upload Document *</Label>
+                          <Input
+                            id="resourceFile"
+                            type="file"
+                            accept=".pdf"
+                            onChange={(e) => setResourceForm({ ...resourceForm, file: e.target.files?.[0] || null })}
+                            data-testid="testid-resource-file-input"
+                          />
+                          {resourceForm.file && (
+                            <p className="text-sm text-muted-foreground">Selected: {resourceForm.file.name}</p>
+                          )}
+                        </div>
+                        <Button onClick={handleResourceUpload} className="w-full" disabled={isUploadingResource} data-testid="testid-upload-resource-button">
+                          <Upload className="w-4 h-4 mr-2" />
+                          {isUploadingResource ? 'Uploading...' : 'Upload Resource'}
+                        </Button>
+                      </>
                     )}
-                    <div className="space-y-2">
-                      <Label htmlFor="resourceFile">Upload Document *</Label>
-                      <Input
-                        id="resourceFile"
-                        type="file"
-                        accept=".pdf"
-                        onChange={(e) => setResourceForm({ ...resourceForm, file: e.target.files?.[0] || null })}
-                        data-testid="testid-resource-file-input"
-                      />
-                      {resourceForm.file && (
-                        <p className="text-sm text-muted-foreground">Selected: {resourceForm.file.name}</p>
-                      )}
-                    </div>
-                    <Button onClick={handleResourceUpload} className="w-full" disabled={isUploadingResource} data-testid="testid-upload-resource-button">
-                      <Upload className="w-4 h-4 mr-2" />
-                      {isUploadingResource ? 'Uploading...' : 'Upload Resource'}
-                    </Button>
                   </div>
 
                   {/* Existing Resources List */}
@@ -801,38 +892,72 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
                                 )}
                                 <span className="font-medium text-sm">{cat.name}</span>
                                 <Badge variant="secondary" className="text-xs">
-                                  {cat.documents?.length ?? 0} docs
+                                  {cat.id === 'links'
+                                    ? `${externalLinksList.length} links`
+                                    : `${cat.documents?.length ?? 0} docs`}
                                 </Badge>
                               </div>
                             </button>
 
-                            {/* Documents List */}
+                            {/* Documents or External Links List */}
                             {expandedCategories[cat.id] && (
                               <div className="divide-y">
-                                {!cat.documents || cat.documents.length === 0 ? (
-                                  <p className="text-sm text-muted-foreground px-4 py-3">No documents in this category.</p>
-                                ) : (
-                                  cat.documents.map((doc, idx) => (
-                                    <div key={`${cat.id}-${idx}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/20">
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate">{doc.title}</p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                          <span className="text-xs text-muted-foreground">Year: {doc.year}</span>
-                                          {doc.subcategory && (
-                                            <Badge variant="outline" className="text-xs px-1 py-0">{doc.subcategory}</Badge>
-                                          )}
+                                {cat.id === 'links' ? (
+                                  externalLinksList.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground px-4 py-3">No external links found in file.</p>
+                                  ) : (
+                                    externalLinksList.map((link, idx) => (
+                                      <div key={`link-${idx}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/20">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium truncate">{link.title}</p>
+                                          <a
+                                            href={link.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5 truncate"
+                                          >
+                                            <ExternalLink className="w-3 h-3 shrink-0" />
+                                            <span className="truncate">{link.url}</span>
+                                          </a>
                                         </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-2 shrink-0"
+                                          onClick={() => setDeleteExternalLinkConfirm({ open: true, title: link.title })}
+                                          title="Delete Link"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </Button>
                                       </div>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-2 shrink-0"
-                                        onClick={() => setDeleteResourceConfirm({ open: true, categoryId: cat.id, title: doc.title })}
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </Button>
-                                    </div>
-                                  ))
+                                    ))
+                                  )
+                                ) : (
+                                  !cat.documents || cat.documents.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground px-4 py-3">No documents in this category.</p>
+                                  ) : (
+                                    cat.documents.map((doc, idx) => (
+                                      <div key={`${cat.id}-${idx}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/20">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium truncate">{doc.title}</p>
+                                          <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-xs text-muted-foreground">Year: {doc.year}</span>
+                                            {doc.subcategory && (
+                                              <Badge variant="outline" className="text-xs px-1 py-0">{doc.subcategory}</Badge>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-2 shrink-0"
+                                          onClick={() => setDeleteResourceConfirm({ open: true, categoryId: cat.id, title: doc.title })}
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </Button>
+                                      </div>
+                                    ))
+                                  )
                                 )}
                               </div>
                             )}
@@ -1427,6 +1552,15 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
         onConfirm={handleDeleteResource}
         onCancel={() => setDeleteResourceConfirm(null)}
         isLoading={isDeletingResource}
+      />
+
+      <ConfirmDeleteDialog
+        open={!!deleteExternalLinkConfirm?.open}
+        title="Delete External Link"
+        description={`Are you sure you want to delete the external link "${deleteExternalLinkConfirm?.title}" from the External Links file? This action cannot be undone.`}
+        onConfirm={handleDeleteExternalLink}
+        onCancel={() => setDeleteExternalLinkConfirm(null)}
+        isLoading={isDeletingLink}
       />
 
       <ConfirmDeleteDialog

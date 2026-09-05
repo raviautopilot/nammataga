@@ -247,6 +247,50 @@ export const deleteResource = async (categoryId: string, documentTitle: string):
   }
 };
 
+export interface ExternalLinkItem {
+  title: string;
+  url: string;
+}
+
+export const getAdminExternalLinks = async (): Promise<ExternalLinkItem[]> => {
+  const token = getAuthToken() || localStorage.getItem('member_token');
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}/resources/external-links`, { headers });
+  if (!response.ok) {
+    throw new Error('Failed to fetch external links');
+  }
+  return response.json();
+};
+
+export const addExternalLink = async (link: ExternalLinkItem): Promise<void> => {
+  const response = await authFetch(`${API_BASE}/admin/resources/external-links`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(link),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to add external link');
+  }
+};
+
+export const deleteExternalLink = async (title: string): Promise<void> => {
+  const encodedTitle = encodeURIComponent(title);
+  const response = await authFetch(`${API_BASE}/admin/resources/external-links/${encodedTitle}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to delete external link');
+  }
+};
+
 // Fetch all resource categories WITH their documents
 export const getResourceCategoriesWithDocs = async (): Promise<ResourceCategoryWithDocs[]> => {
   const token = getAuthToken() || localStorage.getItem('member_token');

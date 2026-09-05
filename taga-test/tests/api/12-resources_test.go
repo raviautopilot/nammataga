@@ -278,3 +278,107 @@ func TestAPI_Resources_Banner(t *testing.T) {
 		tctx.Actual = fmt.Sprintf("HTTP 200 OK, Image Path='%s'", image)
 	})
 }
+
+// ============================================================================
+// 5. POST/DELETE /api/admin/resources/external-links - Admin CRUD Tests
+// ============================================================================
+
+func TestAPI_Admin_ExternalLinks_CRUD(t *testing.T) {
+	testTitle := "E2E Test Portal Link"
+	testURL := "https://e2e-test-portal.gov.in"
+
+	// 1. Security: Attempt adding link without token -> 401
+	tests.RunAPITestWithDetails(t, "[Anonymous] POST External Link Without Auth", "Attempts adding external link without auth header.", "HTTP 401 Unauthorized", func(tctx *tests.TestContext) {
+		payload := map[string]string{
+			"title": testTitle,
+			"url":   testURL,
+		}
+		var resp map[string]interface{}
+		err := tctx.Client.SendHttpRequest("POST", "/api/admin/resources/external-links", nil, &payload, &resp, nil)
+		assertErrorStatus(tctx, err, http.StatusUnauthorized, "Authorization header required")
+	})
+
+	// 2. Admin adds new link -> 200 OK
+	tests.RunAPITestWithDetails(t, "[Admin] POST Add External Link", "Admin adds a new external link directly into CSV file.", "HTTP 200 OK", func(tctx *tests.TestContext) {
+		adminToken := getValidAdminToken(tctx.T, tctx.Client)
+		auth := &client.BearerTokenAuth{Token: adminToken}
+
+		payload := map[string]string{
+			"title": testTitle,
+			"url":   testURL,
+		}
+		var resp map[string]interface{}
+		err := tctx.Client.SendHttpRequest("POST", "/api/admin/resources/external-links", nil, &payload, &resp, auth)
+		if err != nil {
+			tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
+			tctx.Fatalf("Expected 200 OK, got: %v", err)
+		}
+		tctx.Actual = "HTTP 200 OK, External link added successfully"
+	})
+
+	// 3. Admin attempts adding duplicate link -> 409 Conflict
+	tests.RunAPITestWithDetails(t, "[Admin] POST Add Duplicate External Link", "Admin attempts adding link with existing title.", "HTTP 409 Conflict", func(tctx *tests.TestContext) {
+		adminToken := getValidAdminToken(tctx.T, tctx.Client)
+		auth := &client.BearerTokenAuth{Token: adminToken}
+
+		payload := map[string]string{
+			"title": testTitle,
+			"url":   testURL,
+		}
+		var resp map[string]interface{}
+		err := tctx.Client.SendHttpRequest("POST", "/api/admin/resources/external-links", nil, &payload, &resp, auth)
+		assertErrorStatus(tctx, err, http.StatusConflict, "already exists")
+	})
+
+	// 4. Member verifies link is in GET /api/resources/external-links
+	tests.RunAPITestWithDetails(t, "[Member] GET External Links Contains New Link", "Member fetches external links and verifies newly added link.", "HTTP 200 OK with new link", func(tctx *tests.TestContext) {
+		memberToken := getValidMemberToken(tctx.T, tctx.Client)
+		auth := &client.BearerTokenAuth{Token: memberToken}
+
+		var links []map[string]string
+		err := tctx.Client.SendHttpRequest("GET", "/api/resources/external-links", nil, nil, &links, auth)
+		if err != nil {
+			tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
+			tctx.Fatalf("Expected 200 OK, got: %v", err)
+		}
+
+		found := false
+		for _, l := range links {
+			if strings.EqualFold(l["title"], testTitle) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			tctx.FailureReason = fmt.Sprintf("New link '%s' not found in external links list", testTitle)
+			tctx.Fatalf("New link '%s' not found", testTitle)
+		}
+		tctx.Actual = fmt.Sprintf("HTTP 200 OK, found link '%s'", testTitle)
+	})
+
+	// 5. Admin deletes link -> 200 OK
+	tests.RunAPITestWithDetails(t, "[Admin] DELETE External Link", "Admin deletes the external link from the CSV file.", "HTTP 200 OK", func(tctx *tests.TestContext) {
+		adminToken := getValidAdminToken(tctx.T, tctx.Client)
+		auth := &client.BearerTokenAuth{Token: adminToken}
+
+		path := fmt.Sprintf("/api/admin/resources/external-links?title=%s", strings.ReplaceAll(testTitle, " ", "%20"))
+		var resp map[string]interface{}
+		err := tctx.Client.SendHttpRequest("DELETE", path, nil, nil, &resp, auth)
+		if err != nil {
+			tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
+			tctx.Fatalf("Expected 200 OK, got: %v", err)
+		}
+		tctx.Actual = "HTTP 200 OK, External link deleted successfully"
+	})
+
+	// 6. Admin deletes already deleted link -> 404 Not Found
+	tests.RunAPITestWithDetails(t, "[Admin] DELETE Already Deleted External Link", "Admin attempts deleting non-existent link.", "HTTP 404 Not Found", func(tctx *tests.TestContext) {
+		adminToken := getValidAdminToken(tctx.T, tctx.Client)
+		auth := &client.BearerTokenAuth{Token: adminToken}
+
+		path := fmt.Sprintf("/api/admin/resources/external-links?title=%s", strings.ReplaceAll(testTitle, " ", "%20"))
+		var resp map[string]interface{}
+		err := tctx.Client.SendHttpRequest("DELETE", path, nil, nil, &resp, auth)
+		assertErrorStatus(tctx, err, http.StatusNotFound, "not found")
+	})
+}

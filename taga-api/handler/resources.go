@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"net/http"
 	"os"
+	"strings"
 	"taga-api/config"
 	"taga-api/service"
 
@@ -132,7 +133,11 @@ func GetExternalLinks(c *gin.Context) {
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Unable to open CSV"})
+		if os.IsNotExist(err) {
+			c.JSON(http.StatusOK, []gin.H{})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to open CSV"})
 		return
 	}
 	defer file.Close()
@@ -141,11 +146,11 @@ func GetExternalLinks(c *gin.Context) {
 
 	records, err := reader.ReadAll()
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Unable to read CSV"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to read CSV"})
 		return
 	}
 
-	var links []gin.H
+	links := make([]gin.H, 0)
 
 	for i, row := range records {
 		if i == 0 {
@@ -156,11 +161,17 @@ func GetExternalLinks(c *gin.Context) {
 			continue
 		}
 
+		title := strings.TrimSpace(row[0])
+		url := strings.TrimSpace(row[1])
+		if title == "" || url == "" {
+			continue
+		}
+
 		links = append(links, gin.H{
-			"title": row[0],
-			"url":   row[1],
+			"title": title,
+			"url":   url,
 		})
 	}
 
-	c.JSON(200, links)
+	c.JSON(http.StatusOK, links)
 }
