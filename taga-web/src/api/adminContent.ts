@@ -217,6 +217,11 @@ export interface ResourceCategoryWithDocs {
 }
 
 export const uploadResource = async (resourceData: UploadResourceData): Promise<void> => {
+  // Client-side file size check (50MB limit)
+  if (resourceData.file && resourceData.file.size > 50 * 1024 * 1024) {
+    throw new Error('File size exceeds the 50MB limit. Please upload a smaller PDF file.');
+  }
+
   const formData = new FormData();
   formData.append('categoryId', resourceData.categoryId);
   formData.append('title', resourceData.title);
@@ -230,8 +235,20 @@ export const uploadResource = async (resourceData: UploadResourceData): Promise<
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to upload resource');
+    if (response.status === 413) {
+      throw new Error('File is too large for the server limit (Max: 50MB).');
+    }
+    if (response.status === 504) {
+      throw new Error('Upload timed out. Please check your network connection.');
+    }
+    let errorMessage = 'Failed to upload resource';
+    try {
+      const error = await response.json();
+      errorMessage = error.error || errorMessage;
+    } catch {
+      errorMessage = `Upload failed with status code ${response.status}`;
+    }
+    throw new Error(errorMessage);
   }
 };
 

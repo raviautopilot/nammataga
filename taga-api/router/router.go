@@ -26,6 +26,9 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
+	// Max multipart memory for file uploads (50MB)
+	r.MaxMultipartMemory = 50 << 20
+
 	// Load configuration
 	appCfg := config.GetConfig()
 	env := appCfg.Environment

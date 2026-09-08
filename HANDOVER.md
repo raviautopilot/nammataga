@@ -671,6 +671,9 @@ server {
     ssl_certificate /etc/letsencrypt/live/nammataga.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/nammataga.com/privkey.pem;
 
+    # Allow large resource/file uploads (up to 50MB)
+    client_max_body_size 50M;
+
     # Frontend SPA Proxy
     location / {
         proxy_pass http://127.0.0.1:1701;
@@ -685,6 +688,11 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Upload timeouts for large files
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
     }
 }
 ```
