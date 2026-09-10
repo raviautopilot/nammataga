@@ -38,36 +38,62 @@ type DataConfig struct {
 	Tower    TowerConfig     `json:"tower"`
 }
 
+type AdminUser struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 type AppConfig struct {
-	Port                  int        `json:"port"`
-	Environment           string     `json:"environment"`
-	LogLevel              string     `json:"log_level"`
-	LogFile               string     `json:"log_file"`
-	DisablePayment        bool       `json:"disable_payment"`
-	SMTPHost              string     `json:"smtp_host"`
-	SMTPPort              int        `json:"smtp_port"`
-	SMTPUsername          string     `json:"smtp_username"`
-	SMTPPassword          string     `json:"smtp_password"`
-	ResetPasswordURL      string     `json:"reset_password_url"`
-	FromEmail             string     `json:"from_email"`
-	AdminEmail            string     `json:"admin_email"`
-	CCEmail               string     `json:"cc_email"`
-	AdminPassword         string     `json:"admin_password"`
-	OfficeDir             string     `json:"office_dir"`
-	MembersFile           string     `json:"members_file"`
-	DeletedMembersFile    string     `json:"deleted_members_file"`
-	ProcessedPaymentsFile string     `json:"processed_payments_file"`
-	AboutFile             string     `json:"about_file"`
-	ContactFile           string     `json:"contact_file"`
-	ObjectivesFile        string     `json:"objectives_file"`
-	ServicesFile          string     `json:"services_file"`
-	StatsFile             string     `json:"stats_file"`
-	JwtSecret             string     `json:"jwt_secret"`
-	SessionDurationHours  int        `json:"session_duration_hours"`
-	AdminAPIKey           string     `json:"admin_api_key"`
-	RazorpayKey           string     `json:"-"`
-	RazorpaySecret        string     `json:"-"`
-	Data                  DataConfig `json:"data"`
+	Port                  int         `json:"port"`
+	Environment           string      `json:"environment"`
+	LogLevel              string      `json:"log_level"`
+	LogFile               string      `json:"log_file"`
+	DisablePayment        bool        `json:"disable_payment"`
+	SMTPHost              string      `json:"smtp_host"`
+	SMTPPort              int         `json:"smtp_port"`
+	SMTPUsername          string      `json:"smtp_username"`
+	SMTPPassword          string      `json:"smtp_password"`
+	ResetPasswordURL      string      `json:"reset_password_url"`
+	FromEmail             string      `json:"from_email"`
+	AdminEmail            string      `json:"admin_email"`
+	CCEmail               string      `json:"cc_email"`
+	AdminPassword         string      `json:"admin_password"`
+	Admins                []AdminUser `json:"admins"`
+	OfficeDir             string      `json:"office_dir"`
+	MembersFile           string      `json:"members_file"`
+	DeletedMembersFile    string      `json:"deleted_members_file"`
+	ProcessedPaymentsFile string      `json:"processed_payments_file"`
+	AboutFile             string      `json:"about_file"`
+	ContactFile           string      `json:"contact_file"`
+	ObjectivesFile        string      `json:"objectives_file"`
+	ServicesFile          string      `json:"services_file"`
+	StatsFile             string      `json:"stats_file"`
+	JwtSecret             string      `json:"jwt_secret"`
+	SessionDurationHours  int         `json:"session_duration_hours"`
+	AdminAPIKey           string      `json:"admin_api_key"`
+	RazorpayKey           string      `json:"-"`
+	RazorpaySecret        string      `json:"-"`
+	Data                  DataConfig  `json:"data"`
+}
+
+// ValidateAdminCredentials checks if the provided username and password match any configured admin
+func (c *AppConfig) ValidateAdminCredentials(username, password string) bool {
+	if username == "" || password == "" {
+		return false
+	}
+	// 1. Check against the new "admins" array
+	for _, admin := range c.Admins {
+		if admin.Username == username && admin.Password == password {
+			return true
+		}
+	}
+	// 2. Backward compatibility fallback for single admin_email & admin_password
+	if c.AdminEmail != "" && c.AdminPassword != "" {
+		if c.AdminEmail == username && c.AdminPassword == password {
+			return true
+		}
+	}
+	return false
 }
 
 var (
