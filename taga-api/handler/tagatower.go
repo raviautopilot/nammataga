@@ -349,18 +349,12 @@ type CreateOrderResponse struct {
 // @Success 200 {object} CreateOrderResponse
 // @Router /api/towers/create-order [post]
 func CreateOrder(c *gin.Context) {
-	razorpayKey := os.Getenv("RAZORPAY_KEY")
-	razorpaySecret := os.Getenv("RAZORPAY_SECRET")
+	bankConfig := config.GetBankGatewayConfig("room_booking")
+	razorpayKey := bankConfig.Key
+	razorpaySecret := bankConfig.Secret
 
-	if config.Config.DisablePayment {
-		if razorpayKey == "" {
-			razorpayKey = "mock_key"
-		}
-		if razorpaySecret == "" {
-			razorpaySecret = "mock_secret"
-		}
-	} else if razorpayKey == "" || razorpaySecret == "" {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Razorpay credentials not configured"})
+	if !config.Config.DisablePayment && (razorpayKey == "" || razorpaySecret == "") {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Razorpay credentials not configured for " + bankConfig.BankName})
 		return
 	}
 
@@ -400,7 +394,11 @@ func CreateOrder(c *gin.Context) {
 
 	// Build notes with room booking details
 	orderNotes := map[string]interface{}{
-		"payment_type": "room_booking",
+		"payment_type":  "room_booking",
+		"bank_name":     bankConfig.BankName,
+		"bank_id":       bankConfig.BankID,
+		"account_email": bankConfig.AccountEmail,
+		"notify_email":  bankConfig.NotifyEmail,
 	}
 
 	// Merge any additional notes from frontend (contains room details, guest details, etc.)
@@ -687,11 +685,13 @@ func VerifyPayment(c *gin.Context) {
 		return
 	}
 
+	bankConfig := config.GetBankGatewayConfig("room_booking")
+
 	isMock := config.Config.DisablePayment || strings.HasPrefix(req.OrderID, "mock_order_") || req.Signature == "mock_signature"
 	if isMock {
 		config.Logger.Info("Bypassing payment signature verification for mock payment", zap.String("order_id", req.OrderID))
 	} else {
-		razorpaySecret := os.Getenv("RAZORPAY_SECRET")
+		razorpaySecret := bankConfig.Secret
 		data := req.OrderID + "|" + req.PaymentID
 		h := hmac.New(sha256.New, []byte(razorpaySecret))
 		h.Write([]byte(data))
@@ -787,17 +787,16 @@ func VerifyPayment(c *gin.Context) {
 		// Send emails with retry mechanism
 		paymentID := req.PaymentID
 		if !hasEmailBeenSent(paymentID) {
-			// 1. Send to Admin
+			// 1. Send to Default Association Admin (always nammataga@gmail.com)
 			adminEmail := config.GetConfig().AdminEmail
-			if adminEmail != "" {
-				go sendEmailWithRetry(adminEmail, subject, emailBody, paymentID, "room_booking", 2)
-			} else {
-				config.Logger.Warn("Admin email not configured, skipping admin notification")
+			if adminEmail == "" {
+				adminEmail = "nammataga@gmail.com"
 			}
+			go sendEmailWithRetry(adminEmail, subject, emailBody, paymentID, "room_booking", 2)
 			
-			// 2. Send to Customer
+			// 2. Send to Customer with Reply-To set to the default admin email (nammataga@gmail.com)
 			if customerEmail != "" {
-				go sendEmailWithRetry(customerEmail, subject, emailBody, paymentID, "room_booking", 2)
+				go sendEmailWithReplyToAndRetry(customerEmail, adminEmail, subject, emailBody, paymentID, "room_booking", 2)
 			} else {
 				config.Logger.Warn("Customer email not found, skipping customer notification")
 			}

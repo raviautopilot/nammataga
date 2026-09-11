@@ -120,19 +120,25 @@ func isPaymentAlreadyProcessed(paymentID string) bool {
 	return exists
 }
 
-// verifyWebhookSignature verifies that the webhook came from Razorpay
+// verifyWebhookSignature verifies that the webhook came from Razorpay across any configured bank account
 func verifyWebhookSignature(payload []byte, signature string) bool {
-	razorpaySecret := os.Getenv("RAZORPAY_SECRET")
-	if razorpaySecret == "" {
-		config.Logger.Warn("RAZORPAY_SECRET not set, skipping webhook verification")
+	secrets := config.GetAllBankSecrets()
+	if len(secrets) == 0 {
+		config.Logger.Warn("No Razorpay secrets set, skipping webhook verification")
 		return true // Skip verification in development (not recommended for production)
 	}
 
-	h := hmac.New(sha256.New, []byte(razorpaySecret))
-	h.Write(payload)
-	expectedSignature := hex.EncodeToString(h.Sum(nil))
+	for _, secret := range secrets {
+		h := hmac.New(sha256.New, []byte(secret))
+		h.Write(payload)
+		expectedSignature := hex.EncodeToString(h.Sum(nil))
 
-	return hmac.Equal([]byte(signature), []byte(expectedSignature))
+		if hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // WebhookHandler handles Razorpay webhook events

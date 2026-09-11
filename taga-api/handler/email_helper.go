@@ -133,6 +133,11 @@ func saveFailedEmail(failed FailedEmail) {
 
 // sendEmailWithRetry sends email with retry mechanism
 func sendEmailWithRetry(to, subject, body string, paymentID, paymentType string, maxRetries int) {
+	sendEmailWithReplyToAndRetry(to, "", subject, body, paymentID, paymentType, maxRetries)
+}
+
+// sendEmailWithReplyToAndRetry sends email with custom reply-to header and retry mechanism
+func sendEmailWithReplyToAndRetry(to, replyTo, subject, body string, paymentID, paymentType string, maxRetries int) {
 	var lastErr error
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
@@ -140,9 +145,10 @@ func sendEmailWithRetry(to, subject, body string, paymentID, paymentType string,
 			zap.Int("attempt", attempt),
 			zap.String("payment_id", paymentID),
 			zap.String("to", to),
+			zap.String("reply_to", replyTo),
 		)
 
-		err := sendEmail(to, subject, body)
+		err := sendEmailWithReplyTo(to, replyTo, subject, body)
 		if err == nil {
 			// Success - save to sent payments
 			saveSentPayment(SentPayment{

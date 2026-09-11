@@ -282,7 +282,15 @@ The TAGA Towers engine manages **9 rooms / 35 total beds**:
 
 ---
 
-### 3.3 Payment Processing & Subscription Dues
+### 3.3 Payment Processing & Multi-Bank Routing Architecture
+
+The payment engine integrates with Razorpay to support **3 dedicated bank merchant accounts** based on the purpose of the transaction:
+
+| Bank Account | Purpose / Payment Categories | Razorpay Env Keys | Registered Bank Account Email | Admin Alert & Customer Reply-To |
+| :--- | :--- | :--- | :--- | :--- |
+| **Indian Bank** | Annual Subscription (`annual-subscription`), New Member Enrollment Fee (`new-member-enrollment-fee`) | `RAZORPAY_KEY_INDIAN_BANK`<br>`RAZORPAY_SECRET_INDIAN_BANK` | `nammataga@gmail.com` | `nammataga@gmail.com` |
+| **Union Bank** | TBF New Registration Fee (`tbf-new-registration`), TBF Additional Amount (`tbf-additional`) | `RAZORPAY_KEY_UNION_BANK`<br>`RAZORPAY_SECRET_UNION_BANK` | `tagatbf@gmail.com` | `nammataga@gmail.com` |
+| **Canara Bank** | Legal Fund (`legal-fund`), Donation (`donation`), Others (`others`), Room Booking (`room_booking`) | `RAZORPAY_KEY_CANARA_BANK`<br>`RAZORPAY_SECRET_CANARA_BANK` | `tagaothers@gmail.com` | `nammataga@gmail.com` |
 
 ```mermaid
 sequenceDiagram
@@ -290,21 +298,24 @@ sequenceDiagram
     actor Member as Member
     participant Web as Frontend UI
     participant API as Backend API
-    participant RZP as Razorpay Gateway
+    participant RZP as Razorpay Gateway (Multi-Bank)
     participant DB as processed_payments.json
+    participant Mail as Google SMTP
 
     Member->>Web: Select Subscription or Room Booking
-    Web->>API: POST /api/subscriptions/create-order OR /api/towers/create-order
-    API->>RZP: Create Order (Amount in Paise)
+    Web->>API: POST /api/subscription/create-order OR /api/taga-tower/create-order
+    API->>API: Resolve Bank Account (Indian Bank / Union Bank / Canara Bank)
+    API->>RZP: Create Order on Designated Bank Account (Paise)
     RZP-->>API: Returns order_id
-    API-->>Web: Return order_id & Razorpay Key
-    Web->>RZP: Open Razorpay Checkout Modal
+    API-->>Web: Return order_id & Bank Public Key
+    Web->>RZP: Open Razorpay Checkout Modal (routed to Bank)
     Member->>RZP: Completes UPI / NetBanking / Card Payment
     RZP-->>Web: Returns payment_id, order_id, signature
-    Web->>API: POST /api/subscriptions/verify-payment OR /api/towers/verify-payment
-    API->>API: Verify HMAC-SHA256(order_id + "|" + payment_id, secret)
+    Web->>API: POST /api/subscription/verify-payment OR /api/taga-tower/verify-payment
+    API->>API: Verify HMAC-SHA256(order_id + "|" + payment_id, bankSecret)
     alt Signature Valid
         API->>DB: Save Payment Record & Update Status
+        API->>Mail: Send Admin Notification & Customer Receipt (To Admin: nammataga@gmail.com, Customer Reply-To: nammataga@gmail.com)
         API-->>Web: Return Success
         Web-->>Member: Display Confirmation & Download Receipt
     else Signature Invalid / Tampered
@@ -314,24 +325,26 @@ sequenceDiagram
 
 ---
 
-### 3.4 Automated Email Relay & Routing Architecture
+### 3.4 Automated Email Relay & Centralized Admin Routing
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                      2-TIER EMAIL ARCHITECTURE                         │
-├──────────────────────────┬─────────────────────────────────────────────┤
-│ Outgoing Sender (SMTP)   │ appnammataga@gmail.com                      │
-│ From Display Header      │ Nammataga Association <appnammataga@gmail.com>│
-│ Reply-To Address         │ Nammataga Association <nammataga@gmail.com> │
-│ Admin Alerts & CC Copy   │ nammataga@gmail.com                         │
-│ Auto-Responder Status    │ 24/7 Vacation Auto-Reply ON                 │
-└──────────────────────────┴─────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                     CENTRALIZED ADMIN EMAIL & ROUTING ARCHITECTURE                     │
+├──────────────────────────┬─────────────────────────────────────────────────────────────┤
+│ Outgoing Sender (SMTP)   │ appnammataga@gmail.com (Google App Password authenticated)  │
+│ From Display Header      │ Nammataga Association <appnammataga@gmail.com>              │
+│ Reply-To Address         │ Nammataga Association <nammataga@gmail.com> (Central)       │
+│ Admin Notifications      │ nammataga@gmail.com (100% of all alerts arrive here)        │
+│ Central Audit CC Copy    │ nammataga@gmail.com (Always CC'ed on customer receipts)     │
+│ Auto-Responder Status    │ 24/7 Vacation Auto-Reply ON on appnammataga@gmail.com       │
+└──────────────────────────┴─────────────────────────────────────────────────────────────┘
 ```
 
 1. **Dedicated SMTP Bot (`appnammataga@gmail.com`):** Authenticates via Google App Password `wubfancfyylcxxno`. All system emails (resets, bookings, receipts) originate from here.
-2. **Smart Reply Routing (`Reply-To`):** Every email contains `Reply-To: nammataga@gmail.com`. When members click "Reply", their email client automatically routes directly to `nammataga@gmail.com`.
-3. **Audit Carbon Copy (`CC`):** `nammataga@gmail.com` is automatically CC'd on outgoing notifications, creating an indelible record in the association's inbox.
-4. **Auto-Reply Safety Net:** If anyone writes directly to `appnammataga@gmail.com`, Google's Vacation Auto-Responder immediately sends a polite notice directing them to `nammataga@gmail.com`.
+2. **Central Admin Inbox:** All payment alerts (Subscriptions, TBF, Room Bookings) and administrative notifications are routed strictly to `nammataga@gmail.com`.
+3. **Centralized Member Reply-To:** Member receipts specify `Reply-To: nammataga@gmail.com`, ensuring all member inquiries arrive at the central association inbox.
+4. **Indelible Central CC Record:** `nammataga@gmail.com` is automatically CC'ed on all member receipts, guaranteeing a unified audit trail without manual intervention.
+5. **Auto-Reply Safety Net:** If anyone writes directly to `appnammataga@gmail.com`, Google's Vacation Auto-Responder immediately sends a polite notice directing them to `nammataga@gmail.com`.
 
 ---
 
@@ -472,6 +485,46 @@ Configuration is managed via [`taga-api/config.json`](file:///home/sudhan_dev/Do
 }
 ```
 
+### Multi-Bank Payment Gateway Configuration (`.env` or `data/.env`)
+
+Payment transactions are partitioned into 3 distinct bank accounts / Razorpay merchant accounts based on the association purpose:
+
+```env
+# ------------------------------------------------------------------------------
+# 1. INDIAN BANK ACCOUNT
+# Purpose    : Annual Subscription & New Member Enrollment Fee
+# Bank Email : nammataga@gmail.com
+# Admin Alert: nammataga@gmail.com (Central Admin)
+# Customer Reply-To: nammataga@gmail.com
+# ------------------------------------------------------------------------------
+RAZORPAY_KEY_INDIAN_BANK=rzp_live_xxxxxxxxxxxxxx
+RAZORPAY_SECRET_INDIAN_BANK=xxxxxxxxxxxxxxxxxxxxxxxx
+
+# ------------------------------------------------------------------------------
+# 2. UNION BANK ACCOUNT
+# Purpose    : TBF New Registration Fee & TBF Additional Amount
+# Bank Email : tagatbf@gmail.com
+# Admin Alert: nammataga@gmail.com (Central Admin)
+# Customer Reply-To: nammataga@gmail.com
+# ------------------------------------------------------------------------------
+RAZORPAY_KEY_UNION_BANK=rzp_live_yyyyyyyyyyyyyy
+RAZORPAY_SECRET_UNION_BANK=yyyyyyyyyyyyyyyyyyyyyyyy
+
+# ------------------------------------------------------------------------------
+# 3. CANARA BANK ACCOUNT
+# Purpose    : Legal Fund, Donation, Others, and TAGA Towers Room Booking
+# Bank Email : tagaothers@gmail.com
+# Admin Alert: nammataga@gmail.com (Central Admin)
+# Customer Reply-To: nammataga@gmail.com
+# ------------------------------------------------------------------------------
+RAZORPAY_KEY_CANARA_BANK=rzp_live_zzzzzzzzzzzzzz
+RAZORPAY_SECRET_CANARA_BANK=zzzzzzzzzzzzzzzzzzzzzzzz
+
+# Fallback keys (used if any bank-specific key is omitted)
+RAZORPAY_KEY=rzp_live_xxxxxxxxxxxxxx
+RAZORPAY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
 ---
 
 ## 7. FUTURE CHANGES & IMPACT ANALYSIS RUNBOOK
@@ -582,16 +635,32 @@ If the domain moves (e.g., to a new government URL or custom domain):
 
 ---
 
-### 7.5 Rotating Razorpay Gateway Keys (Test to Live)
+### 7.5 Rotating Multi-Bank Razorpay Gateway Keys (Test to Live)
 
-When switching from Razorpay Test Mode to Live Production Mode:
-1. Obtain **Key ID** (`rzp_live_...`) and **Key Secret** from [Razorpay Dashboard](https://dashboard.razorpay.com/#/app/keys).
-2. Set in `taga-api/config.json` or `.env`:
+When switching each bank account from Razorpay Test Mode to Live Production Mode:
+1. Obtain the **Key ID** (`rzp_live_...`) and **Key Secret** for each bank account from the respective Razorpay merchant dashboards.
+2. In `taga-api/data/.env` (or server `.env`), replace the placeholder/test values with the live credentials:
    ```env
-   RAZORPAY_KEY=rzp_live_xxxxxxxxxxxxxx
-   RAZORPAY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+   # 1. Indian Bank (Annual Subscriptions & New Member Enrollment)
+   RAZORPAY_KEY_INDIAN_BANK=rzp_live_xxxxxxxxxxxxxx
+   RAZORPAY_SECRET_INDIAN_BANK=xxxxxxxxxxxxxxxxxxxxxxxx
+
+   # 2. Union Bank (TBF New Registration & Additional Amount)
+   RAZORPAY_KEY_UNION_BANK=rzp_live_yyyyyyyyyyyyyy
+   RAZORPAY_SECRET_UNION_BANK=yyyyyyyyyyyyyyyyyyyyyyyy
+
+   # 3. Canara Bank (Legal Fund, Donation, Others & Room Booking)
+   RAZORPAY_KEY_CANARA_BANK=rzp_live_zzzzzzzzzzzzzz
+   RAZORPAY_SECRET_CANARA_BANK=zzzzzzzzzzzzzzzzzzzzzzzz
    ```
-3. Update `taga-web/src/components/TAGATowers.tsx` and `MembersDashboard.tsx` to use the live Key ID.
+3. Restart the backend container:
+   ```bash
+   docker restart taga-api-prod
+   # Or in dev:
+   docker restart taga-api-dev
+   ```
+> [!NOTE]
+> **No Frontend Changes Needed!** The backend dynamically returns the respective bank's public key during order creation (`POST /api/subscription/create-order` and `POST /api/taga-tower/create-order`), allowing the Razorpay checkout modal to automatically route payments to the intended bank account without recompiling the web application.
 
 ---
 

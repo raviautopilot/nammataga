@@ -125,21 +125,17 @@ func CreateSubscriptionOrder(c *gin.Context) {
 	memberName := getMemberNameByEmail(req.Email)
 	memberTagaID := getMemberTagaIdByEmail(req.Email)
 
-	// Get Razorpay credentials from environment
-	razorpayKey := os.Getenv("RAZORPAY_KEY")
-	razorpaySecret := os.Getenv("RAZORPAY_SECRET")
+	// Get bank gateway credentials based on subscription ID
+	bankConfig := config.GetBankGatewayConfig(req.SubscriptionID)
+	razorpayKey := bankConfig.Key
+	razorpaySecret := bankConfig.Secret
 
-	// If payment is disabled, fallback to mock credentials if not set
-	if config.Config.DisablePayment {
-		if razorpayKey == "" {
-			razorpayKey = "mock_key"
-		}
-		if razorpaySecret == "" {
-			razorpaySecret = "mock_secret"
-		}
-	} else if razorpayKey == "" || razorpaySecret == "" {
-		config.Logger.Error("Razorpay credentials missing from environment")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Payment gateway not configured"})
+	if !config.Config.DisablePayment && (razorpayKey == "" || razorpaySecret == "") {
+		config.Logger.Error("Razorpay credentials missing for bank",
+			zap.String("bank", bankConfig.BankName),
+			zap.String("subscription_id", req.SubscriptionID),
+		)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Payment gateway not configured for " + bankConfig.BankName})
 		return
 	}
 
@@ -156,6 +152,10 @@ func CreateSubscriptionOrder(c *gin.Context) {
 		"member_name":       memberName,
 		"member_taga_id":    memberTagaID,
 		"payment_type":      "subscription",
+		"bank_name":         bankConfig.BankName,
+		"bank_id":           bankConfig.BankID,
+		"account_email":     bankConfig.AccountEmail,
+		"notify_email":      bankConfig.NotifyEmail,
 	}
 
 	// Merge any additional notes from frontend
@@ -234,18 +234,25 @@ func VerifySubscriptionPayment(c *gin.Context) {
 	}
 
 	// Verify signature using environment secret
+	// Get bank gateway configuration for this subscription
+	bankConfig := config.GetBankGatewayConfig(req.SubscriptionID)
+
+	// Verify signature using environment secret for this bank
 	isMock := config.Config.DisablePayment || strings.HasPrefix(req.OrderID, "mock_order_") || req.Signature == "mock_signature"
 	if isMock {
 		config.Logger.Info("Bypassing payment signature verification for mock payment", zap.String("order_id", req.OrderID))
 	} else {
-		razorpaySecret := os.Getenv("RAZORPAY_SECRET")
+		razorpaySecret := bankConfig.Secret
 		data := req.OrderID + "|" + req.PaymentID
 		h := hmac.New(sha256.New, []byte(razorpaySecret))
 		h.Write([]byte(data))
 		expectedSignature := hex.EncodeToString(h.Sum(nil))
 
 		if expectedSignature != req.Signature {
-			config.Logger.Error("Payment verification failed - invalid signature")
+			config.Logger.Error("Payment verification failed - invalid signature",
+				zap.String("bank", bankConfig.BankName),
+				zap.String("subscription_id", req.SubscriptionID),
+			)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Payment verification failed"})
 			return
 		}
@@ -383,17 +390,16 @@ func VerifySubscriptionPayment(c *gin.Context) {
 		emailBody := buildSubscriptionEmailBody(emailData)
 
 		// Send emails with retry mechanism (2 retries, 2 sec delay)
-		// 1. Send to Admin
+		// 1. Send to Default Association Admin (always nammataga@gmail.com)
 		adminEmail := config.GetConfig().AdminEmail
-		if adminEmail != "" {
-			go sendEmailWithRetry(adminEmail, subject, emailBody, paymentID, "subscription", 2)
-		} else {
-			config.Logger.Warn("Admin email not configured, skipping admin notification")
+		if adminEmail == "" {
+			adminEmail = "nammataga@gmail.com"
 		}
+		go sendEmailWithRetry(adminEmail, subject, emailBody, paymentID, "subscription", 2)
 
-		// 2. Send to Customer
+		// 2. Send to Customer with Reply-To set to the default admin email (nammataga@gmail.com)
 		if req.Email != "" {
-			go sendEmailWithRetry(req.Email, subject, emailBody, paymentID, "subscription", 2)
+			go sendEmailWithReplyToAndRetry(req.Email, adminEmail, subject, emailBody, paymentID, "subscription", 2)
 		} else {
 			config.Logger.Warn("Customer email not found, skipping customer notification")
 		}

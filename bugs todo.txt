@@ -1,0 +1,163 @@
+ ### 🚨 Critical Security Vulnerabilities
+
+  #### 1. Bypass of Razorpay Signature Verification in Production (Critical)
+
+  • Location: subscription_payment.go:241 & tagatower.go:690
+  • Code:
+    isMock := config.Config.DisablePayment || strings.HasPrefix(req.OrderID, "mock_order_") ||
+  req.Signature == "mock_signature"
+
+  • The Bug:
+  Because || (OR) is used without scoping to DisablePayment, even when running in live
+  production (DisablePayment == false), if any client sends razorpay_signature:
+  "mock_signature" or an order ID starting with mock_order_, isMock evaluates to true!
+  • Impact:
+  Anyone can forge a payment confirmation without paying a single rupee. The system will
+  bypass signature verification, mark their annual subscription as active, or confirm their
+  TAGA Towers room reservation for free.
+  ──────
+  #### 2. Price Tampering / No Amount Validation on Order Creation (High)
+
+  • Location: subscription_payment.go:82-140 & tagatower.go:366
+  • The Bug:
+      • In CreateSubscriptionOrder, fixed-rate subscriptions (e.g. annual-subscription which
+      is ₹3,500) do not validate that req.Amount == 350000. A user can modify the API
+      request to send amount: 100 (₹1) and get their annual membership activated.
+      • Negative or zero amounts are not rejected at the API level, causing unhandled 500
+      crashes from the Razorpay SDK.
+      • In CreateOrder (Room Booking), the server blindly creates a Razorpay order with
+      whatever req.Amount the frontend sends instead of verifying it matches the room's
+      calculated advance rate.
+
+  ──────
+  #### 3. Insecure Direct Object Reference (IDOR) on Booking Cancellation (High)
+
+  • Location: tagatower.go:190-203
+  • The Bug:
+  DELETE /api/towers/bookings/:id cancels the booking ID specified in the URL parameter, but
+  never checks whether the logged-in user owns that booking.
+  • Impact:
+  Any authenticated member can cancel other members' room reservations by guessing or
+  enumerating booking IDs. In addition, it cancels bookings that are already confirmed/paid
+  without any admin restriction.
+  ──────
+  ### ⚠️ Functional & Business Logic Bugs
+
+  #### 4. Active Membership Revoked When Member Makes a Donation or TBF Contribution (High)
+
+  • Location: Membership.tsx:481-486
+  • Code:
+    const updatedUser = {
+      ...user,
+      isPaid: selectedSubscription.id === 'annual-subscription',
+      subscription_active: selectedSubscription.id === 'annual-subscription'
+    };
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+
+  • The Bug:
+  If a member who has already paid their annual subscription (isPaid = true) later makes a
+  payment for TBF, Legal Fund, or Donation, selectedSubscription.id === 'annual-
+  subscription' evaluates to false.
+  • Impact:
+  The member's active paid status is immediately overwritten to false in their browser
+  session, revoking their membership access until they log out and log back in!
+  ──────
+  #### 5. Webhook Room Booking Amount Displayed in Paise Instead of Rupees (Medium)
+
+  • Location: tagatower.go:541 vs webhook.go:292
+  • The Bug:
+  In tagatower.go, buildRoomBookingEmailBody expects data.Amount in Rupees (amountInRupees
+  := float64(data.Amount)). However, when called from Razorpay Webhook, payment.Amount is in
+  Paise (e.g. 10000 paise for ₹100).
+  • Impact:
+  The booking confirmation email generated via webhook will display ₹ 10,000.00 instead of ₹
+  100.00.
+  ──────
+  #### 6. Duplicate Email Notifications When Webhooks are Active (Medium)
+
+  • Location: subscription_payment.go:370 & webhook.go:200
+  • The Bug:
+  When a member pays on the website:
+      1. /api/subscriptions/verify-payment verifies the signature and sends the payment
+      confirmation email.
+      2. A few seconds later, Razorpay sends a payment.captured webhook.
+      3. Because verify-payment saves to sentPayments in email_helper.go, but webhook.go
+      checks processedPayments in payments/processed_payments.json, the webhook does not
+      know an email was already sent and dispatches a second duplicate email to the admin.
+
+  ──────
+  #### 7. Webhook Does Not Update Database on Browser Disconnect (Medium)
+
+  • Location: webhook.go:230-328
+  • The Bug:
+  If a payer completes payment on Razorpay but closes their browser before the frontend
+  calls /api/subscriptions/verify-payment (e.g. power cut or closed tab), the webhook
+  arrives. But webhook.go only sends an email — it never writes to member_subscriptions.json
+  or activates the member in members.json, and never confirms the booking in bookings.json.
+  • Impact:
+  The member is charged, but their subscription or room booking remains unconfirmed in the
+  database.
+  ──────
+  #### 8. Concurrency Race Condition in member_subscriptions.json (Medium)
+
+  • Location: subscription_payment.go:602-615
+  • The Bug:
+  Unlike tagatower.go which uses bookingsLock.Lock(), saveMemberSubscription and
+  updatePaymentTransaction directly perform os.ReadFile followed by os.WriteFile without a
+  mutex.
+  • Impact:
+  If two members submit payments at the exact same millisecond, one write operation can
+  overwrite the other, permanently erasing a member's payment record from the JSON file.
+  ──────
+  #### 9. Context Key Mismatch for Booker Email in tagatower.go (Low)
+
+  • Location: tagatower.go:391 vs member_auth.go:51
+  • The Bug:
+  In MemberAuthMiddleware, the context stores the email as c.Set("member_email", email). In
+  CreateOrder (room booking), it looks for c.Get("email"). This lookup always returns nil.
+  (Frontend currently compensates by sending booker details in notes, but the fallback
+  lookup fails).
+  ──────
+  #### 10. Case-Sensitive Email Check on One-Time Fees (Low)
+
+  • Location: subscription_payment.go:63
+  • The Bug:
+  sub.MemberEmail == email is strictly case-sensitive. If a user enters Member@gmail.com on
+  their first payment and member@gmail.com on their second, hasMemberPaidOneTime will return
+  false, allowing duplicate one-time fee payments.
+  ──────
+  ### 📋 Summary Matrix
+
+   #  | Bug / Issue            | Sever… | Component               | Potential Consequence
+  ----|------------------------|--------|-------------------------|-------------------------
+   1  | mock_signature         | Critic | Backend                 | Free subscriptions and
+      | bypasses verification  | al     | (subscription_payment.g | room bookings
+      | in production          |        | o, tagatower.go)        |
+   2  | No price / amount      | High   | Backend                 | Paying ₹1 instead of
+      | validation on          |        | (subscription_payment.g | ₹3,500 for annual dues
+      | subscription orders    |        | o)                      |
+   3  | Insecure booking       | High   | Backend (tagatower.go)  | Members can cancel
+      | cancellation (IDOR)    |        |                         | others' bookings
+   4  | Membership revoked     | High   | Frontend                | Paid members get marked
+      | when making a donation |        | (Membership.tsx)        | unpaid upon donating
+      | / TBF                  |        |                         |
+   5  | Room booking webhook   | Medium | Backend (tagatower.go,  | Incorrect amount in
+      | email displays ₹10,000 |        | webhook.go)             | webhook emails
+      | for ₹100               |        |                         |
+   6  | Duplicate admin        | Medium | Backend (webhook.go)    | Admin gets 2 emails per
+      | notification emails on |        |                         | transaction
+      | webhook                |        |                         |
+   7  | Webhook fails to       | Medium | Backend (webhook.go)    | Paid transactions not
+      | update database        |        |                         | fulfilled if tab closes
+   8  | Unsynchronized file    | Medium | Backend                 | Overwritten / lost
+      | writes (no mutex)      |        | (subscription_payment.g | payment records under
+      |                        |        | o)                      | concurrent load
+   9  | Context key mismatch   | Low    | Backend (tagatower.go)  | Context fallback
+      | (email vs              |        |                         | returns empty string
+      | member_email)          |        |                         |
+   10 | Case-sensitive email   | Low    | Backend                 | Duplicate one-time fee
+      | comparison on one-time |        | (subscription_payment.g | payment if casing
+      | fees                   |        | o)                      | differs
+
+  Please review these findings. Whenever you are ready, let me know which ones you would
+  like addressed and I will proceed with the fixes.

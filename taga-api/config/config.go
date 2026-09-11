@@ -96,6 +96,170 @@ func (c *AppConfig) ValidateAdminCredentials(username, password string) bool {
 	return false
 }
 
+// Bank Account Constants
+const (
+	BankIndianBank = "indian_bank" // Annual Subscription & New Member Enrollment Fee
+	BankUnionBank  = "union_bank"  // TBF New Registration Fee & TBF Additional Amount
+	BankCanaraBank = "canara_bank" // Legal Fund, Donation, Others & Room Booking
+)
+
+type BankGatewayConfig struct {
+	BankID       string `json:"bank_id"`
+	BankName     string `json:"bank_name"`
+	Key          string `json:"key"`
+	Secret       string `json:"secret"`
+	AccountEmail string `json:"account_email"` // Registered Razorpay bank account email
+	NotifyEmail  string `json:"notify_email"`   // Admin notification email (always centralized to nammataga@gmail.com)
+}
+
+// GetBankGatewayConfig resolves the bank gateway configuration (Key, Secret, NotifyEmail)
+// for a given payment item (subscription ID or payment type).
+func GetBankGatewayConfig(paymentItemOrSubID string) BankGatewayConfig {
+	defaultKey := Config.RazorpayKey
+	if defaultKey == "" {
+		defaultKey = os.Getenv("RAZORPAY_KEY")
+	}
+	defaultSecret := Config.RazorpaySecret
+	if defaultSecret == "" {
+		defaultSecret = os.Getenv("RAZORPAY_SECRET")
+	}
+
+	adminEmail := Config.AdminEmail
+	if adminEmail == "" {
+		adminEmail = "nammataga@gmail.com"
+	}
+
+	// 1. Indian Bank: Annual Subscription & New Member Enrollment Fee
+	switch paymentItemOrSubID {
+	case "annual-subscription", "new-member-enrollment-fee":
+		key := os.Getenv("RAZORPAY_KEY_INDIAN_BANK")
+		if key == "" {
+			key = defaultKey
+		}
+		secret := os.Getenv("RAZORPAY_SECRET_INDIAN_BANK")
+		if secret == "" {
+			secret = defaultSecret
+		}
+		if Config.DisablePayment {
+			if key == "" {
+				key = "mock_key"
+			}
+			if secret == "" {
+				secret = "mock_secret"
+			}
+		}
+		return BankGatewayConfig{
+			BankID:       BankIndianBank,
+			BankName:     "Indian Bank",
+			Key:          key,
+			Secret:       secret,
+			AccountEmail: "nammataga@gmail.com",
+			NotifyEmail:  adminEmail,
+		}
+
+	// 2. Union Bank: TBF New Registration Fee & TBF Additional Amount
+	case "tbf-new-registration", "tbf-additional":
+		key := os.Getenv("RAZORPAY_KEY_UNION_BANK")
+		if key == "" {
+			key = defaultKey
+		}
+		secret := os.Getenv("RAZORPAY_SECRET_UNION_BANK")
+		if secret == "" {
+			secret = defaultSecret
+		}
+		if Config.DisablePayment {
+			if key == "" {
+				key = "mock_key"
+			}
+			if secret == "" {
+				secret = "mock_secret"
+			}
+		}
+		return BankGatewayConfig{
+			BankID:       BankUnionBank,
+			BankName:     "Union Bank",
+			Key:          key,
+			Secret:       secret,
+			AccountEmail: "tagatbf@gmail.com",
+			NotifyEmail:  adminEmail,
+		}
+
+	// 3. Canara Bank: Legal Fund, Donation, Others & Room Booking (TAGA Towers)
+	case "legal-fund", "donation", "others", "room_booking", "room-booking", "taga_tower":
+		key := os.Getenv("RAZORPAY_KEY_CANARA_BANK")
+		if key == "" {
+			key = defaultKey
+		}
+		secret := os.Getenv("RAZORPAY_SECRET_CANARA_BANK")
+		if secret == "" {
+			secret = defaultSecret
+		}
+		if Config.DisablePayment {
+			if key == "" {
+				key = "mock_key"
+			}
+			if secret == "" {
+				secret = "mock_secret"
+			}
+		}
+		return BankGatewayConfig{
+			BankID:       BankCanaraBank,
+			BankName:     "Canara Bank",
+			Key:          key,
+			Secret:       secret,
+			AccountEmail: "tagaothers@gmail.com",
+			NotifyEmail:  adminEmail,
+		}
+
+	default:
+		// Default fallback
+		key := defaultKey
+		secret := defaultSecret
+		if Config.DisablePayment {
+			if key == "" {
+				key = "mock_key"
+			}
+			if secret == "" {
+				secret = "mock_secret"
+			}
+		}
+		return BankGatewayConfig{
+			BankID:       "default",
+			BankName:     "Default Account",
+			Key:          key,
+			Secret:       secret,
+			AccountEmail: adminEmail,
+			NotifyEmail:  adminEmail,
+		}
+	}
+}
+
+// GetAllBankSecrets returns a list of unique webhook/payment secrets for signature verification across accounts
+func GetAllBankSecrets() []string {
+	secrets := make(map[string]bool)
+	if s := os.Getenv("RAZORPAY_SECRET_INDIAN_BANK"); s != "" {
+		secrets[s] = true
+	}
+	if s := os.Getenv("RAZORPAY_SECRET_UNION_BANK"); s != "" {
+		secrets[s] = true
+	}
+	if s := os.Getenv("RAZORPAY_SECRET_CANARA_BANK"); s != "" {
+		secrets[s] = true
+	}
+	if s := os.Getenv("RAZORPAY_SECRET"); s != "" {
+		secrets[s] = true
+	}
+	if Config.RazorpaySecret != "" {
+		secrets[Config.RazorpaySecret] = true
+	}
+
+	result := make([]string, 0, len(secrets))
+	for s := range secrets {
+		result = append(result, s)
+	}
+	return result
+}
+
 var (
 	Logger *zap.Logger
 	Config AppConfig
@@ -113,14 +277,17 @@ func Init() {
 }
 
 func loadEnv() {
-	envPath := ".env"
-
-	if _, err := os.Stat(envPath); err == nil {
-		err := godotenv.Load(envPath)
-		if err != nil {
-			fmt.Println("❌ Failed to load .env file")
+	envCandidates := []string{".env", "data/.env", "../data/.env", filepath.Join("..", ".env")}
+	loadedAny := false
+	for _, envPath := range envCandidates {
+		if _, err := os.Stat(envPath); err == nil {
+			if err := godotenv.Load(envPath); err == nil {
+				fmt.Printf("✅ Loaded environment from %s\n", envPath)
+				loadedAny = true
+			}
 		}
-	} else {
+	}
+	if !loadedAny {
 		fmt.Println("ℹ️ No .env file found, using system environment variables")
 	}
 }
