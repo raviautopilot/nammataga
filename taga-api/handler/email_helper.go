@@ -82,6 +82,7 @@ func saveSentPayment(payment SentPayment) {
 		return
 	}
 
+	// Save to sent_payments.json
 	data, err := json.MarshalIndent(payments, "", "  ")
 	if err != nil {
 		safeLogError("Failed to marshal sent payments", zap.Error(err))
@@ -91,6 +92,13 @@ func saveSentPayment(payment SentPayment) {
 	if err := os.WriteFile(sentPaymentsFile, data, 0644); err != nil {
 		safeLogError("Failed to save sent payments", zap.Error(err))
 	}
+
+	// Also record in processedPayments for webhook deduplication
+	saveProcessedPayment(ProcessedPayment{
+		PaymentID:   payment.PaymentID,
+		OrderID:     "",
+		ProcessedAt: payment.SentAt,
+	})
 }
 
 // hasEmailBeenSent checks if an email has already been sent for this payment

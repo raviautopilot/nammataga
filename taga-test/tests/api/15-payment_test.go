@@ -7,6 +7,7 @@ import (
 
 	"e2e-template/pkg/client"
 	"e2e-template/tests"
+	"taga-api/handler"
 )
 
 type SubOrderRequest struct {
@@ -289,5 +290,23 @@ func TestAPI_Payment_TowerPayments_TableDriven(t *testing.T) {
 				assertErrorStatus(tctx, err, tc.ExpectedStatus, "")
 			}
 		})
+	}
+}
+
+func TestWebhookDuplicatePrevention(t *testing.T) {
+	// Import handler helper functions
+	paymentID := "pay_test_dedup_123"
+
+	// 1. Verify initially not marked as sent or processed
+	if handler.IsPaymentProcessedOrSentForTest(paymentID) {
+		t.Fatalf("Test setup error: paymentID should not be marked as processed initially")
+	}
+
+	// 2. Simulate email verification saving sent payment
+	handler.SaveSentPaymentForTest(paymentID)
+
+	// 3. Verify that webhook handler deduplication check detects the payment as already handled
+	if !handler.IsPaymentProcessedOrSentForTest(paymentID) {
+		t.Errorf("Deduplication failure: webhook did not recognize paymentID %s as already processed after email dispatch", paymentID)
 	}
 }

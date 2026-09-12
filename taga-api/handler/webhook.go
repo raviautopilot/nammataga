@@ -97,18 +97,18 @@ func saveProcessedPayment(payment ProcessedPayment) {
 	// Ensure directory exists
 	dir := filepath.Dir(getProcessedPaymentsFile())
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		config.Logger.Error("Failed to create payments directory", zap.Error(err))
+		safeLogError("Failed to create payments directory", zap.Error(err))
 		return
 	}
 
 	data, err := json.MarshalIndent(payments, "", "  ")
 	if err != nil {
-		config.Logger.Error("Failed to marshal processed payments", zap.Error(err))
+		safeLogError("Failed to marshal processed payments", zap.Error(err))
 		return
 	}
 
 	if err := os.WriteFile(getProcessedPaymentsFile(), data, 0644); err != nil {
-		config.Logger.Error("Failed to write processed payments file", zap.Error(err))
+		safeLogError("Failed to write processed payments file", zap.Error(err))
 	}
 }
 
@@ -118,6 +118,18 @@ func isPaymentAlreadyProcessed(paymentID string) bool {
 	defer processedPaymentsLock.RUnlock()
 	_, exists := processedPayments[paymentID]
 	return exists
+}
+
+func IsPaymentProcessedOrSentForTest(paymentID string) bool {
+	return isPaymentAlreadyProcessed(paymentID) || hasEmailBeenSent(paymentID)
+}
+
+func SaveSentPaymentForTest(paymentID string) {
+	saveSentPayment(SentPayment{
+		PaymentID:   paymentID,
+		PaymentType: "test",
+		SentAt:      time.Now(),
+	})
 }
 
 // verifyWebhookSignature verifies that the webhook came from Razorpay across any configured bank account
@@ -196,9 +208,9 @@ func WebhookHandler(c *gin.Context) {
 		zap.Int("amount", payment.Amount),
 	)
 
-	// Check for duplicate payment
-	if isPaymentAlreadyProcessed(paymentID) {
-		config.Logger.Info("Payment already processed, skipping",
+	// Check for duplicate payment (either in processedPayments or sentPayments)
+	if isPaymentAlreadyProcessed(paymentID) || hasEmailBeenSent(paymentID) {
+		config.Logger.Info("Payment already processed or email already sent, skipping webhook duplicate",
 			zap.String("payment_id", paymentID))
 		c.JSON(http.StatusOK, gin.H{"message": "Already processed"})
 		return
