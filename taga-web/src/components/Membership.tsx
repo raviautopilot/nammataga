@@ -477,11 +477,12 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
               setPaidSubscriptions(prev => new Set([...prev, selectedSubscription.id]));
             }
 
-            // 🔥 Only mark as paid if Annual Subscription was paid
+            // 🔥 Keep existing isPaid / subscription_active status, or activate if paying Annual Subscription
+            const isAnnual = selectedSubscription.id === 'annual-subscription';
             const updatedUser = {
               ...user,
-              isPaid: selectedSubscription.id === 'annual-subscription',
-              subscription_active: selectedSubscription.id === 'annual-subscription'
+              isPaid: isAnnual ? true : (user?.isPaid ?? false),
+              subscription_active: isAnnual ? true : (user?.subscription_active ?? false)
             };
             localStorage.setItem("user", JSON.stringify(updatedUser));
 

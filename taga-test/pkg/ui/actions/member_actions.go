@@ -391,6 +391,68 @@ func PayAnnualSubscription(mai MemberActionsInterface, cfg *config.Config, r *Re
 	r.Advice = append(r.Advice, "Successfully completed mock annual subscription payment.")
 }
 
+// PayNonAnnualContribution navigates to the subscription page and makes a non-annual contribution (e.g. Legal Fund / Donation / TBF).
+func PayNonAnnualContribution(mai MemberActionsInterface, cfg *config.Config, subscriptionID string, r *Result) {
+	actionName := fmt.Sprintf("Pay Non-Annual Contribution (%s)", subscriptionID)
+	r.Actions = append(r.Actions, actionName)
+	if r.Failed() {
+		r.Advice = append(r.Advice, fmt.Sprintf("Skipped '%s' because a previous step failed", actionName))
+		return
+	}
+
+	mp := mai.GetMemberPersona()
+
+	// 1. Navigate to Profile / Membership Page
+	if err := mp.Page.ClickByTestID("testid-membership-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-membership-button' element exists")
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	// 2. Switch to Subscriptions Tab
+	if err := mp.Page.ClickByTestID("testid-member-subscriptions-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-member-subscriptions-button' exists in Membership tabs")
+		return
+	}
+
+	// 3. Click 'Pay Now' or 'Contribute' for the non-annual subscription
+	payBtnID := fmt.Sprintf("testid-pay-now-%s-button", subscriptionID)
+	if err := mp.Page.ClickByTestID(payBtnID, mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, fmt.Sprintf("Advice: Verify '%s' exists", payBtnID))
+		return
+	}
+	r.WaitForElementAndCapture(mp.Page, "css:[role='dialog']", 5 * time.Second, "Contribution_Payment_Modal_Opened")
+
+	// 4. Fill custom amount if input is present (e.g. for Donation, Legal Fund, TBF)
+	customInputID := "testid-membership-custom-amount-input"
+	checkCustomScript := fmt.Sprintf(`return !!document.querySelector('[data-testid="%s"]');`, customInputID)
+	hasCustomInput, _ := mp.Page.Driver.ExecuteScript(checkCustomScript, nil)
+	if hasCustomInput == true {
+		_ = mp.Page.SendKeysByTestID(customInputID, "500", mp.DefaultTimeout)
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	// 5. Inject Mock Razorpay
+	mp.Page.InjectMockRazorpay()
+
+	// 6. Click Proceed to Pay
+	if err := mp.Page.ClickByTestID("testid-membership-payment-submit-button", mp.DefaultTimeout); err != nil {
+		r.Status = "failed"
+		r.Error = err
+		r.Advice = append(r.Advice, "Advice: Verify 'testid-membership-payment-submit-button' exists in modal")
+		return
+	}
+
+	time.Sleep(3 * time.Second)
+	r.CaptureScreenshot(mp.Page, fmt.Sprintf("Contribution_%s_Paid", subscriptionID))
+}
+
 // LogoutMember logs out the member persona.
 func LogoutMember(mai MemberActionsInterface, cfg *config.Config, r *Result) {
 	actionName := "Logout Member"
