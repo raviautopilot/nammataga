@@ -368,6 +368,25 @@ func CreateOrder(c *gin.Context) {
 		return
 	}
 
+	// Validate room booking amount if booking_id is provided in notes
+	if req.Notes != nil {
+		if bookingID, ok := req.Notes["booking_id"].(string); ok && bookingID != "" {
+			booking, err := service.GetBookingByID(bookingID)
+			if err == nil && booking != nil {
+				expectedAmountPaise := booking.AdvanceAmount * 100
+				if req.Amount != expectedAmountPaise {
+					config.Logger.Warn("Mismatched room booking order amount",
+						zap.String("booking_id", bookingID),
+						zap.Int("expected_paise", expectedAmountPaise),
+						zap.Int("received_paise", req.Amount),
+					)
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid room booking advance amount"})
+					return
+				}
+			}
+		}
+	}
+
 	// Get member details for notes from context (set by middleware)
 	bookerName := c.GetString("bookerName")
 	if bookerName == "" {

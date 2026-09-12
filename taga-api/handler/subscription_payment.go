@@ -93,7 +93,13 @@ func CreateSubscriptionOrder(c *gin.Context) {
 		zap.String("email", req.Email),
 	)
 
-	// Load subscription metadata to know if it's one‑time and get subscription name
+	// Validate positive amount
+	if req.Amount <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid amount"})
+		return
+	}
+
+	// Load subscription metadata to know if it's one‑time, get subscription name, and check fixed rate
 	var subscriptionsMeta []map[string]interface{}
 	subsFile := config.Config.Data.Config.SubscriptionType
 	metaData, err := os.ReadFile(subsFile)
@@ -110,6 +116,23 @@ func CreateSubscriptionOrder(c *gin.Context) {
 			}
 			if name, ok := sub["name"].(string); ok && name != "" {
 				subscriptionName = name
+			}
+
+			// Validate fixed-rate subscription amounts (amount is in Rupees in config, req.Amount is in paise)
+			allowCustom, _ := sub["allowCustomAmount"].(bool)
+			if !allowCustom {
+				if expectedAmtFloat, ok := sub["amount"].(float64); ok && expectedAmtFloat > 0 {
+					expectedAmtPaise := int(expectedAmtFloat * 100)
+					if req.Amount != expectedAmtPaise {
+						config.Logger.Warn("Mismatched subscription amount",
+							zap.String("subscription_id", req.SubscriptionID),
+							zap.Int("expected_paise", expectedAmtPaise),
+							zap.Int("received_paise", req.Amount),
+						)
+						c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid subscription amount"})
+						return
+					}
+				}
 			}
 			break
 		}

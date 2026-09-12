@@ -47,11 +47,24 @@ func TestAPI_Payment_SubscriptionPayment_TableDriven(t *testing.T) {
 			AuthType:    "member",
 			Payload: &SubOrderRequest{
 				SubscriptionID: "annual-subscription",
-				Amount:         3500,
+				Amount:         350000,
 				Email:          "sudhantest08@gmail.com",
 			},
 			ExpectedStatus: http.StatusOK,
 			ExpectedSub:    "orderId",
+		},
+		{
+			Name:        "Validation - Tampered Subscription Amount (₹1 for ₹3500 Plan)",
+			Persona:     "Authenticated Member",
+			Description: "Attempts to create an order sending 100 paise (₹1) for a fixed ₹3,500 plan.",
+			AuthType:    "member",
+			Payload: &SubOrderRequest{
+				SubscriptionID: "annual-subscription",
+				Amount:         100,
+				Email:          "sudhantest08@gmail.com",
+			},
+			ExpectedStatus: http.StatusBadRequest,
+			ExpectedSub:    "Invalid subscription amount",
 		},
 		{
 			Name:           "Security - Create Order Unauthenticated",
