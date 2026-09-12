@@ -201,6 +201,7 @@ func DeleteBooking(c *gin.Context) {
 	authBookerID := c.GetString("bookerID")
 	authEmail, _ := c.Get("member_email")
 	authRole, _ := c.Get("role")
+	authUsername, _ := c.Get("username")
 
 	isOwner := false
 	if authMemberID != nil && authMemberID.(string) != "" {
@@ -220,7 +221,8 @@ func DeleteBooking(c *gin.Context) {
 		}
 	}
 
-	isAdmin := authRole != nil && (authRole.(string) == "admin" || authRole.(string) == "superadmin")
+	isAdmin := (authRole != nil && (authRole.(string) == "admin" || authRole.(string) == "superadmin")) ||
+		(authUsername != nil && authUsername.(string) != "")
 
 	if !isOwner && !isAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You are not authorized to cancel this booking"})
