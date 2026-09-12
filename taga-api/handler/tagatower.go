@@ -192,13 +192,44 @@ func DeleteBooking(c *gin.Context) {
 
 	booking, err := service.GetBookingByID(bookingID)
 	if err != nil {
-		c.JSON(404, gin.H{"error": "Booking not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Booking not found"})
+		return
+	}
+
+	// IDOR Protection: Check ownership or admin privileges
+	authMemberID, _ := c.Get("member_id")
+	authBookerID := c.GetString("bookerID")
+	authEmail, _ := c.Get("member_email")
+	authRole, _ := c.Get("role")
+
+	isOwner := false
+	if authMemberID != nil && authMemberID.(string) != "" {
+		memID := authMemberID.(string)
+		tagaID := getMemberTagaIdByUUID(memID)
+		if memID == booking.BookerID || tagaID == booking.BookerID {
+			isOwner = true
+		}
+	}
+	if !isOwner && authBookerID != "" && authBookerID == booking.BookerID {
+		isOwner = true
+	}
+	if !isOwner && authEmail != nil && authEmail.(string) != "" {
+		tagaID := getMemberTagaIdByEmail(authEmail.(string))
+		if tagaID != "" && tagaID == booking.BookerID {
+			isOwner = true
+		}
+	}
+
+	isAdmin := authRole != nil && (authRole.(string) == "admin" || authRole.(string) == "superadmin")
+
+	if !isOwner && !isAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not authorized to cancel this booking"})
 		return
 	}
 
 	err = service.CancelBooking(bookingID)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -209,7 +240,7 @@ func DeleteBooking(c *gin.Context) {
 		fmt.Sprintf("Member %s (ID: %s) cancelled room booking %s", booking.BookerName, booking.BookerID, booking.ID),
 		booking, nil)
 
-	c.JSON(200, gin.H{"message": "Booking cancelled"})
+	c.JSON(http.StatusOK, gin.H{"message": "Booking cancelled"})
 }
 
 /* ---------------------------

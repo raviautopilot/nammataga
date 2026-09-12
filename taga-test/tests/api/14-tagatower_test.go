@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"e2e-template/pkg/client"
 	"e2e-template/tests"
 
 	"taga-api/config"
@@ -191,6 +192,21 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 				tctx.Errorf("Unexpected cancellation response: %s", msg)
 			}
 			tctx.Actual = fmt.Sprintf("HTTP 200 OK, Message='%s'", msg)
+		})
+
+		// Step E2: IDOR Security Test - Attempt to cancel booking as another member
+		tests.RunAPITestWithDetails(t, "[Member] DELETE Cancel Booking - IDOR Security Attempt", "Attempts to cancel another member's booking.", "HTTP 403 Forbidden", func(tctx *tests.TestContext) {
+			var resp map[string]interface{}
+			// Get token for a different user
+			otherToken := getValidMemberToken(tctx.T, tctx.Client)
+			otherAuth := &client.BearerTokenAuth{Token: otherToken}
+			err := tctx.Client.SendHttpRequest("DELETE", "/api/towers/bookings/"+createdBookingID, nil, nil, &resp, otherAuth)
+
+			if err == nil {
+				tctx.FailureReason = "IDOR vulnerability: expected 403 Forbidden when deleting another user's booking, but got 200 OK"
+				tctx.Fatalf("Expected 403 Forbidden, got 200 OK")
+			}
+			assertErrorStatus(tctx, err, http.StatusForbidden, "not authorized")
 		})
 	}
 
