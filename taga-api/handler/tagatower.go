@@ -589,8 +589,12 @@ func getMemberNameByTagaID(tagaID string) string {
 	return ""
 }
 
+func BuildRoomBookingEmailBodyForTest(data AdminRoomBookingData) string {
+	return buildRoomBookingEmailBody(data)
+}
+
 func buildRoomBookingEmailBody(data AdminRoomBookingData) string {
-	amountInRupees := float64(data.Amount)
+	amountInRupees := float64(data.Amount) / 100.0
 
 	var body strings.Builder
 
@@ -807,7 +811,7 @@ func VerifyPayment(c *gin.Context) {
 			BookingID:     req.BookingID,
 			PaymentID:     req.PaymentID,
 			OrderID:       req.OrderID,
-			Amount:        booking.AdvanceAmount,
+			Amount:        booking.AdvanceAmount * 100,
 			CustomerEmail: customerEmail, 
 			CustomerPhone: booking.BookerPhone,
 			RoomName:      roomName,

@@ -14,6 +14,7 @@ import (
 	"e2e-template/tests"
 
 	"taga-api/config"
+	"taga-api/handler"
 	"taga-api/model"
 	"taga-api/service"
 )
@@ -711,6 +712,35 @@ func TestAPI_Tower_MixedGenderRulesAndAdvanceCalculation(t *testing.T) {
 		t.Errorf("kurinchi room not found in GetAllRooms")
 	}
 	if !pasumaiFound {
-		t.Errorf("pasumai room not found in GetAllRooms")
+		t.Errorf("pasumaiFound room not found in GetAllRooms")
+	}
+}
+
+func TestRoomBookingEmailAmountConversion(t *testing.T) {
+	// Test data with Amount in paise (10000 paise = ₹100.00)
+	emailData := handler.AdminRoomBookingData{
+		BookingID:     "BK123456",
+		PaymentID:     "pay_test123",
+		OrderID:       "order_test123",
+		Amount:        10000, // 10000 paise = ₹ 100.00
+		CustomerEmail: "test@example.com",
+		CustomerPhone: "9876543210",
+		RoomName:      "Apex Suite",
+		BedCount:      1,
+		CheckInDate:   "2026-10-01",
+		CheckOutDate:  "2026-10-02",
+		BookerName:    "Test Booker",
+		BookerTagaID:  "TAGA123",
+		BookerPhone:   "9876543210",
+		BookingFor:    "self",
+	}
+
+	emailBody := handler.BuildRoomBookingEmailBodyForTest(emailData)
+
+	if !strings.Contains(emailBody, "₹ 100.00") {
+		t.Errorf("Expected email body to display '₹ 100.00' for 10000 paise, got body containing wrong amount")
+	}
+	if strings.Contains(emailBody, "₹ 10000.00") {
+		t.Errorf("Vulnerability detected: email body displayed amount in paise (₹ 10000.00) instead of Rupees")
 	}
 }
