@@ -38,8 +38,12 @@ func checkAnnualSubscriptionStatus(memberID string) bool {
 
 
 	tagaId := getMemberTagaIdByUUID(memberID)
+	memberEmail := getMemberEmailByUUID(memberID)
 	cfg := config.GetConfig()
 	subsFile := filepath.Join(filepath.Dir(cfg.MembersFile), "..", "subscriptions", "member_subscriptions.json")
+	if _, err := os.Stat(subsFile); os.IsNotExist(err) {
+		subsFile = getMemberSubscriptionsFilePath()
+	}
 
 	data, err := os.ReadFile(subsFile)
 	if err != nil {
@@ -54,7 +58,11 @@ func checkAnnualSubscriptionStatus(memberID string) bool {
 	}
 
 	for _, sub := range subscriptions {
-		if sub.MemberID == tagaId &&
+		matchesMember := (tagaId != "" && sub.MemberID == tagaId) ||
+			(memberID != "" && sub.MemberID == memberID) ||
+			(memberEmail != "" && strings.EqualFold(sub.MemberEmail, memberEmail))
+
+		if matchesMember &&
 			sub.SubscriptionID == "annual-subscription" &&
 			sub.Status == "active" {
 			graceEnd := sub.EndDate.AddDate(0, 2, 0)

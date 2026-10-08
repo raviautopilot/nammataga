@@ -741,12 +741,6 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-1">
                             <h3 className="text-base font-semibold text-gray-900">{sub.name}</h3>
-                            {!isPaid && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs">
-                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                                Not Paid
-                              </span>
-                            )}
                           </div>
                           <p className="text-sm text-gray-500 mb-3">{sub.description}</p>
                         </div>

@@ -17,6 +17,7 @@ import (
 	"taga-api/handler"
 	"taga-api/model"
 	"taga-api/service"
+	"taga-api/service/jwt"
 )
 
 type BookingGuestDetail struct {
@@ -80,19 +81,24 @@ func TestAPI_Tower_RoomsAndAvailability_TableDriven(t *testing.T) {
 
 	for _, tc := range cases {
 		tc := tc
-		tests.RunAPITestWithDetails(t, "[Public] "+tc.Name, tc.Description, tc.Expected, func(tctx *tests.TestContext) {
+		tests.RunAPITestWithDetails(t, "[Member] "+tc.Name, tc.Description, tc.Expected, func(tctx *tests.TestContext) {
 			var resp interface{}
 			var errResp map[string]interface{}
-			
+			memberToken, _, err := jwt.GenerateMemberToken("d11348e1-9a65-4945-bb1b-f100a5df15cg", "sudhantest08@gmail.com", "Sudhan Test")
+			if err != nil {
+				tctx.Fatalf("Failed to generate member token: %v", err)
+			}
+			memberAuth := &client.BearerTokenAuth{Token: memberToken}
+
 			if tc.ExpectedStatus == http.StatusOK {
-				err := tctx.Client.SendHttpRequest("GET", tc.Path, nil, nil, &resp, nil)
+				err := tctx.Client.SendHttpRequest("GET", tc.Path, nil, nil, &resp, memberAuth)
 				if err != nil {
 					tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
 					tctx.Fatalf("Expected 200 OK, got: %v", err)
 				}
 				tctx.Actual = "HTTP 200 OK, Retrieved availability data"
 			} else {
-				err := tctx.Client.SendHttpRequest("GET", tc.Path, nil, nil, &errResp, nil)
+				err := tctx.Client.SendHttpRequest("GET", tc.Path, nil, nil, &errResp, memberAuth)
 				assertErrorStatus(tctx, err, tc.ExpectedStatus, "")
 			}
 		})
@@ -105,6 +111,12 @@ func TestAPI_Tower_RoomsAndAvailability_TableDriven(t *testing.T) {
 
 func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 	var createdBookingID string
+
+	memberToken, _, err := jwt.GenerateMemberToken("d11348e1-9a65-4945-bb1b-f100a5df15cg", "sudhantest08@gmail.com", "Sudhan Test")
+	if err != nil {
+		t.Fatalf("Failed to generate member token: %v", err)
+	}
+	memberAuth := &client.BearerTokenAuth{Token: memberToken}
 
 	// Step A: Create Booking (Happy Path)
 	tests.RunAPITestWithDetails(t, "[Member] POST Create Booking - Happy Path", "Creates a room booking for gents-dorm.", "HTTP 201 Created with booking details", func(tctx *tests.TestContext) {
@@ -122,7 +134,7 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 		}
 
 		var resp map[string]interface{}
-		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, nil)
+		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, memberAuth)
 
 		if err != nil {
 			tctx.FailureReason = fmt.Sprintf("Expected 201 Created, got: %v", err)
@@ -142,7 +154,7 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 	if createdBookingID != "" {
 		tests.RunAPITestWithDetails(t, "[Member] GET User Bookings List", "Retrieves active bookings list for the current member.", "HTTP 200 OK containing booking list", func(tctx *tests.TestContext) {
 			var resp []interface{}
-			err := tctx.Client.SendHttpRequest("GET", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, nil, &resp, nil)
+			err := tctx.Client.SendHttpRequest("GET", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, nil, &resp, memberAuth)
 
 			if err != nil {
 				tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
@@ -155,7 +167,7 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 		tests.RunAPITestWithDetails(t, "[Member] POST Confirm Payment", "Confirms payment for the newly created room booking.", "HTTP 200 OK", func(tctx *tests.TestContext) {
 			var resp map[string]interface{}
 			confirmPayload := map[string]string{"upiId": "test-upi-id"}
-			err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings/"+createdBookingID+"/confirm-payment", nil, &confirmPayload, &resp, nil)
+			err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings/"+createdBookingID+"/confirm-payment", nil, &confirmPayload, &resp, memberAuth)
 
 			if err != nil {
 				tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
@@ -168,7 +180,9 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 	// Step D: Admin Get All Bookings
 	tests.RunAPITestWithDetails(t, "[Admin] GET Admin Bookings Catalog", "Admin lists all tower bookings.", "HTTP 200 OK with all bookings array", func(tctx *tests.TestContext) {
 		var resp []interface{}
-		err := tctx.Client.SendHttpRequest("GET", "/api/towers/admin/bookings", nil, nil, &resp, nil)
+		adminToken := getValidAdminToken(tctx.T, tctx.Client)
+		adminAuth := &client.BearerTokenAuth{Token: adminToken}
+		err := tctx.Client.SendHttpRequest("GET", "/api/towers/admin/bookings", nil, nil, &resp, adminAuth)
 
 		if err != nil {
 			tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
@@ -177,11 +191,28 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 		tctx.Actual = fmt.Sprintf("HTTP 200 OK, Admin retrieved %d total bookings", len(resp))
 	})
 
-	// Step E: Cancel/Delete Booking
 	if createdBookingID != "" {
+		// Step E1: IDOR Security Test - Attempt to cancel booking as another member
+		tests.RunAPITestWithDetails(t, "[Member] DELETE Cancel Booking - IDOR Security Attempt", "Attempts to cancel another member's booking.", "HTTP 403 Forbidden", func(tctx *tests.TestContext) {
+			var resp map[string]interface{}
+			otherToken, _, genErr := jwt.GenerateMemberToken("other-uuid-9999", "other_victim@nammataga.com", "Other Member")
+			if genErr != nil {
+				tctx.Fatalf("Failed to generate token for other member: %v", genErr)
+			}
+			otherAuth := &client.BearerTokenAuth{Token: otherToken}
+			httpErr := tctx.Client.SendHttpRequest("DELETE", "/api/towers/bookings/"+createdBookingID, nil, nil, &resp, otherAuth)
+
+			if httpErr == nil {
+				tctx.FailureReason = "IDOR vulnerability: expected 403 Forbidden when deleting another user's booking, but got 200 OK"
+				tctx.Fatalf("Expected 403 Forbidden, got 200 OK")
+			}
+			assertErrorStatus(tctx, httpErr, http.StatusForbidden, "not authorized")
+		})
+
+		// Step E2: Cancel/Delete Booking (Legitimate Owner)
 		tests.RunAPITestWithDetails(t, "[Member] DELETE Cancel Booking", "Cancels/Deletes the booking reservation.", "HTTP 200 OK with success message", func(tctx *tests.TestContext) {
 			var resp map[string]interface{}
-			err := tctx.Client.SendHttpRequest("DELETE", "/api/towers/bookings/"+createdBookingID, nil, nil, &resp, nil)
+			err := tctx.Client.SendHttpRequest("DELETE", "/api/towers/bookings/"+createdBookingID, nil, nil, &resp, memberAuth)
 
 			if err != nil {
 				tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
@@ -194,27 +225,12 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 			}
 			tctx.Actual = fmt.Sprintf("HTTP 200 OK, Message='%s'", msg)
 		})
-
-		// Step E2: IDOR Security Test - Attempt to cancel booking as another member
-		tests.RunAPITestWithDetails(t, "[Member] DELETE Cancel Booking - IDOR Security Attempt", "Attempts to cancel another member's booking.", "HTTP 403 Forbidden", func(tctx *tests.TestContext) {
-			var resp map[string]interface{}
-			// Get token for a different user
-			otherToken := getValidMemberToken(tctx.T, tctx.Client)
-			otherAuth := &client.BearerTokenAuth{Token: otherToken}
-			err := tctx.Client.SendHttpRequest("DELETE", "/api/towers/bookings/"+createdBookingID, nil, nil, &resp, otherAuth)
-
-			if err == nil {
-				tctx.FailureReason = "IDOR vulnerability: expected 403 Forbidden when deleting another user's booking, but got 200 OK"
-				tctx.Fatalf("Expected 403 Forbidden, got 200 OK")
-			}
-			assertErrorStatus(tctx, err, http.StatusForbidden, "not authorized")
-		})
 	}
 
 	// Step F: Validation Failure - Empty Booking Request
 	tests.RunAPITestWithDetails(t, "[Member] POST Create Booking - Empty Payload", "Submits empty payload causing binding validation failure.", "HTTP 400 Bad Request", func(tctx *tests.TestContext) {
 		var resp map[string]interface{}
-		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings", nil, &TowerCreateBookingRequest{}, &resp, nil)
+		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings", nil, &TowerCreateBookingRequest{}, &resp, memberAuth)
 
 		assertErrorStatus(tctx, err, http.StatusBadRequest, "")
 	})
@@ -228,9 +244,10 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 			BookerPhone:  "9944637254",
 			BookingFor:   "self",
 			BedCount:     1,
+			Gender:       "male",
 		}
 		var resp map[string]interface{}
-		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, nil)
+		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, memberAuth)
 		assertErrorStatus(tctx, err, http.StatusBadRequest, "")
 	})
 
@@ -243,9 +260,10 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 			BookerPhone:  "9944637254",
 			BookingFor:   "self",
 			BedCount:     1,
+			Gender:       "male",
 		}
 		var resp map[string]interface{}
-		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, nil)
+		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, memberAuth)
 		assertErrorStatus(tctx, err, http.StatusBadRequest, "")
 	})
 
@@ -258,30 +276,33 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 			BookerPhone:  "9944637254",
 			BookingFor:   "self",
 			BedCount:     1,
+			Gender:       "male",
 		}
 		var resp map[string]interface{}
-		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, nil)
+		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, memberAuth)
 		assertErrorStatus(tctx, err, http.StatusBadRequest, "")
 	})
 
 	// Step J: Overlapping Booking
 	tests.RunAPITestWithDetails(t, "[Member] POST Create Booking - Overlapping", "Attempts to book a room that overlaps with an existing booking.", "HTTP 400 Bad Request or 409 Conflict", func(tctx *tests.TestContext) {
-		// 1. Create a valid booking
+		// 1. Create a valid booking occupying all beds (ladies-dorm has 8 beds)
 		payload1 := &TowerCreateBookingRequest{
 			RoomID:       "ladies-dorm",
 			CheckInDate:  "2027-05-10",
 			CheckOutDate: "2027-05-15",
 			BookerPhone:  "9944637254",
 			BookingFor:   "self",
-			BedCount:     1,
+			BedCount:     8,
+			Gender:       "female",
 		}
 		var resp1 map[string]interface{}
-		err1 := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload1, &resp1, nil)
+		err1 := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload1, &resp1, memberAuth)
 		
 		if err1 != nil {
 			tctx.FailureReason = fmt.Sprintf("Failed to setup initial booking for overlap test: %v", err1)
 			tctx.Fatalf("Failed to setup initial booking: %v", err1)
 		}
+		initialBookingID, _ := resp1["id"].(string)
 
 		// 2. Attempt overlapping booking
 		payload2 := &TowerCreateBookingRequest{
@@ -291,9 +312,10 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 			BookerPhone:  "9944637254",
 			BookingFor:   "self",
 			BedCount:     1,
+			Gender:       "female",
 		}
 		var resp2 map[string]interface{}
-		err2 := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload2, &resp2, nil)
+		err2 := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload2, &resp2, memberAuth)
 		
 		if err2 == nil {
 			tctx.FailureReason = "Expected overlapping booking to fail with 400 or 409, got 201 Created"
@@ -304,12 +326,18 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 		} else {
 			tctx.Actual = fmt.Sprintf("Correctly rejected overlapping booking with %d", err2.StatusCode())
 		}
+
+		// Cleanup initial booking
+		if initialBookingID != "" {
+			var delResp map[string]interface{}
+			_ = tctx.Client.SendHttpRequest("DELETE", "/api/towers/bookings/"+initialBookingID, nil, nil, &delResp, memberAuth)
+		}
 	})
 
 	// Step K: Get Past User Bookings
 	tests.RunAPITestWithDetails(t, "[Member] GET Past Bookings List", "Retrieves past/archived bookings for the current member.", "HTTP 200 OK containing booking list", func(tctx *tests.TestContext) {
 		var resp []interface{}
-		err := tctx.Client.SendHttpRequest("GET", "/api/towers/bookings/past?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg&year=2026", nil, nil, &resp, nil)
+		err := tctx.Client.SendHttpRequest("GET", "/api/towers/bookings/past?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg&year=2026", nil, nil, &resp, memberAuth)
 
 		if err != nil {
 			tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)

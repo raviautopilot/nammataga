@@ -423,9 +423,16 @@ func CreateOrder(c *gin.Context) {
 	// Get member details for notes from context (set by middleware)
 	bookerName := c.GetString("bookerName")
 	if bookerName == "" {
-		// Try to get from logged-in user
-		if memberEmail, exists := c.Get("email"); exists {
-			if name := getMemberNameByEmail(memberEmail.(string)); name != "" {
+		// Try to get from logged-in user context
+		var memberEmail string
+		if e, exists := c.Get("member_email"); exists {
+			memberEmail, _ = e.(string)
+		} else if e, exists := c.Get("email"); exists {
+			memberEmail, _ = e.(string)
+		}
+
+		if memberEmail != "" {
+			if name := getMemberNameByEmail(memberEmail); name != "" {
 				bookerName = name
 			}
 		}
@@ -440,8 +447,10 @@ func CreateOrder(c *gin.Context) {
 
 	// Get booker email
 	bookerEmail := ""
-	if email, exists := c.Get("email"); exists {
-		bookerEmail = email.(string)
+	if e, exists := c.Get("member_email"); exists {
+		bookerEmail, _ = e.(string)
+	} else if e, exists := c.Get("email"); exists {
+		bookerEmail, _ = e.(string)
 	}
 
 	// Build notes with room booking details
@@ -502,6 +511,19 @@ func CreateOrder(c *gin.Context) {
 		Key:   razorpayKey,
 		Order: order,
 	})
+}
+
+func GetBookerEmailFromContextForTest(key string, value string) string {
+	c, _ := gin.CreateTestContext(nil)
+	c.Set(key, value)
+
+	email := ""
+	if e, exists := c.Get("member_email"); exists {
+		email, _ = e.(string)
+	} else if e, exists := c.Get("email"); exists {
+		email, _ = e.(string)
+	}
+	return email
 }
 
 // ConfirmPayment godoc

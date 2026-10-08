@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"taga-api/config"
@@ -60,11 +61,25 @@ func hasMemberPaidOneTime(subscriptionID, email string) bool {
 	var subscriptions []model.MemberSubscription
 	json.Unmarshal(data, &subscriptions)
 	for _, sub := range subscriptions {
-		if sub.MemberEmail == email && sub.SubscriptionID == subscriptionID {
+		if strings.EqualFold(sub.MemberEmail, email) && sub.SubscriptionID == subscriptionID {
 			return true
 		}
 	}
 	return false
+}
+
+func HasMemberPaidOneTimeForTest(subscriptionID, email string) bool {
+	return hasMemberPaidOneTime(subscriptionID, email)
+}
+
+func SaveTestOneTimePayment(subscriptionID, email string) {
+	saveMemberSubscription(model.MemberSubscription{
+		ID:             uuid.New().String(),
+		MemberEmail:    email,
+		SubscriptionID: subscriptionID,
+		Status:         "active",
+		CreatedAt:      time.Now(),
+	})
 }
 
 // CreateSubscriptionOrder godoc
@@ -600,7 +615,12 @@ func getPaymentTransactionsFilePath() string {
 
 
 
+var subscriptionsFileLock sync.RWMutex
+
 func updatePaymentTransaction(orderID, status, paymentID string) {
+	subscriptionsFileLock.Lock()
+	defer subscriptionsFileLock.Unlock()
+
 	filePath := getPaymentTransactionsFilePath()
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -623,6 +643,9 @@ func updatePaymentTransaction(orderID, status, paymentID string) {
 }
 
 func saveMemberSubscription(subscription model.MemberSubscription) {
+	subscriptionsFileLock.Lock()
+	defer subscriptionsFileLock.Unlock()
+
 	filePath := getMemberSubscriptionsFilePath()
 	os.MkdirAll(filepath.Dir(filePath), 0755)
 
@@ -648,7 +671,7 @@ func getActiveMemberSubscription(email string) (*model.MemberSubscription, error
 	json.Unmarshal(data, &subscriptions)
 
 	for _, s := range subscriptions {
-		if s.MemberEmail == email && s.Status == "active" {
+		if strings.EqualFold(s.MemberEmail, email) && s.Status == "active" {
 			return &s, nil
 		}
 	}

@@ -13,8 +13,12 @@ import (
 	"time"
 
 	"taga-api/config"
+	"taga-api/model"
+	"taga-api/service"
+	"taga-api/service/member"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -250,6 +254,40 @@ func WebhookHandler(c *gin.Context) {
 		memberName, _ := notes["member_name"].(string)
 		memberTagaID, _ := notes["member_taga_id"].(string)
 		memberEmail, _ := notes["member_email"].(string)
+		if memberEmail == "" {
+			memberEmail = customerEmail
+		}
+
+		// Ensure subscription record is persisted and member payment status updated
+		if subscriptionID != "" && memberEmail != "" {
+			now := time.Now()
+			nextYearEnd := getMembershipYearEnd(now)
+
+			memberSub := model.MemberSubscription{
+				ID:               uuid.New().String(),
+				MemberID:         memberTagaID,
+				MemberEmail:      memberEmail,
+				SubscriptionID:   subscriptionID,
+				SubscriptionName: subscriptionName,
+				Amount:           payment.Amount,
+				OrderID:          orderID,
+				PaymentID:        paymentID,
+				Status:           "active",
+				StartDate:        now,
+				EndDate:          nextYearEnd,
+				LastPaidDate:     now,
+				NextDueDate:      nextYearEnd.AddDate(0, 0, 1),
+				CreatedAt:        now,
+				UpdatedAt:        now,
+			}
+			saveMemberSubscription(memberSub)
+
+			if subscriptionID == "annual-subscription" {
+				if err := member.UpdateMemberPaymentStatus(memberEmail, true); err != nil {
+					config.Logger.Error("Webhook: Failed to update member payment status", zap.Error(err))
+				}
+			}
+		}
 
 		emailData := AdminSubscriptionData{
 			PaymentID:        paymentID,
@@ -294,8 +332,16 @@ func WebhookHandler(c *gin.Context) {
 			bookingFor, _ = notes["booking_for"].(string)
 		}
 		guestDetailsJSON, _ := notes["guest_details"].(string)
-
 		bookingID, _ := notes["booking_id"].(string)
+
+		// Confirm room booking payment status in database if booking_id present
+		if bookingID != "" {
+			if err := service.ConfirmPaymentWithDetails(bookingID, orderID, paymentID); err != nil {
+				config.Logger.Error("Webhook: Failed to confirm room booking payment in database",
+					zap.String("booking_id", bookingID),
+					zap.Error(err))
+			}
+		}
 
 		emailData := AdminRoomBookingData{
 			BookingID:     bookingID,

@@ -310,3 +310,25 @@ func TestWebhookDuplicatePrevention(t *testing.T) {
 		t.Errorf("Deduplication failure: webhook did not recognize paymentID %s as already processed after email dispatch", paymentID)
 	}
 }
+
+func TestCaseInsensitiveOneTimeFeeCheck(t *testing.T) {
+	// Test Issue #10: case-insensitive email check on one-time fees
+	emailLower := "membercase@example.com"
+	emailUpper := "MEMBERCASE@EXAMPLE.COM"
+
+	// Create test order with lower-case email
+	handler.SaveTestOneTimePayment("new-member-enrollment-fee", emailLower)
+
+	// Verify upper-case email check returns true (already paid)
+	if !handler.HasMemberPaidOneTimeForTest("new-member-enrollment-fee", emailUpper) {
+		t.Errorf("Case-sensitivity bug detected: upper-case email check failed for one-time fee already paid with lower-case email")
+	}
+}
+
+func TestContextKeyBookerEmail(t *testing.T) {
+	// Test Issue #9: context key lookup for booker email
+	email := handler.GetBookerEmailFromContextForTest("member_email", "testbooker@example.com")
+	if email != "testbooker@example.com" {
+		t.Errorf("Context key mismatch: expected 'testbooker@example.com' from member_email, got '%s'", email)
+	}
+}

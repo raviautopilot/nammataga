@@ -7,6 +7,7 @@ import (
 
 	"e2e-template/pkg/client"
 	"e2e-template/tests"
+	"taga-api/service/jwt"
 )
 
 type OverlapBookingRequest struct {
@@ -23,6 +24,12 @@ func TestAPI_Tower_BookingOverlapAndGenderRules(t *testing.T) {
 	var firstBookingID string
 	var savedClient *tests.TestContext
 
+	memberToken, _, err := jwt.GenerateMemberToken("d11348e1-9a65-4945-bb1b-f100a5df15cg", "sudhantest08@gmail.com", "Sudhan Test")
+	if err != nil {
+		t.Fatalf("Failed to generate member token: %v", err)
+	}
+	memberAuth := &client.BearerTokenAuth{Token: memberToken}
+
 	// Step A: Create first booking for room 'kurinchi' (Capacity: 2, Female, 1 bed)
 	tests.RunAPITestWithDetails(t, "[Member] POST Create Initial Booking - Kurinchi", "Creates a confirmed 1-bed female booking for Kurinchi room.", "HTTP 201 Created", func(tctx *tests.TestContext) {
 		savedClient = tctx
@@ -37,7 +44,7 @@ func TestAPI_Tower_BookingOverlapAndGenderRules(t *testing.T) {
 		}
 
 		var resp map[string]interface{}
-		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, nil)
+		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, memberAuth)
 
 		if err != nil {
 			tctx.FailureReason = fmt.Sprintf("Expected 201 Created, got: %v", err)
@@ -53,7 +60,7 @@ func TestAPI_Tower_BookingOverlapAndGenderRules(t *testing.T) {
 		tests.RunAPITestWithDetails(t, "[Member] POST Confirm Initial Booking Payment", "Confirms payment to activate the booking restriction.", "HTTP 200 OK", func(tctx *tests.TestContext) {
 			var resp map[string]interface{}
 			confirmPayload := map[string]string{"upiId": "test-upi-id"}
-			err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings/"+firstBookingID+"/confirm-payment", nil, &confirmPayload, &resp, nil)
+			err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings/"+firstBookingID+"/confirm-payment", nil, &confirmPayload, &resp, memberAuth)
 
 			if err != nil {
 				tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
@@ -75,7 +82,7 @@ func TestAPI_Tower_BookingOverlapAndGenderRules(t *testing.T) {
 			}
 
 			var resp map[string]interface{}
-			err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, nil)
+			err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, memberAuth)
 
 			assertErrorStatus(tctx, err, http.StatusBadRequest, "partially occupied by")
 		})
@@ -93,7 +100,7 @@ func TestAPI_Tower_BookingOverlapAndGenderRules(t *testing.T) {
 			}
 
 			var resp map[string]interface{}
-			err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, nil)
+			err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, memberAuth)
 
 			assertErrorStatus(tctx, err, http.StatusBadRequest, "not enough beds available")
 		})
@@ -103,7 +110,7 @@ func TestAPI_Tower_BookingOverlapAndGenderRules(t *testing.T) {
 	t.Cleanup(func() {
 		if savedClient != nil && firstBookingID != "" {
 			var resp map[string]interface{}
-			_ = savedClient.Client.SendHttpRequest("DELETE", "/api/towers/bookings/"+firstBookingID, nil, nil, &resp, nil)
+			_ = savedClient.Client.SendHttpRequest("DELETE", "/api/towers/bookings/"+firstBookingID, nil, nil, &resp, memberAuth)
 		}
 	})
 }

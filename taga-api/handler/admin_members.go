@@ -318,7 +318,11 @@ func AddMember(c *gin.Context) {
 	}
 
 	if isPaid {
-		go createManualAnnualSubscription(newMember.ID, newMember.EmailId, newMember.Name)
+		tagaID := newMember.TagaID
+		if tagaID == "" {
+			tagaID = newMember.ID
+		}
+		go createManualAnnualSubscription(tagaID, newMember.EmailId, newMember.Name)
 	}
 
 	go sendSuccessEmail(req.Email, tempPassword)
@@ -904,7 +908,14 @@ func BulkUploadMembers(c *gin.Context) {
 		existingMobileMap[reg.MobileNumber] = true
 
 		if isPaid {
-			go createManualAnnualSubscription(newMember["id"].(string), reg.EmailId, reg.Name)
+			tagaID := reg.TagaID
+			if tagaID == "" {
+				tagaID, _ = newMember["tagaId"].(string)
+			}
+			if tagaID == "" {
+				tagaID, _ = newMember["id"].(string)
+			}
+			go createManualAnnualSubscription(tagaID, reg.EmailId, reg.Name)
 		}
 
 		mu.Lock()
@@ -1978,12 +1989,20 @@ func createManualAnnualSubscription(memberID, memberEmail, memberName string) {
 	endDate := getMembershipYearEnd(startDate)
 	nextDueDate := endDate.AddDate(0, 0, 1)
 
+	// Prefer TAGA ID over internal UUID if available
+	tagaID := memberID
+	if tID := getMemberTagaIdByUUID(memberID); tID != "" && tID != memberID {
+		tagaID = tID
+	} else if tID := getMemberTagaIdByEmail(memberEmail); tID != "" {
+		tagaID = tID
+	}
+
 	// Expire any existing active annual subscription
 	expireExistingAnnualSubscriptions(memberEmail)
 
 	memberSub := model.MemberSubscription{
 		ID:               uuid.New().String(),
-		MemberID:         memberID,
+		MemberID:         tagaID,
 		MemberEmail:      memberEmail,
 		MemberName:       memberName,
 		SubscriptionID:   "annual-subscription",

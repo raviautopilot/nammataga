@@ -282,6 +282,23 @@ func getMemberTagaIdByUUID(uuid string) string {
 	return uuid
 }
 
+// getMemberEmailByUUID returns the email address for a given internal member UUID
+func getMemberEmailByUUID(uuid string) string {
+	members, err := readExistingMembers()
+	if err != nil {
+		return ""
+	}
+	for _, m := range members {
+		if id, ok := m["id"].(string); ok && id == uuid {
+			if email, ok := m["emailId"].(string); ok {
+				return email
+			}
+			return ""
+		}
+	}
+	return ""
+}
+
 // getAdminUsername retrieves the admin username from the Gin context.
 // Set by AdminAuthMiddleware from the JWT claims.
 func getAdminUsername(c *gin.Context) string {

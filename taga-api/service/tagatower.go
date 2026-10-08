@@ -200,6 +200,23 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 		return nil, fmt.Errorf("invalid check-out date")
 	}
 
+	// Validate date ordering
+	if !checkOutDate.After(checkInDate) {
+		return nil, fmt.Errorf("check-out date must be after check-in date")
+	}
+
+	// Validate check-in date is not in the past
+	todayStr := time.Now().Format("2006-01-02")
+	if req.CheckInDate < todayStr {
+		return nil, fmt.Errorf("cannot book dates in the past")
+	}
+
+	// Validate maximum stay duration (10 days)
+	days := int(checkOutDate.Sub(checkInDate).Hours() / 24)
+	if days > 10 {
+		return nil, fmt.Errorf("maximum stay duration is 10 days")
+	}
+
 	// Get room
 	room, err := GetRoomByID(req.RoomID)
 	if err != nil {

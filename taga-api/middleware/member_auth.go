@@ -53,6 +53,9 @@ func MemberAuthMiddleware() gin.HandlerFunc {
 		if name, ok := claims["name"]; ok {
 			c.Set("member_name", name)
 		}
+		if username, ok := claims["username"]; ok {
+			c.Set("username", username)
+		}
 		c.Set("role", claims["role"])
 		c.Next()
 	}
