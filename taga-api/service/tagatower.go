@@ -164,8 +164,6 @@ func GetRoomByID(roomID string) (*model.Room, error) {
 	return nil, fmt.Errorf("room not found: %s", roomID)
 }
 
-
-
 func isBookingMixed(b model.Booking) bool {
 	if b.Gender == model.GenderMixed {
 		return true
@@ -224,10 +222,11 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 	}
 
 	// Determine advance rate per bed based on room type:
-	// For testing: changed to ₹1 per bed for all rooms
-	advanceRatePerBed := 1
+	// Dormitory rooms (Gents & Ladies Dorm): ₹100 per bed
+	// Other rooms (Apex Suite, A/C rooms): ₹200 per bed
+	advanceRatePerBed := 200
 	if room.Type == model.RoomTypeGentsDorm || room.Type == model.RoomTypeLadiesDorm || room.ID == "gents-dorm" || room.ID == "ladies-dorm" {
-		advanceRatePerBed = 1
+		advanceRatePerBed = 100
 	}
 	effectiveBeds := req.BedCount
 	if !room.AllowSingleBed {
@@ -683,8 +682,6 @@ func ConfirmPaymentWithDetails(bookingID, orderID, paymentID string) error {
 	return fmt.Errorf("booking not found")
 }
 
-
-
 func GetBookingByID(bookingID string) (*model.Booking, error) {
 
 	allBookings, err := ReadAllBookings()
@@ -805,7 +802,7 @@ func archiveBooking(b model.Booking) error {
 	}
 
 	archivedBookings = append(archivedBookings, b)
-	
+
 	newData, err := json.MarshalIndent(archivedBookings, "", "  ")
 	if err != nil {
 		return err
@@ -844,7 +841,7 @@ func GetPastUserBookings(bookerID string, year string, month string) ([]model.Bo
 	}
 
 	var pastBookings []model.BookingResponse
-	
+
 	rooms, err := ReadRooms()
 	if err != nil {
 		return nil, err
@@ -854,9 +851,9 @@ func GetPastUserBookings(bookerID string, year string, month string) ([]model.Bo
 		roomMap[r.ID] = &rooms[i]
 	}
 	baseDir := BookingsArchiveDirHelper()
-	
+
 	var filesToRead []string
-	
+
 	if year != "" && month != "" {
 		// Specific month
 		filesToRead = append(filesToRead, filepath.Join(baseDir, year, fmt.Sprintf("%s-%s.json", year, month)))
@@ -890,27 +887,27 @@ func GetPastUserBookings(bookerID string, year string, month string) ([]model.Bo
 			}
 		}
 	}
-	
+
 	now := time.Now()
-	
+
 	for _, file := range filesToRead {
 		data, err := os.ReadFile(file)
 		if err != nil {
 			continue
 		}
-		
+
 		var archivedBookings []model.Booking
 		if err := json.Unmarshal(data, &archivedBookings); err != nil {
 			continue
 		}
-		
+
 		for _, b := range archivedBookings {
 			if b.BookerID == bookerID {
 				roomName := ""
 				if room := roomMap[b.RoomID]; room != nil {
 					roomName = room.Name
 				}
-				
+
 				pastBookings = append(pastBookings, model.BookingResponse{
 					ID:            b.ID,
 					RoomID:        b.RoomID,
@@ -930,7 +927,7 @@ func GetPastUserBookings(bookerID string, year string, month string) ([]model.Bo
 			}
 		}
 	}
-	
+
 	return pastBookings, nil
 }
 
@@ -939,6 +936,7 @@ func GetPastUserBookings(bookerID string, year string, month string) ([]model.Bo
 	  Bulk Range Availability
 	  Checks ALL rooms for ALL dates in the range in one shot.
 	  Returns a map: roomID → RoomAvailability (worst case across all days)
+
 ---------------------------
 */
 func CheckAllRoomsAvailabilityRange(checkIn, checkOut time.Time) (map[string]model.RoomAvailability, error) {

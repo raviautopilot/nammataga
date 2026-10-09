@@ -62,8 +62,8 @@ export const ROOM_HIDE_CONFIG: Record<string, boolean> = {
   pasumai: true,  // Pasumai room - change to false to restore
 };
 
-const DORMITORY_ADVANCE_PER_BED = 1;
-const OTHER_ROOM_ADVANCE_PER_BED = 1;
+const DORMITORY_ADVANCE_PER_BED = 100;
+const OTHER_ROOM_ADVANCE_PER_BED = 200;
 
 export const getAdvanceRatePerBed = (room?: Room | null): number => {
   if (!room) return OTHER_ROOM_ADVANCE_PER_BED;
@@ -1230,30 +1230,30 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
                           {Object.entries(byRoom)
                             .filter(([roomId]) => !ROOM_HIDE_CONFIG[roomId])
                             .map(([roomId, bookings]) => {
-                            const roomName =
-                              rooms.find((r) => r.id === roomId)?.name || roomId;
-                            const roomNo = ROOM_NUMBER_MAP[roomId];
-                            return (
-                              <div
-                                key={roomId}
-                                className="text-sm bg-muted/50 rounded-lg px-3 py-2 space-y-1"
-                              >
-                                <p className="font-medium text-foreground">
-                                  {roomNo ? `Room ${roomNo} — ` : ''}
-                                  {roomName}
-                                </p>
-                                {bookings.map((b, idx) => (
-                                  <p key={idx} className="text-muted-foreground text-xs">
-                                    {b.bookerName}
-                                    {b.bookerId ? ` (${b.bookerId})` : ''}
-                                    {' · '}
-                                    {b.bedCount} bed{b.bedCount > 1 ? 's' : ''}
-                                    {b.bookingFor === 'guest' ? ' · Guest booking' : ''}
+                              const roomName =
+                                rooms.find((r) => r.id === roomId)?.name || roomId;
+                              const roomNo = ROOM_NUMBER_MAP[roomId];
+                              return (
+                                <div
+                                  key={roomId}
+                                  className="text-sm bg-muted/50 rounded-lg px-3 py-2 space-y-1"
+                                >
+                                  <p className="font-medium text-foreground">
+                                    {roomNo ? `Room ${roomNo} — ` : ''}
+                                    {roomName}
                                   </p>
-                                ))}
-                              </div>
-                            );
-                          })}
+                                  {bookings.map((b, idx) => (
+                                    <p key={idx} className="text-muted-foreground text-xs">
+                                      {b.bookerName}
+                                      {b.bookerId ? ` (${b.bookerId})` : ''}
+                                      {' · '}
+                                      {b.bedCount} bed{b.bedCount > 1 ? 's' : ''}
+                                      {b.bookingFor === 'guest' ? ' · Guest booking' : ''}
+                                    </p>
+                                  ))}
+                                </div>
+                              );
+                            })}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground ml-1">
@@ -1832,20 +1832,18 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
                   id="self"
                   data-testid="testid-booking-for-self"
                   onClick={() => setBookingFor('self')}
-                  className={`flex flex-col items-start p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${
-                    bookingFor === 'self'
+                  className={`flex flex-col items-start p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${bookingFor === 'self'
                       ? 'border-primary bg-primary/10 text-primary font-semibold shadow-sm ring-2 ring-primary/20'
                       : 'border-input bg-card hover:bg-muted/60 text-muted-foreground'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="font-semibold text-foreground flex items-center gap-1.5">
                       <User className="w-4 h-4 text-primary" />
                       Self Booking
                     </span>
-                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      bookingFor === 'self' ? 'border-primary bg-primary' : 'border-muted-foreground/40'
-                    }`}>
+                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${bookingFor === 'self' ? 'border-primary bg-primary' : 'border-muted-foreground/40'
+                      }`}>
                       {bookingFor === 'self' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </span>
                   </div>
@@ -1859,20 +1857,18 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
                   id="guest"
                   data-testid="testid-booking-for-guest"
                   onClick={() => setBookingFor('guest')}
-                  className={`flex flex-col items-start p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${
-                    bookingFor === 'guest'
+                  className={`flex flex-col items-start p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${bookingFor === 'guest'
                       ? 'border-primary bg-primary/10 text-primary font-semibold shadow-sm ring-2 ring-primary/20'
                       : 'border-input bg-card hover:bg-muted/60 text-muted-foreground'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="font-semibold text-foreground flex items-center gap-1.5">
                       <Users className="w-4 h-4 text-primary" />
                       Guest Booking
                     </span>
-                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      bookingFor === 'guest' ? 'border-primary bg-primary' : 'border-muted-foreground/40'
-                    }`}>
+                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${bookingFor === 'guest' ? 'border-primary bg-primary' : 'border-muted-foreground/40'
+                      }`}>
                       {bookingFor === 'guest' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </span>
                   </div>
@@ -2013,11 +2009,10 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
                                   });
                                 }
                               }}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-2xs ${
-                                guest.name && guest.name === getLoggedInUser().name
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-2xs ${guest.name && guest.name === getLoggedInUser().name
                                   ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary/20'
                                   : 'bg-muted/80 hover:bg-muted text-foreground border-input'
-                              }`}
+                                }`}
                             >
                               <UserCheck className="w-3.5 h-3.5" />
                               <span>{guest.name && guest.name === getLoggedInUser().name ? '✓ Self Applied' : 'Fill as Self'}</span>
