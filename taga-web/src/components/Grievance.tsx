@@ -13,7 +13,13 @@ import { createGrievance, getCategories, getPriorities } from '../api/Grievance'
 import API_BASE_URL from '../config/api';
 import { toast } from 'sonner';
 
-export function Grievance() {
+interface GrievanceProps {
+  isLoggedIn?: boolean;
+  isPaidMember?: boolean;
+  onNavigateToMembership?: () => void;
+}
+
+export function Grievance({ isLoggedIn = true, isPaidMember = true, onNavigateToMembership }: GrievanceProps = {}) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -85,6 +91,53 @@ useEffect(() => {
 
   loadData();
 }, []);
+
+  if (!isPaidMember) {
+    return (
+      <div className="space-y-8" data-testid="testid-grievance-locked-page">
+        <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+          <div className="absolute inset-0">
+            <img
+              src={bannerImage}
+              alt="Grievance Redressal"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-green-900/80" />
+          </div>
+          <div className="relative p-10 text-white">
+            <Badge className="mb-4 bg-green-600">
+              <MessageSquare className="w-3 h-3 mr-1" />
+              For Paid Members Only
+            </Badge>
+            <h1 className="text-4xl font-bold mb-2">
+              Submit Grievance
+            </h1>
+            <p>
+              Grievance redressal portal for active TAGA association members
+            </p>
+          </div>
+        </div>
+
+        <Card className="max-w-2xl mx-auto bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+          <CardContent className="pt-6 text-center py-12">
+            <AlertCircle className="w-16 h-16 mx-auto text-yellow-600 mb-4" />
+            <h3 className="text-xl font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+              Subscriber Access Only
+            </h3>
+            <p className="text-yellow-800 dark:text-yellow-200 mb-4">
+              Grievance submission and tracking is available only for active paid subscribers. Please complete or renew your annual subscription to submit grievances.
+            </p>
+            {onNavigateToMembership && (
+              <Button onClick={onNavigateToMembership} data-testid="testid-manage-subscription-button">
+                Manage Subscription
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
 

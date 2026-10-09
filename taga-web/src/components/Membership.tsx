@@ -251,12 +251,17 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
 
       try {
         const user = JSON.parse(localStorage.getItem("user") || "{}");
-        if (user.emailId) {
+        const email = user.emailId || user.email || memberProfile?.emailId;
+        if (email) {
           const token = localStorage.getItem("member_token");
-          const response = await axios.get(`${API_BASE}/subscriptions/member-paid?email=${user.emailId}`, {
+          const response = await axios.get(`${API_BASE}/subscriptions/member-paid?email=${encodeURIComponent(email)}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          setPaidSubscriptions(new Set(response.data));
+          const set = new Set<string>(response.data);
+          if (isPaidMember || user.isPaid === true || user.subscription_active === true) {
+            set.add("annual-subscription");
+          }
+          setPaidSubscriptions(set);
         }
       } catch (error) {
         console.error("Failed to fetch paid subscriptions:", error);
@@ -264,7 +269,7 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
     };
 
     fetchPaidSubscriptions();
-  }, [isLoggedIn, API_BASE]);
+  }, [isLoggedIn, API_BASE, memberProfile?.emailId, isPaidMember]);
 
   // Fetch notifications when component mounts
   useEffect(() => {
@@ -365,18 +370,35 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
         return;
       }
 
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const amount = selectedSubscription?.allowCustomAmount
-        ? Number(customAmount)
-        : selectedSubscription?.amount || 0;
-
       if (!selectedSubscription) {
         toast.error("No subscription selected");
+        setIsProcessingPayment(false);
         return;
       }
 
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
       if (!user.emailId) {
         toast.error("User not found. Please login again.");
+        setIsProcessingPayment(false);
+        return;
+      }
+
+      if (selectedSubscription.allowCustomAmount) {
+        const parsed = Number(customAmount);
+        if (!customAmount || isNaN(parsed) || parsed <= 0) {
+          toast.error("Please enter a valid amount greater than ₹0");
+          setIsProcessingPayment(false);
+          return;
+        }
+      }
+
+      const amount = selectedSubscription.allowCustomAmount
+        ? Number(customAmount)
+        : selectedSubscription.amount || 0;
+
+      if (isNaN(amount) || amount <= 0) {
+        toast.error("Payment amount must be greater than ₹0");
+        setIsProcessingPayment(false);
         return;
       }
 
@@ -495,7 +517,14 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
       const rzp = new (window as any).Razorpay(options);
       rzp.open();
     } catch (err: any) {
-      toast.error(err.message || "Payment Failed");
+      console.error("Payment submission error:", err);
+      const serverError =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        (err.response?.status === 404 ? "Payment service endpoint not found (404)" : null) ||
+        err.message ||
+        "Payment Failed";
+      toast.error(serverError);
     } finally {
       setIsProcessingPayment(false);
     }
@@ -612,8 +641,19 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
               <Field label="Initial" value={memberProfile.initial} />
               <Field label="Gender" value={memberProfile.gender} />
               <Field label="Date of Birth" value={formatDate(memberProfile.dateOfBirth)} />
-              <Field label="Father Name" value={memberProfile.fatherName} />
-              <Field label="Mother Name" value={memberProfile.motherName} />
+              <Field label="Father Name" value={memberProfile.fatherName || (memberProfile as any).father_name || getStoredUser?.fatherName || getStoredUser?.father_name} />
+              <Field
+                label="Mother Name"
+                value={
+                  memberProfile.motherName ||
+                  (memberProfile as any).mother_name ||
+                  (memberProfile as any).mother ||
+                  getStoredUser?.motherName ||
+                  getStoredUser?.mother_name ||
+                  getStoredUser?.mother
+                }
+                fallback="N/A"
+              />
             </CardContent>
           </Card>
 
@@ -662,9 +702,9 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
 
             <div className="grid gap-4">
               {subscriptions.map((sub) => {
-                const isPaid = paidSubscriptions.has(sub.id);
                 const isAnnual = sub.id === "annual-subscription";
                 const inGrace = isInGracePeriod();
+                const isPaid = paidSubscriptions.has(sub.id) || (isAnnual && isPaidMember && !inGrace);
 
                 // Determine button/status area
                 let actionComponent;
@@ -880,9 +920,12 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
                 </p>
                 {selectedSubscription.allowCustomAmount ? (
                   <div className="space-y-2 mt-3">
-                    <label className="text-sm">Enter Amount</label>
+                    <label className="text-sm font-medium">Enter Amount (₹)</label>
                     <input
                       type="number"
+                      min="1"
+                      step="any"
+                      placeholder="Enter amount in ₹"
                       className="w-full border px-3 py-2 rounded-md"
                       data-testid="testid-membership-custom-amount-input"
                       value={customAmount}
@@ -1191,11 +1234,12 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
   );
 }
 
-function Field({ label, value }: { label: string; value: any }) {
+function Field({ label, value, fallback = "N/A" }: { label: string; value: any; fallback?: string }) {
+  const hasValue = value !== null && value !== undefined && String(value).trim() !== "" && String(value).trim() !== "-";
   return (
     <div>
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="font-medium">{value || "-"}</p>
+      <p className="font-medium">{hasValue ? String(value).trim() : fallback}</p>
     </div>
   );
 }

@@ -29,6 +29,7 @@ import { Membership } from './components/Membership';
 import { Events } from './components/Events';
 import { AuditLog } from './components/admin/AuditLog';
 import { getLogo } from './api/logo';
+import { getMemberProfile } from './api/member';
 import API_BASE_URL from "./config/api";
 
 type Page =
@@ -173,6 +174,21 @@ export default function App() {
                 } else {
                     restoredPage = 'home';
                 }
+
+                // 🔥 Verify session & sync latest subscription status from backend
+                getMemberProfile()
+                    .then((profile) => {
+                        const freshPaid = profile.isPaid === true || profile.subscription_active === true;
+                        setUserType(freshPaid ? 'subscriber' : 'member');
+                        const subscriberRestricted: Page[] = ['resources', 'taga-towers', 'grievance'];
+                        if (!freshPaid && savedPage && subscriberRestricted.includes(savedPage)) {
+                            setCurrentPage('membership');
+                            window.history.replaceState({ page: 'membership' }, '', '/#membership');
+                        }
+                    })
+                    .catch((err) => {
+                        console.warn('Session verification error:', err);
+                    });
             }
             else {
                 localStorage.removeItem('admin_token');
@@ -250,9 +266,20 @@ export default function App() {
         setUserType(isAdminLogin || isPaid ? 'subscriber' : 'member');
 
         const lastPage = localStorage.getItem('lastPage') as Page;
+        const subscriberPages: Page[] = ['resources', 'taga-towers', 'grievance'];
 
-        if (lastPage && lastPage !== 'member-login' && lastPage !== 'admin-login' && (isAdminLogin || (lastPage !== 'members' && lastPage !== 'audit-log'))) {
-            navigateTo(lastPage);
+        if (
+            lastPage &&
+            lastPage !== 'member-login' &&
+            lastPage !== 'admin-login' &&
+            (isAdminLogin || (lastPage !== 'members' && lastPage !== 'audit-log'))
+        ) {
+            // Prevent unpaid member from restoring to subscriber-only pages
+            if (!isAdminLogin && !isPaid && subscriberPages.includes(lastPage)) {
+                navigateTo('membership');
+            } else {
+                navigateTo(lastPage);
+            }
         } else {
             navigateTo('home');
         }
@@ -289,8 +316,8 @@ export default function App() {
             return true;
         }
 
-        // 🔥 Check payment status directly from localStorage
-        const isPaid = getIsPaidFromStorage();
+        // 🔥 Paid subscriber status: STRICTLY requires isLoggedIn AND isPaid
+        const isPaid = isLoggedIn && getIsPaidFromStorage();
 
         const accessControl: Record<string, boolean> = {
             'home': true,
@@ -302,7 +329,7 @@ export default function App() {
             'grievance': isPaid,
             'members': false, // 🔥 FIX: Members cannot access the 'members' page at all
             'member-login': !isLoggedIn,
-            'audit-log': isAdmin, // Only admins can access audit log
+            'audit-log': false, // Only admins can access audit log
         };
 
         return accessControl[page] ?? true;
@@ -335,7 +362,8 @@ export default function App() {
 
     const renderPage = () => {
         // 🔥 Read isPaid directly from localStorage for immediate access
-        const isPaid = getIsPaidFromStorage();
+        const isPaid = isLoggedIn && getIsPaidFromStorage();
+        const isPaidSubscriber = isAdmin || isPaid;
 
         // 🔥 FIX: Redirect members away from 'members' page
         if (currentPage === 'members' && !isAdmin) {
@@ -365,13 +393,13 @@ export default function App() {
             case 'audit-log':
                 return <AuditLog isAdmin={isAdmin} />;
             case 'resources':
-                return <Resources isLoggedIn={isLoggedIn} />;
+                return <Resources isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} onNavigateToMembership={() => navigateTo('membership')} />;
             case 'grievance':
-                return <Grievance />;
+                return <Grievance isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} onNavigateToMembership={() => navigateTo('membership')} />;
             case 'taga-towers':
-                return <TAGATowers isLoggedIn={isLoggedIn} isPaidMember={isPaid || userType === 'subscriber'} isAdmin={isAdmin} />;
+                return <TAGATowers isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} isAdmin={isAdmin} onNavigateToMembership={() => navigateTo('membership')} />;
             case 'membership':
-                return <Membership isLoggedIn={isLoggedIn} isPaidMember={isPaid || userType === 'subscriber'} />;
+                return <Membership isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} />;
             case 'events':
                 return <Events isLoggedIn={isLoggedIn} />;
             default:

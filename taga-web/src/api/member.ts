@@ -72,6 +72,9 @@ export interface Member {
   tbfNumber: string;
   cpsGpfNumber: string;
   firstLogin: boolean;
+  isPaid?: boolean;
+  subscription_active?: boolean;
+  payment_status?: string;
 }
 
 // Member Login with JWT
@@ -112,6 +115,24 @@ export const getMemberProfile = async (): Promise<Member> => {
   
   const data = response.data.user;
   
+  try {
+    const existing = JSON.parse(localStorage.getItem("user") || "{}");
+    const updated = {
+      ...existing,
+      ...data,
+      isPaid: data.isPaid === true,
+      subscription_active: data.subscription_active === true,
+      payment_status: data.payment_status,
+      emailId: data.emailId || existing.emailId,
+      dateOfBirth: data.date_of_birth || data.dateOfBirth || existing.dateOfBirth || existing.date_of_birth || "",
+      motherName: data.mother_name || data.motherName || data.mother || existing.motherName || existing.mother_name || "",
+      fatherName: data.father_name || data.fatherName || data.father || existing.fatherName || existing.father_name || "",
+    };
+    localStorage.setItem("user", JSON.stringify(updated));
+  } catch (e) {
+    console.error("Failed to sync profile to localStorage", e);
+  }
+
   return {
     id: data.id,
     username: data.username || data.emailId,
@@ -119,8 +140,8 @@ export const getMemberProfile = async (): Promise<Member> => {
     name: data.name,
     initial: data.initial,
     gender: data.gender,
-    fatherName: data.father_name || data.fatherName,
-    motherName: data.mother_name || data.motherName,
+    fatherName: data.father_name || data.fatherName || data.father || data.FatherName || data["Father Name"] || "",
+    motherName: data.mother_name || data.motherName || data.mother || data.MotherName || data["Mother Name"] || "",
     educationalQualification: data.educational_qualification || data.educationalQualification,
     designation: data.designation,
     workingDistrict: data.working_district || data.workingDistrict,
@@ -129,12 +150,15 @@ export const getMemberProfile = async (): Promise<Member> => {
     seniorityNumber: data.seniority_number || data.seniorityNumber,
     residentialAddress: data.residential_address || data.residentialAddress,
     permanentAddress: data.permanent_address || data.permanentAddress,
-    dateOfBirth: data.date_of_birth || data.dateOfBirth,
+    dateOfBirth: data.date_of_birth || data.dateOfBirth || data.dob || data.DOB || "",
     mobileNumber: data.mobile_number || data.mobileNumber,
     emailId: data.emailId,
     tbfNumber: data.tbf_number || data.tbfNumber,
     cpsGpfNumber: data.cps_gpf_number || data.cpsGpfNumber,
     firstLogin: data.first_login || data.firstLogin,
+    isPaid: data.isPaid,
+    subscription_active: data.subscription_active,
+    payment_status: data.payment_status,
   };
 };
 

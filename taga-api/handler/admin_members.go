@@ -442,8 +442,14 @@ func UpdateMember(c *gin.Context) {
 			members[i]["mobile_number"] = req.MobileNumber
 		}
 		if req.EmailId != "" {
+			oldEmail := getString(members[i], "emailId")
 			members[i]["emailId"] = req.EmailId
 			members[i]["username"] = req.EmailId
+			if oldEmail != "" && !strings.EqualFold(oldEmail, req.EmailId) {
+				memberUUID := getString(members[i], "id")
+				tagaID := getString(members[i], "tagaId")
+				syncMemberEmailInSubscriptions(memberUUID, tagaID, oldEmail, req.EmailId)
+			}
 		}
 		if req.TbfNumber != "" {
 			members[i]["tbf_number"] = req.TbfNumber
@@ -2138,7 +2144,14 @@ func BulkProcessEditRequests(c *gin.Context) {
 				// Update member
 				for k, m := range members {
 					if mId, ok := m["id"].(string); ok && mId == pending[i].MemberID {
+						oldEmail := getString(members[k], "emailId")
 						members[k][pending[i].Field] = pending[i].NewValue
+						if pending[i].Field == "emailId" || pending[i].Field == "mailId" {
+							members[k]["emailId"] = pending[i].NewValue
+							members[k]["username"] = pending[i].NewValue
+							tagaID := getString(members[k], "tagaId")
+							syncMemberEmailInSubscriptions(pending[i].MemberID, tagaID, oldEmail, pending[i].NewValue)
+						}
 						membersUpdated = true
 						break
 					}

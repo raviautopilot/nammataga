@@ -110,7 +110,7 @@ func CreateSubscriptionOrder(c *gin.Context) {
 
 	// Validate positive amount
 	if req.Amount <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid amount"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Payment amount must be greater than zero. Negative or zero amount is not allowed."})
 		return
 	}
 
@@ -543,11 +543,18 @@ func expireExistingAnnualSubscriptions(email string) {
 	var subscriptions []model.MemberSubscription
 	json.Unmarshal(data, &subscriptions)
 
+	memberInfo := getMemberDetailsByEmail(email)
 	modified := false
+	now := time.Now()
 	for i, sub := range subscriptions {
-		if sub.MemberEmail == email && sub.SubscriptionID == "annual-subscription" && sub.Status == "active" {
+		matches := strings.EqualFold(sub.MemberEmail, email)
+		if !matches && memberInfo != nil {
+			matches = (memberInfo.ID != "" && sub.MemberID == memberInfo.ID) ||
+				(memberInfo.TagaID != "" && sub.MemberID == memberInfo.TagaID)
+		}
+		if matches && sub.SubscriptionID == "annual-subscription" && sub.Status == "active" {
 			subscriptions[i].Status = "expired"
-			subscriptions[i].UpdatedAt = time.Now()
+			subscriptions[i].UpdatedAt = now
 			modified = true
 		}
 	}
@@ -606,6 +613,13 @@ func GetMemberSubscriptionStatus(c *gin.Context) {
 
 // Helper functions for storage
 func getMemberSubscriptionsFilePath() string {
+	cfg := config.GetConfig()
+	if cfg.MembersFile != "" {
+		subsFile := filepath.Join(filepath.Dir(cfg.MembersFile), "..", "subscriptions", "member_subscriptions.json")
+		if _, err := os.Stat(subsFile); err == nil {
+			return subsFile
+		}
+	}
 	return filepath.Join("data", "subscriptions", "member_subscriptions.json")
 }
 
@@ -670,8 +684,15 @@ func getActiveMemberSubscription(email string) (*model.MemberSubscription, error
 	var subscriptions []model.MemberSubscription
 	json.Unmarshal(data, &subscriptions)
 
+	memberInfo := getMemberDetailsByEmail(email)
+
 	for _, s := range subscriptions {
-		if strings.EqualFold(s.MemberEmail, email) && s.Status == "active" {
+		matches := strings.EqualFold(s.MemberEmail, email)
+		if !matches && memberInfo != nil {
+			matches = (memberInfo.ID != "" && s.MemberID == memberInfo.ID) ||
+				(memberInfo.TagaID != "" && s.MemberID == memberInfo.TagaID)
+		}
+		if matches && s.Status == "active" {
 			return &s, nil
 		}
 	}
@@ -757,13 +778,25 @@ func GetMemberPaidSubscriptions(c *gin.Context) {
 	paidIDs := []string{}
 	now := time.Now()
 
+	// Look up member details from members.json (resolves ID, TagaID, offline payment status)
+	memberInfo := getMemberDetailsByEmail(email)
+
 	// 1. Determine if annual subscription is paid (active or grace period)
 	isAnnualPaid := false
 
-	// Check active annual subscription (strictly paid for current year, no grace period)
-	sub, err := getActiveMemberSubscription(email)
-	if err == nil && sub.SubscriptionID == "annual-subscription" && sub.Status == "active" && now.Before(sub.EndDate) {
-		isAnnualPaid = true
+	// Check members.json for offline payment or active status
+	if memberInfo != nil {
+		if strings.EqualFold(memberInfo.PaymentStatus, "Paid") || memberInfo.SubscriptionActive {
+			isAnnualPaid = true
+		}
+	}
+
+	// Also check active annual subscription from subscriptions storage
+	if !isAnnualPaid {
+		sub, err := getActiveMemberSubscription(email)
+		if err == nil && sub.SubscriptionID == "annual-subscription" && sub.Status == "active" && now.Before(sub.EndDate) {
+			isAnnualPaid = true
+		}
 	}
 	if isAnnualPaid {
 		paidIDs = append(paidIDs, "annual-subscription")
@@ -789,7 +822,7 @@ func GetMemberPaidSubscriptions(c *gin.Context) {
 		}
 	}
 
-	// 3. Scan member's subscription records for one‑time fees (any record counts)
+	// 3. Scan member's subscription records for one‑time fees (matched by email, UUID, or TagaID)
 	filePath := getMemberSubscriptionsFilePath()
 	data, err := os.ReadFile(filePath)
 	if err == nil {
@@ -797,7 +830,12 @@ func GetMemberPaidSubscriptions(c *gin.Context) {
 		json.Unmarshal(data, &subscriptions)
 		seen := make(map[string]bool)
 		for _, sub := range subscriptions {
-			if sub.MemberEmail == email && oneTimeIDs[sub.SubscriptionID] && !seen[sub.SubscriptionID] {
+			matches := strings.EqualFold(sub.MemberEmail, email)
+			if !matches && memberInfo != nil {
+				matches = (memberInfo.ID != "" && sub.MemberID == memberInfo.ID) ||
+					(memberInfo.TagaID != "" && sub.MemberID == memberInfo.TagaID)
+			}
+			if matches && oneTimeIDs[sub.SubscriptionID] && !seen[sub.SubscriptionID] {
 				paidIDs = append(paidIDs, sub.SubscriptionID)
 				seen[sub.SubscriptionID] = true
 			}
