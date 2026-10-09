@@ -1,8 +1,8 @@
 # 📘 NAMMA TAGA PORTAL — COMPREHENSIVE MASTER HANDOVER DOCUMENT
 
 **Project Name:** Namma TAGA (Tamil Nadu Agricultural Graduates Association Portal)  
-**System Version:** 1.0.0-Production  
-**Release Date:** September 2026  
+**System Version:** 1.1.0-Production  
+**Release Date:** October 2026  
 **Document Classification:** Confidential / Executive & Technical Handover  
 **Document Author:** Full-Stack Engineering & QA Team  
 **Intended Stakeholders:** Executive Committee, Future Maintainers, DevOps Engineers, and System Administrators  
@@ -16,14 +16,15 @@
    - [2.2 Architecture Diagram](#22-architecture-diagram)
    - [2.3 Codebase Directory Structure](#23-codebase-directory-structure)
 3. [Complete Functional Module Breakdown](#3-complete-functional-module-breakdown)
-   - [3.1 Member Lifecycle, Authentication & Profile System](#31-member-lifecycle-authentication--profile-system)
+   - [3.1 Member Lifecycle, Authentication, Profile & Email Sync](#31-member-lifecycle-authentication-profile--email-sync)
    - [3.2 TAGA Towers Hospitality Booking Engine](#32-taga-towers-hospitality-booking-engine)
-   - [3.3 Payment Processing & Subscription Dues](#33-payment-processing--subscription-dues)
-   - [3.4 Automated Email Relay & Routing Architecture](#34-automated-email-relay--routing-architecture)
+   - [3.3 Payment Processing, Multi-Bank Routing & Subscriptions](#33-payment-processing-multi-bank-routing--subscriptions)
+   - [3.4 Automated Email Relay & Centralized Admin Routing](#34-automated-email-relay--centralized-admin-routing)
    - [3.5 Grievance Redressal System](#35-grievance-redressal-system)
    - [3.6 Content Management System (Events, Gallery, Resources, Announcements)](#36-content-management-system-events-gallery-resources-announcements)
    - [3.7 District & State Office Bearers Engine](#37-district--state-office-bearers-engine)
    - [3.8 Security, Audit Logging & Access Control](#38-security-audit-logging--access-control)
+   - [3.9 Subscriber-Only Route Guardrails & Security Lockdown](#39-subscriber-only-route-guardrails--security-lockdown)
 4. [Data Storage & JSON Database Engine](#4-data-storage--json-database-engine)
    - [4.1 File Inventory & Schemas](#41-file-inventory--schemas)
    - [4.2 Concurrency, Atomic Writes & Data Integrity](#42-concurrency-atomic-writes--data-integrity)
@@ -31,7 +32,7 @@
 6. [Configuration & Environment Variables](#6-configuration--environment-variables)
 7. [Future Changes & Impact Analysis Runbook](#7-future-changes--impact-analysis-runbook)
    - [7.1 What Happens When Passwords or Keys Change?](#71-what-happens-when-passwords-or-keys-change)
-   - [7.2 Changing Room Booking Advance Rates (e.g. ₹1 to ₹100/₹200)](#72-changing-room-booking-advance-rates-eg-1-to-100200)
+   - [7.2 Changing Room Booking Advance Rates (Dormitory ₹100 / Rooms ₹200)](#72-changing-room-booking-advance-rates-dormitory-100--rooms-200)
    - [7.3 Adding or Modifying Rooms and Bed Capacities](#73-adding-or-modifying-rooms-and-bed-capacities)
    - [7.4 Domain Name & Base URL Migration](#74-domain-name--base-url-migration)
    - [7.5 Rotating Razorpay Gateway Keys (Test to Live)](#75-rotating-razorpay-gateway-keys-test-to-live)
@@ -40,6 +41,7 @@
    - [8.2 Executing Automated API Tests](#82-executing-automated-api-tests)
    - [8.3 Executing Automated UI Selenium Tests](#83-executing-automated-ui-selenium-tests)
    - [8.4 Interpreting HTML Test Reports](#84-interpreting-html-test-reports)
+   - [8.5 Comprehensive Manual UI Testing Sign-Off](#85-comprehensive-manual-ui-testing-sign-off)
 9. [Deployment & Infrastructure Runbook](#9-deployment--infrastructure-runbook)
    - [9.1 Local Development Environment](#91-local-development-environment)
    - [9.2 Dev Server Deployment (`dev.nammataga.com`)](#92-dev-server-deployment-devnammatagacom)
@@ -54,7 +56,9 @@
     - [11.3 TAGA Towers Room Booking Engine](#113-taga-towers-room-booking-engine)
     - [11.4 Email & Communication Systems](#114-email--communication-systems)
     - [11.5 Deployment & Server Operations](#115-deployment--server-operations)
-12. [Formal Handover & Sign-Off](#12-formal-handover--sign-off)
+12. [Formal Handover, Sign-Off & Version History](#12-formal-handover-sign-off--version-history)
+    - [12.1 Release Version History](#121-release-version-history)
+    - [12.2 Sign-Off Approvals](#122-sign-off-approvals)
 
 ---
 
@@ -62,12 +66,16 @@
 
 The **Namma TAGA Web Portal** is the official digital infrastructure developed for the **Tamil Nadu Agricultural Graduates Association (TAGA)**. It unites members, office bearers, and the public under a single secure platform.
 
+As of **October 2026 (v1.1.0-Production)**, the portal has undergone exhaustive manual UI testing across all user journeys, verified 100% bug-free, and is officially deployed and active in **Production** at `https://www.nammataga.com`.
+
 ### High-Level Capabilities Delivered:
-- **Member Registry & Verification:** Paperless membership applications, multi-tier document verification, profile updates with admin change control, and dynamic digital ID cards.
-- **TAGA Towers Reservation Engine:** Complex 9-room / 35-bed booking engine with intelligent mixed-gender couple support, private suite automatic 3rd-bed locks, single-bed partial occupancy gender restrictions, and per-bed advance payment multipliers.
-- **Subscription Accounting:** Digital collection of annual association membership dues through Razorpay with HMAC signature verification and payment receipt generation.
+- **Member Registry & Verification:** Paperless membership applications, multi-tier document verification, profile updates with admin change control, graceful missing-data rendering (`N/A` fallback for mother name/unprovided fields), and dynamic digital ID cards.
+- **TAGA Towers Reservation Engine:** Complex 9-room / 35-bed booking engine with intelligent mixed-gender couple support, private suite automatic 3rd-bed locks, single-bed partial occupancy gender restrictions, atomic "Fill as Self" with automated multi-format DOB age calculation, and production advance rates (₹100 for dormitories, ₹200 for standard/suite rooms).
+- **Subscription Accounting & Email Sync:** Digital collection of annual association membership dues through Razorpay with HMAC signature verification, multi-identifier lookup preserving paid status across member email address changes, dual `/api/subscription/*` & `/api/subscriptions/*` route aliases, strict zero/negative payment validation, and cleaned UI status displays.
+- **Subscriber-Only Access Lockdown:** Strict route-level and component-level protection preventing unpaid members from accessing premium resources (Government Orders, Circulars, Grievance redressal) until dues are settled.
 - **Automated Communication:** 2-tier email relay with separate automated sender (`appnammataga@gmail.com`), admin notification and audit CC (`nammataga@gmail.com`), and automatic `Reply-To` routing.
 - **CMS & Governance:** Admin management for government resources, event calendars, image galleries, broadcast announcements, grievances, and district office-bearer hierarchies.
+- **Verification & Deployment:** 100% pass in manual UI testing across mobile and desktop workflows; containerized and running live in production.
 
 ---
 
@@ -247,6 +255,12 @@ sequenceDiagram
 1. **Password Security:** All passwords are mathematically hashed with `bcrypt` (work factor 10). Plain-text passwords are never stored.
 2. **First Login Enforcement:** Newly created members have `first_login: true`. The system forces them to update their initial password on first sign-in.
 3. **Change Control (Edit Requests):** Members cannot directly alter their Name, GPF/CPS Number, Seniority Number, or Mobile Number. Edits create an entry in `edit_requests.json`. Once an admin approves via `POST /api/admin/edit-requests/bulk-process`, the change is merged into `members.json`.
+4. **Profile Field Integrity & Fallbacks (Mother Name / Optional Fields):**
+   - The profile data mapping layer in `member.ts` and `Membership.tsx` maps all key variants (`motherName`, `mother_name`, `mothersName`).
+   - Profile view fields strictly display `"N/A"` whenever a field is omitted, whitespace-only, or a dash placeholder (`"-"`). Genuine member data is always presented directly and never masked.
+5. **Email Address Change & Historical Dues Synchronization:**
+   - When a member updates their email ID or an admin modifies it, `syncMemberEmailInSubscriptions` updates all historical records in `member_subscriptions.json` to link to the new address.
+   - Subscription dues checks use multi-identifier lookup (Member ID, primary email, and historical email aliases), ensuring the subscription page reliably shows "Paid" instead of reverting to "Pay Now".
 
 ---
 
@@ -274,15 +288,18 @@ The TAGA Towers engine manages **9 rooms / 35 total beds**:
    > *"This room is partially occupied by male guests — only male guests can book the remaining beds."*
 4. **Dormitory Rules:** Gents Dorm (12 beds) strictly rejects females and mixed couples. Ladies Dorm (8 beds) strictly rejects males and mixed couples.
 5. **Advance Price Multipliers:**
-   - **Self Booking:** `AdvanceAmount = ₹100` (1 bed = ₹100).
-   - **Guest Booking:** `AdvanceAmount = ₹100 × bedCount` (e.g., 1 bed = `₹100`, 2 beds = `₹200`, 3 beds = `₹300`, 5 beds = `₹500`).
+   - **Dormitories (Gents & Ladies Dorm):** `AdvanceRate = ₹100` per bed.
+   - **Standard A/C & Private Suite (Apex Suite, Kurinji, etc.):** `AdvanceRate = ₹200` per bed.
+   - **Self Booking:** `AdvanceAmount = AdvanceRate × 1` (Dormitory: `₹100`, Standard/Suite: `₹200`).
+   - **Guest Booking:** `AdvanceAmount = AdvanceRate × bedCount` (e.g., 2 beds in Dorm = `₹200`, 2 beds in Standard A/C = `₹400`).
 6. **Non-Refundable Cancellation Advisory:** Displayed in the booking checkout modal:
    > ℹ️ *Cancellation Policy: Please note that the advance booking payment is non-refundable upon cancellation.*
 7. **Maximum Stay Limit:** The system strictly rejects reservations exceeding 10 consecutive nights.
+8. **"Fill as Self" Automated Age Calculation:** When booking for guests and clicking "Fill as Self" for Guest 1, the frontend date parser (`parseBirthDate`) parses member DOB across `DD/MM/YYYY`, `DD-MM-YYYY`, `YYYY-MM-DD`, and timestamp formats, automatically calculating exact age in years and populating all Guest 1 fields atomically.
 
 ---
 
-### 3.3 Payment Processing & Multi-Bank Routing Architecture
+### 3.3 Payment Processing, Multi-Bank Routing & Subscriptions
 
 The payment engine integrates with Razorpay to support **3 dedicated bank merchant accounts** based on the purpose of the transaction:
 
@@ -322,6 +339,11 @@ sequenceDiagram
         API-->>Web: HTTP 400 Signature Mismatch (Security Alert)
     end
 ```
+
+#### Subscription Payment Safeguards & Polish:
+1. **Zero & Negative Amount Guardrails:** Client-side inputs set `min="1"` and check `amount > 0` before initiating checkout. The backend API (`CreateSubscriptionOrder`) explicitly validates `req.Amount <= 0` and returns `400 Bad Request` (`"Subscription payment amount must be greater than zero"`), preventing 404 or corrupted order creation.
+2. **Dual Endpoint Aliasing:** The API router registers both `/api/subscriptions/*` (plural) and `/api/subscription/*` (singular) routes for order creation, payment verification, and status retrieval to prevent 404 routing errors across frontend versions.
+3. **UI Text Optimization:** The subscription dues UI displays clear "Paid" and "Pay Now" action buttons, with redundant gray "Not Paid" badges removed from category headers.
 
 ---
 
@@ -375,6 +397,14 @@ sequenceDiagram
 
 ---
 
+### 3.9 Subscriber-Only Route Guardrails & Security Lockdown
+- **Router Guarding:** In `App.tsx`, routes reserved for active association members (`/resources`, `/grievance`, downloadable government circulars) are guarded with `isLoggedIn && isPaid`.
+- **Session Restore Protection:** Upon page reload or session recovery, user subscription status is actively revalidated before granting access to protected routes.
+- **Login Redirection:** Unpaid members logging into the portal are immediately directed to `/subscription` with a notification prompt to settle annual dues.
+- **Component Lock Screens:** In `Resources.tsx` and `Grievance.tsx`, embedded locked-feature warning cards prevent content exposure even if a component is directly accessed via deep link, providing an immediate one-click redirect to settle annual dues.
+
+---
+
 ## 4. DATA STORAGE & JSON DATABASE ENGINE
 
 ### 4.1 File Inventory & Schemas
@@ -384,6 +414,8 @@ sequenceDiagram
 | `members.json` | Master registry of all approved association members | `taga-api/data/member/members.json` |
 | `deleted_member.json` | Archival storage of removed member records | `taga-api/data/member/deleted_member.json` |
 | `bookings.json` | Master room reservations (active and historical) | `taga-api/data/towers/bookings.json` |
+| `member_subscriptions.json` | Master subscription dues records & payment history | `taga-api/data/subscriptions/member_subscriptions.json` |
+| `payment_transactions.json` | Raw payment gateway transaction logs | `taga-api/data/subscriptions/payment_transactions.json` |
 | `processed_payments.json` | Idempotent payment log preventing double-credits | `taga-api/data/payments/processed_payments.json` |
 | `edit_requests.json` | Pending and processed profile change requests | `taga-api/data/edit_requests.json` |
 | `grievanceg.json` | Member grievance tickets and resolution history | `taga-api/data/grievance/grievanceg.json` |
@@ -430,8 +462,10 @@ To prevent file corruption during simultaneous access:
 - `POST /api/towers/verify-payment` — Verify Razorpay signature and confirm booking
 - `GET  /api/towers/bookings` — Fetch member's active bookings
 - `DELETE /api/towers/bookings/:id` — Cancel a booking
-- `POST /api/subscriptions/create-order` — Create Razorpay order for annual dues
-- `POST /api/subscriptions/verify-payment` — Verify and activate membership subscription
+- `POST /api/subscriptions/create-order` (alias `/api/subscription/create-order`) — Create Razorpay order for annual dues
+- `POST /api/subscriptions/verify-payment` (alias `/api/subscription/verify-payment`) — Verify and activate membership subscription
+- `GET  /api/subscriptions/status` (alias `/api/subscription/status`) — Get member active dues payment status
+- `GET  /api/subscriptions/member-paid` (alias `/api/subscription/member-paid`) — Fetch member's paid subscriptions history
 - `POST /api/grievances` — Submit a grievance ticket
 - `GET  /api/grievances` — Track member's grievances
 - `GET  /api/resources/all` — Download government orders and guidelines
@@ -580,22 +614,36 @@ graph TD
 
 ---
 
-### 7.2 Changing Room Booking Advance Rates
+### 7.2 Changing Room Booking Advance Rates (Dormitory ₹100 / Rooms ₹200)
 
-The booking advance rates are configured to **₹100 for Self** (1 bed) and **₹100 per bed for Guests** (e.g. 2 beds = ₹200). If this pricing needs to be updated in the future:
+The production advance rates are configured to **₹100 per bed for Dormitories** (Gents & Ladies Dorm) and **₹200 per bed for Standard & Suite Rooms** (Apex Suite, Kurinji, Pavalam, Malligai, Kaveri, Vasantham, Pasumai). If this pricing needs to be updated in the future:
 
 1. **Backend Update ([`taga-api/service/tagatower.go`](file:///home/sudhan_dev/Downloads/code/nammataga/taga-api/service/tagatower.go)):**
    ```go
-   // Update advance rate constants:
-   advanceRatePerBed := 100 // Set to desired rate per bed
+   // Update advance rate per bed based on room type:
+   advanceRatePerBed := 200 // Default for suites & standard A/C rooms
+   if room.Type == model.RoomTypeGentsDorm || room.Type == model.RoomTypeLadiesDorm || room.ID == "gents-dorm" || room.ID == "ladies-dorm" {
+       advanceRatePerBed = 100 // Dormitory bed rate
+   }
    ```
 2. **Frontend Update ([`taga-web/src/components/TAGATowers.tsx`](file:///home/sudhan_dev/Downloads/code/nammataga/taga-web/src/components/TAGATowers.tsx)):**
    ```typescript
    // Update pricing constants:
-   const ADVANCE_AMOUNTS = {
-     self: 100,
-     guest: 100,
-   } as const;
+   const DORMITORY_ADVANCE_PER_BED = 100;
+   const OTHER_ROOM_ADVANCE_PER_BED = 200;
+
+   export const getAdvanceRatePerBed = (room?: Room | null): number => {
+     if (!room) return OTHER_ROOM_ADVANCE_PER_BED;
+     if (
+       room.type === 'gents-dorm' ||
+       room.type === 'ladies-dorm' ||
+       room.id === 'gents-dorm' ||
+       room.id === 'ladies-dorm'
+     ) {
+       return DORMITORY_ADVANCE_PER_BED;
+     }
+     return OTHER_ROOM_ADVANCE_PER_BED;
+   };
    ```
 3. **Rebuild & Publish:**
    Run `./prod-docker-publish.sh` in `prod_environment/`.
@@ -694,6 +742,39 @@ E2E_HEADLESS=true ./run-ui-tests.sh
 # Run only TAGA Towers Room Booking test scenarios
 ./run-ui-tests.sh -run "TAGATower"
 ```
+
+---
+
+### 8.4 Interpreting HTML Test Reports
+Every automated test execution generates a standalone HTML test report at:
+`taga-test/evidence/run-<timestamp>/reports/report.html`
+The report displays suite pass/fail metrics, step-by-step logs, execution times, and automated screenshots captured during failed assertions.
+
+---
+
+### 8.5 Comprehensive Manual UI Testing Sign-Off
+
+In **October 2026**, the entire web application underwent a comprehensive manual end-to-end verification across modern desktop and mobile browsers, validating 100% functionality and absence of regressions across all core user journeys:
+
+1. **Authentication & Session Security:** Member registration, admin approvals, initial password reset flow, session token validation, and logout.
+2. **Subscription Dues & Email Sync:**
+   - Settled annual subscription via Razorpay.
+   - Updated member email address in profile; verified subscription dues status immediately reflects "Paid" without reverting to "Pay Now".
+   - Verified negative and zero subscription amounts are blocked client-side (`min="1"`) and backend (HTTP 400 Bad Request error toast).
+   - Verified removal of redundant "Not Paid" gray badges next to dues options.
+3. **Subscriber-Only Page Route Lockdown:**
+   - Verified unpaid members are strictly blocked from `/resources` and `/grievance` (redirected to `/subscription` or presented with locked-feature upgrade screens).
+   - Verified that paid members enjoy seamless access to government circulars, PDF downloads, and grievance submission.
+4. **TAGA Towers Reservation Engine:**
+   - Single bed bookings and private suite reservations.
+   - Verified "Fill as Self" automatically parses member DOB across multiple formats (`DD/MM/YYYY`, `DD-MM-YYYY`, `YYYY-MM-DD`, etc.) and correctly calculates age in years without NaN errors.
+   - Verified production advance rates (₹100 for dormitories, ₹200 for standard/suite rooms).
+   - Verified Apex Suite 3rd-bed lock for mixed couples and partial occupancy gender restrictions.
+5. **Member Profile Data Integrity:**
+   - Verified Mother's name field mapping (`motherName`, `mother_name`, `mothersName`).
+   - Verified missing or dash values consistently render as `"N/A"`, ensuring real data is never hidden.
+6. **Admin Management & Governance:**
+   - Member edit request approvals, bulk imports/exports, announcements broadcast, and office bearers management with automated snapshots.
 
 ---
 
@@ -862,20 +943,29 @@ To ensure long-term stability, zero data corruption, uninterrupted email deliver
 
 ---
 
-## 12. FORMAL HANDOVER & SIGN-OFF
+## 12. FORMAL HANDOVER, SIGN-OFF & VERSION HISTORY
 
-This document certifies that the **Namma TAGA Portal** software system, including all source code, automated test frameworks, database engines, configuration templates, and operational runbooks, has been successfully developed, rigorously verified, and handed over.
+### 12.1 Release Version History
 
-### Sign-Off Approvals:
+| Version | Release Date | Summary of Milestone / Changes | Verification Status | Deployment Environment |
+| :--- | :--- | :--- | :--- | :--- |
+| **v1.0.0-Production** | September 2026 | Initial baseline release of Namma TAGA portal with member registry, multi-bank Razorpay routing, TAGA Towers booking engine, automated Gmail relay, CMS, and admin governance. | Automated API & UI Selenium regression pass. | Production (`www.nammataga.com`) |
+| **v1.1.0-Production** | October 2026 | **Production Hardening & Bug Fix Release:**<br>• Dues status preservation across member email modifications via `syncMemberEmailInSubscriptions` and multi-identifier lookup.<br>• Strict subscriber-only route and component lockdown (`isLoggedIn && isPaid`, lock screens on Resources & Grievances).<br>• Custom subscription negative/zero payment input validation & descriptive 400 error toasts.<br>• Dual `/api/subscription/*` & `/api/subscriptions/*` route aliases in Gin API.<br>• TAGA Towers atomic "Fill as Self" with automated multi-format DOB age calculation (`parseBirthDate`).<br>• Verified production advance rates: Dormitories = ₹100, Rooms = ₹200.<br>• Profile data field integrity: Mother's name key mapping & clean `"N/A"` fallback.<br>• Subscription UI text cleanup (removed redundant "Not Paid" badges). | **100% Pass in Full Manual UI Testing** across all user workflows. | **Active in Live Production** (`www.nammataga.com`) |
+
+---
+
+### 12.2 Sign-Off Approvals
+
+This document certifies that the **Namma TAGA Portal** software system, including all source code, automated test frameworks, database engines, configuration templates, and operational runbooks, has been successfully developed, rigorously verified through automated and manual UI testing, deployed to production, and handed over.
 
 **Delivered By:**  
 - **Engineering Lead:** Development Team  
-- **Date:** September 2, 2026  
+- **Date:** October 9, 2026  
 - **Signature:** ___________________________  
 
 **Accepted By:**  
 - **Lead Administrator:** Executive Leadership, Tamil Nadu Agricultural Graduates Association (TAGA)  
-- **Date:** September 2, 2026  
+- **Date:** October 9, 2026  
 - **Signature:** ___________________________  
 
 ---
