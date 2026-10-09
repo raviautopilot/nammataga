@@ -217,6 +217,11 @@ export interface ResourceCategoryWithDocs {
 }
 
 export const uploadResource = async (resourceData: UploadResourceData): Promise<void> => {
+  // Client-side file size check (50MB limit)
+  if (resourceData.file && resourceData.file.size > 50 * 1024 * 1024) {
+    throw new Error('File size exceeds the 50MB limit. Please upload a smaller PDF file.');
+  }
+
   const formData = new FormData();
   formData.append('categoryId', resourceData.categoryId);
   formData.append('title', resourceData.title);
@@ -230,8 +235,20 @@ export const uploadResource = async (resourceData: UploadResourceData): Promise<
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to upload resource');
+    if (response.status === 413) {
+      throw new Error('File is too large for the server limit (Max: 50MB).');
+    }
+    if (response.status === 504) {
+      throw new Error('Upload timed out. Please check your network connection.');
+    }
+    let errorMessage = 'Failed to upload resource';
+    try {
+      const error = await response.json();
+      errorMessage = error.error || errorMessage;
+    } catch {
+      errorMessage = `Upload failed with status code ${response.status}`;
+    }
+    throw new Error(errorMessage);
   }
 };
 
@@ -244,6 +261,50 @@ export const deleteResource = async (categoryId: string, documentTitle: string):
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to delete resource');
+  }
+};
+
+export interface ExternalLinkItem {
+  title: string;
+  url: string;
+}
+
+export const getAdminExternalLinks = async (): Promise<ExternalLinkItem[]> => {
+  const token = getAuthToken() || localStorage.getItem('member_token');
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}/resources/external-links`, { headers });
+  if (!response.ok) {
+    throw new Error('Failed to fetch external links');
+  }
+  return response.json();
+};
+
+export const addExternalLink = async (link: ExternalLinkItem): Promise<void> => {
+  const response = await authFetch(`${API_BASE}/admin/resources/external-links`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(link),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to add external link');
+  }
+};
+
+export const deleteExternalLink = async (title: string): Promise<void> => {
+  const encodedTitle = encodeURIComponent(title);
+  const response = await authFetch(`${API_BASE}/admin/resources/external-links/${encodedTitle}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to delete external link');
   }
 };
 
@@ -508,7 +569,7 @@ export interface DistrictOption {
 
 export const getMembersList = async (
   page: number = 1,
-  limit: number = 10,
+  limit: number = 25,
   search: string = '',
   district: string = '',
   paymentStatus: string = ''

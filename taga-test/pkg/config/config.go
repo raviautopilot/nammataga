@@ -107,6 +107,9 @@ type Config struct {
 	AdminResourceYearInputTestID              string         `json:"adminResourceYearInputTestID"`
 	AdminResourceFileInputTestID              string         `json:"adminResourceFileInputTestID"`
 	AdminUploadResourceButtonTestID           string         `json:"adminUploadResourceButtonTestID"`
+	AdminLinkTitleInputTestID                 string         `json:"adminLinkTitleInputTestID"`
+	AdminLinkURLInputTestID                   string         `json:"adminLinkURLInputTestID"`
+	AdminAddLinkButtonTestID                  string         `json:"adminAddLinkButtonTestID"`
 	ResourcesNavButtonTestID                  string         `json:"resourcesNavButtonTestID"`
 	AdminEventsTabButtonTestID                string         `json:"adminEventsTabButtonTestID"`
 	AdminEventTitleInputTestID                string         `json:"adminEventTitleInputTestID"`

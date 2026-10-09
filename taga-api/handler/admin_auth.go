@@ -42,14 +42,11 @@ func AdminLoginHandler(c *gin.Context) {
 	}
 
 	cfg := config.GetConfig()
-	adminUsername := cfg.AdminEmail
-	adminPassword := cfg.AdminPassword
 
 	config.Logger.Info("Admin login attempt",
-		zap.String("provided_username", req.Username),
-		zap.String("expected_username", adminUsername))
+		zap.String("provided_username", req.Username))
 
-	if req.Username != adminUsername || req.Password != adminPassword {
+	if !cfg.ValidateAdminCredentials(req.Username, req.Password) {
 		config.Logger.Warn("Failed admin login - invalid credentials")
 		// Audit failed login attempt
 		_ = audit.Log(c, "admin", req.Username,

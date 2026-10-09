@@ -1,13 +1,19 @@
 package api_test
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"e2e-template/pkg/client"
 	"e2e-template/tests"
+
+	"github.com/xuri/excelize/v2"
 )
 
 type AdminAddMemberRequest struct {
@@ -172,17 +178,97 @@ func TestAPI_AdminMembers_Reports(t *testing.T) {
 		tctx.Actual = "HTTP 200 OK Excel binary downloaded successfully"
 	})
 
-	tests.RunAPITestWithDetails(t, "[Admin] GET Generate Member Report", "Admin requests member census text/csv report.", "HTTP 200 OK with report content", func(tctx *tests.TestContext) {
+	tests.RunAPITestWithDetails(t, "[Admin] GET Generate Member Report - Excel .xlsx with TAGA ID", "Admin requests member excel report, verifying .xlsx format, TAGA ID column header, and valid TAGA ID values instead of member UUIDs.", "HTTP 200 OK with valid .xlsx and TAGA IDs", func(tctx *tests.TestContext) {
 		token := getValidAdminToken(tctx.T, tctx.Client)
-		auth := &client.BearerTokenAuth{Token: token}
 
-		err := tctx.Client.SendHttpRequest("GET", "/api/admin/reports/members", nil, nil, nil, auth)
+		periods := []string{"all_time", "current_month", "last_month", "current_quarter", "current_year"}
+		for _, period := range periods {
+			fullURL := strings.TrimRight(tctx.Client.BaseURL, "/") + "/api/admin/reports/members?period=" + period
+			req, err := http.NewRequest("GET", fullURL, nil)
+			if err != nil {
+				tctx.Fatalf("Failed to create request for period %s: %v", period, err)
+			}
+			req.Header.Set("Authorization", "Bearer "+token)
 
-		if err != nil {
-			tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
-			tctx.Fatalf("Expected 200 OK, got: %v", err)
+			resp, err := tctx.Client.HTTPClient.Do(req)
+			if err != nil {
+				tctx.Fatalf("Failed to execute request for period %s: %v", period, err)
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				tctx.Fatalf("Expected status 200 OK for period %s, got: %d", period, resp.StatusCode)
+			}
+
+			// Verify Content-Type is Excel spreadsheet
+			contentType := resp.Header.Get("Content-Type")
+			expectedCT := "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+			if !strings.Contains(contentType, expectedCT) {
+				tctx.Fatalf("Expected Content-Type %s, got: %s", expectedCT, contentType)
+			}
+
+			// Verify Content-Disposition has .xlsx filename
+			contentDisp := resp.Header.Get("Content-Disposition")
+			if !strings.Contains(contentDisp, ".xlsx") {
+				tctx.Fatalf("Expected Content-Disposition to contain .xlsx filename, got: %s", contentDisp)
+			}
+
+			bodyBytes, err := io.ReadAll(resp.Body)
+			if err != nil {
+				tctx.Fatalf("Failed to read response body: %v", err)
+			}
+
+			// Open and parse as Excel workbook
+			f, err := excelize.OpenReader(bytes.NewReader(bodyBytes))
+			if err != nil {
+				tctx.Fatalf("Failed to open response as Excel (.xlsx) file: %v", err)
+			}
+			defer f.Close()
+
+			sheetName := "Membership Report"
+			rows, err := f.GetRows(sheetName)
+			if err != nil {
+				tctx.Fatalf("Failed to get rows from sheet '%s': %v", sheetName, err)
+			}
+
+			if len(rows) == 0 {
+				tctx.Fatalf("Excel sheet '%s' has no rows", sheetName)
+			}
+
+			// Header validation: First column MUST be 'TAGA ID' (not 'Member ID')
+			headers := rows[0]
+			if len(headers) == 0 || headers[0] != "TAGA ID" {
+				tctx.Fatalf("Expected first header column to be 'TAGA ID', got: %v", headers)
+			}
+
+			uuidRegex := regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+			// Data rows validation
+			for i := 1; i < len(rows); i++ {
+				row := rows[i]
+				if len(row) > 0 {
+					tagaID := row[0]
+					if uuidRegex.MatchString(tagaID) {
+						tctx.Fatalf("Row %d has internal member UUID instead of TAGA ID: %s", i+1, tagaID)
+					}
+					if tagaID == "" {
+						tctx.Fatalf("Row %d has empty TAGA ID (must be TAGA ID or 'N/A')", i+1)
+					}
+				}
+				// Registration Date column validation (index 16)
+				if len(row) > 16 {
+					regDate := row[16]
+					if regDate != "N/A" {
+						_, err := time.Parse("2006-01-02", regDate)
+						if err != nil {
+							tctx.Fatalf("Row %d has invalid date format '%s', expected YYYY-MM-DD or N/A", i+1, regDate)
+						}
+					}
+				}
+			}
 		}
-		tctx.Actual = "HTTP 200 OK report downloaded successfully"
+
+		tctx.Actual = "HTTP 200 OK genuine Excel report validated across all periods (.xlsx, header 'TAGA ID', valid TAGA IDs, formatted dates)"
 	})
 }
 

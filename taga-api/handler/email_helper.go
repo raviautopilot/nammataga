@@ -82,6 +82,7 @@ func saveSentPayment(payment SentPayment) {
 		return
 	}
 
+	// Save to sent_payments.json
 	data, err := json.MarshalIndent(payments, "", "  ")
 	if err != nil {
 		safeLogError("Failed to marshal sent payments", zap.Error(err))
@@ -91,6 +92,13 @@ func saveSentPayment(payment SentPayment) {
 	if err := os.WriteFile(sentPaymentsFile, data, 0644); err != nil {
 		safeLogError("Failed to save sent payments", zap.Error(err))
 	}
+
+	// Also record in processedPayments for webhook deduplication
+	saveProcessedPayment(ProcessedPayment{
+		PaymentID:   payment.PaymentID,
+		OrderID:     "",
+		ProcessedAt: payment.SentAt,
+	})
 }
 
 // hasEmailBeenSent checks if an email has already been sent for this payment
@@ -133,6 +141,11 @@ func saveFailedEmail(failed FailedEmail) {
 
 // sendEmailWithRetry sends email with retry mechanism
 func sendEmailWithRetry(to, subject, body string, paymentID, paymentType string, maxRetries int) {
+	sendEmailWithReplyToAndRetry(to, "", subject, body, paymentID, paymentType, maxRetries)
+}
+
+// sendEmailWithReplyToAndRetry sends email with custom reply-to header and retry mechanism
+func sendEmailWithReplyToAndRetry(to, replyTo, subject, body string, paymentID, paymentType string, maxRetries int) {
 	var lastErr error
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
@@ -140,9 +153,10 @@ func sendEmailWithRetry(to, subject, body string, paymentID, paymentType string,
 			zap.Int("attempt", attempt),
 			zap.String("payment_id", paymentID),
 			zap.String("to", to),
+			zap.String("reply_to", replyTo),
 		)
 
-		err := sendEmail(to, subject, body)
+		err := sendEmailWithReplyTo(to, replyTo, subject, body)
 		if err == nil {
 			// Success - save to sent payments
 			saveSentPayment(SentPayment{

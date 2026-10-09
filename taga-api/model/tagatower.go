@@ -9,6 +9,7 @@ type Room struct {
 	Type           RoomType `json:"type"`
 	Capacity       int      `json:"capacity"`
 	AllowSingleBed bool     `json:"allowSingleBed"`
+	Hide           bool     `json:"hide,omitempty"`
 }
 
 type RoomType string

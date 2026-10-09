@@ -13,8 +13,12 @@ import (
 	"time"
 
 	"taga-api/config"
+	"taga-api/model"
+	"taga-api/service"
+	"taga-api/service/member"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -97,18 +101,18 @@ func saveProcessedPayment(payment ProcessedPayment) {
 	// Ensure directory exists
 	dir := filepath.Dir(getProcessedPaymentsFile())
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		config.Logger.Error("Failed to create payments directory", zap.Error(err))
+		safeLogError("Failed to create payments directory", zap.Error(err))
 		return
 	}
 
 	data, err := json.MarshalIndent(payments, "", "  ")
 	if err != nil {
-		config.Logger.Error("Failed to marshal processed payments", zap.Error(err))
+		safeLogError("Failed to marshal processed payments", zap.Error(err))
 		return
 	}
 
 	if err := os.WriteFile(getProcessedPaymentsFile(), data, 0644); err != nil {
-		config.Logger.Error("Failed to write processed payments file", zap.Error(err))
+		safeLogError("Failed to write processed payments file", zap.Error(err))
 	}
 }
 
@@ -120,19 +124,37 @@ func isPaymentAlreadyProcessed(paymentID string) bool {
 	return exists
 }
 
-// verifyWebhookSignature verifies that the webhook came from Razorpay
+func IsPaymentProcessedOrSentForTest(paymentID string) bool {
+	return isPaymentAlreadyProcessed(paymentID) || hasEmailBeenSent(paymentID)
+}
+
+func SaveSentPaymentForTest(paymentID string) {
+	saveSentPayment(SentPayment{
+		PaymentID:   paymentID,
+		PaymentType: "test",
+		SentAt:      time.Now(),
+	})
+}
+
+// verifyWebhookSignature verifies that the webhook came from Razorpay across any configured bank account
 func verifyWebhookSignature(payload []byte, signature string) bool {
-	razorpaySecret := os.Getenv("RAZORPAY_SECRET")
-	if razorpaySecret == "" {
-		config.Logger.Warn("RAZORPAY_SECRET not set, skipping webhook verification")
+	secrets := config.GetAllBankSecrets()
+	if len(secrets) == 0 {
+		config.Logger.Warn("No Razorpay secrets set, skipping webhook verification")
 		return true // Skip verification in development (not recommended for production)
 	}
 
-	h := hmac.New(sha256.New, []byte(razorpaySecret))
-	h.Write(payload)
-	expectedSignature := hex.EncodeToString(h.Sum(nil))
+	for _, secret := range secrets {
+		h := hmac.New(sha256.New, []byte(secret))
+		h.Write(payload)
+		expectedSignature := hex.EncodeToString(h.Sum(nil))
 
-	return hmac.Equal([]byte(signature), []byte(expectedSignature))
+		if hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // WebhookHandler handles Razorpay webhook events
@@ -190,9 +212,9 @@ func WebhookHandler(c *gin.Context) {
 		zap.Int("amount", payment.Amount),
 	)
 
-	// Check for duplicate payment
-	if isPaymentAlreadyProcessed(paymentID) {
-		config.Logger.Info("Payment already processed, skipping",
+	// Check for duplicate payment (either in processedPayments or sentPayments)
+	if isPaymentAlreadyProcessed(paymentID) || hasEmailBeenSent(paymentID) {
+		config.Logger.Info("Payment already processed or email already sent, skipping webhook duplicate",
 			zap.String("payment_id", paymentID))
 		c.JSON(http.StatusOK, gin.H{"message": "Already processed"})
 		return
@@ -232,6 +254,40 @@ func WebhookHandler(c *gin.Context) {
 		memberName, _ := notes["member_name"].(string)
 		memberTagaID, _ := notes["member_taga_id"].(string)
 		memberEmail, _ := notes["member_email"].(string)
+		if memberEmail == "" {
+			memberEmail = customerEmail
+		}
+
+		// Ensure subscription record is persisted and member payment status updated
+		if subscriptionID != "" && memberEmail != "" {
+			now := time.Now()
+			nextYearEnd := getMembershipYearEnd(now)
+
+			memberSub := model.MemberSubscription{
+				ID:               uuid.New().String(),
+				MemberID:         memberTagaID,
+				MemberEmail:      memberEmail,
+				SubscriptionID:   subscriptionID,
+				SubscriptionName: subscriptionName,
+				Amount:           payment.Amount,
+				OrderID:          orderID,
+				PaymentID:        paymentID,
+				Status:           "active",
+				StartDate:        now,
+				EndDate:          nextYearEnd,
+				LastPaidDate:     now,
+				NextDueDate:      nextYearEnd.AddDate(0, 0, 1),
+				CreatedAt:        now,
+				UpdatedAt:        now,
+			}
+			saveMemberSubscription(memberSub)
+
+			if subscriptionID == "annual-subscription" {
+				if err := member.UpdateMemberPaymentStatus(memberEmail, true); err != nil {
+					config.Logger.Error("Webhook: Failed to update member payment status", zap.Error(err))
+				}
+			}
+		}
 
 		emailData := AdminSubscriptionData{
 			PaymentID:        paymentID,
@@ -276,8 +332,16 @@ func WebhookHandler(c *gin.Context) {
 			bookingFor, _ = notes["booking_for"].(string)
 		}
 		guestDetailsJSON, _ := notes["guest_details"].(string)
-
 		bookingID, _ := notes["booking_id"].(string)
+
+		// Confirm room booking payment status in database if booking_id present
+		if bookingID != "" {
+			if err := service.ConfirmPaymentWithDetails(bookingID, orderID, paymentID); err != nil {
+				config.Logger.Error("Webhook: Failed to confirm room booking payment in database",
+					zap.String("booking_id", bookingID),
+					zap.Error(err))
+			}
+		}
 
 		emailData := AdminRoomBookingData{
 			BookingID:     bookingID,

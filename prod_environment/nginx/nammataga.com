@@ -71,6 +71,9 @@ server {
     listen [::]:443 ssl http2;
     server_name www.nammataga.com;
 
+    # Allow large file/resource uploads (up to 50MB)
+    client_max_body_size 50M;
+
     # ==========================================================================
     # SSL Configuration
     # ==========================================================================

@@ -208,6 +208,13 @@ export function Resources({ isLoggedIn }: ResourcesProps) {
               <ScrollArea className="h-[500px]">
                 <div className="space-y-3">
                   {/* External links when category is "links" - SORTED */}
+                  {selectedCategory === "links" && externalLinks.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <ExternalLink className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                      <p>No external links found.</p>
+                    </div>
+                  )}
+
                   {selectedCategory === "links" && externalLinks.length > 0 && (
                     externalLinks.map((link: any, i: number) => (
                       <div

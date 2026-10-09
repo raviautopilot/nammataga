@@ -7,6 +7,7 @@ import (
 
 	"e2e-template/pkg/client"
 	"e2e-template/tests"
+	"taga-api/handler"
 )
 
 type SubOrderRequest struct {
@@ -47,11 +48,24 @@ func TestAPI_Payment_SubscriptionPayment_TableDriven(t *testing.T) {
 			AuthType:    "member",
 			Payload: &SubOrderRequest{
 				SubscriptionID: "annual-subscription",
-				Amount:         3500,
+				Amount:         350000,
 				Email:          "sudhantest08@gmail.com",
 			},
 			ExpectedStatus: http.StatusOK,
 			ExpectedSub:    "orderId",
+		},
+		{
+			Name:        "Validation - Tampered Subscription Amount (₹1 for ₹3500 Plan)",
+			Persona:     "Authenticated Member",
+			Description: "Attempts to create an order sending 100 paise (₹1) for a fixed ₹3,500 plan.",
+			AuthType:    "member",
+			Payload: &SubOrderRequest{
+				SubscriptionID: "annual-subscription",
+				Amount:         100,
+				Email:          "sudhantest08@gmail.com",
+			},
+			ExpectedStatus: http.StatusBadRequest,
+			ExpectedSub:    "Invalid subscription amount",
 		},
 		{
 			Name:           "Security - Create Order Unauthenticated",
@@ -276,5 +290,45 @@ func TestAPI_Payment_TowerPayments_TableDriven(t *testing.T) {
 				assertErrorStatus(tctx, err, tc.ExpectedStatus, "")
 			}
 		})
+	}
+}
+
+func TestWebhookDuplicatePrevention(t *testing.T) {
+	// Import handler helper functions
+	paymentID := "pay_test_dedup_123"
+
+	// 1. Verify initially not marked as sent or processed
+	if handler.IsPaymentProcessedOrSentForTest(paymentID) {
+		t.Fatalf("Test setup error: paymentID should not be marked as processed initially")
+	}
+
+	// 2. Simulate email verification saving sent payment
+	handler.SaveSentPaymentForTest(paymentID)
+
+	// 3. Verify that webhook handler deduplication check detects the payment as already handled
+	if !handler.IsPaymentProcessedOrSentForTest(paymentID) {
+		t.Errorf("Deduplication failure: webhook did not recognize paymentID %s as already processed after email dispatch", paymentID)
+	}
+}
+
+func TestCaseInsensitiveOneTimeFeeCheck(t *testing.T) {
+	// Test Issue #10: case-insensitive email check on one-time fees
+	emailLower := "membercase@example.com"
+	emailUpper := "MEMBERCASE@EXAMPLE.COM"
+
+	// Create test order with lower-case email
+	handler.SaveTestOneTimePayment("new-member-enrollment-fee", emailLower)
+
+	// Verify upper-case email check returns true (already paid)
+	if !handler.HasMemberPaidOneTimeForTest("new-member-enrollment-fee", emailUpper) {
+		t.Errorf("Case-sensitivity bug detected: upper-case email check failed for one-time fee already paid with lower-case email")
+	}
+}
+
+func TestContextKeyBookerEmail(t *testing.T) {
+	// Test Issue #9: context key lookup for booker email
+	email := handler.GetBookerEmailFromContextForTest("member_email", "testbooker@example.com")
+	if email != "testbooker@example.com" {
+		t.Errorf("Context key mismatch: expected 'testbooker@example.com' from member_email, got '%s'", email)
 	}
 }

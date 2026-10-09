@@ -168,6 +168,10 @@ func sendSuccessEmail(memberEmail, tempPassword string) error {
 
 // sendEmail sends an HTML email using SMTP configuration
 func sendEmail(to, subject, body string) error {
+	return sendEmailWithReplyTo(to, "", subject, body)
+}
+
+func sendEmailWithReplyTo(to, replyTo, subject, body string) error {
 	cfg := config.GetConfig()
 
 	from := cfg.FromEmail
@@ -183,7 +187,9 @@ func sendEmail(to, subject, body string) error {
 	headers := make(map[string]string)
 	headers["From"] = fmt.Sprintf("Nammataga Association <%s>", from)
 	headers["To"] = to
-	if cfg.AdminEmail != "" {
+	if replyTo != "" {
+		headers["Reply-To"] = fmt.Sprintf("Nammataga Association <%s>", replyTo)
+	} else if cfg.AdminEmail != "" {
 		headers["Reply-To"] = fmt.Sprintf("Nammataga Association <%s>", cfg.AdminEmail)
 	}
 	headers["Subject"] = subject
@@ -198,6 +204,7 @@ func sendEmail(to, subject, body string) error {
 
 	config.Logger.Info("📧 Sending email",
 		zap.String("to", to),
+		zap.String("reply_to", replyTo),
 		zap.String("cc", cfg.CCEmail),
 		zap.String("from", from),
 		zap.String("subject", subject),
@@ -273,6 +280,23 @@ func getMemberTagaIdByUUID(uuid string) string {
 		}
 	}
 	return uuid
+}
+
+// getMemberEmailByUUID returns the email address for a given internal member UUID
+func getMemberEmailByUUID(uuid string) string {
+	members, err := readExistingMembers()
+	if err != nil {
+		return ""
+	}
+	for _, m := range members {
+		if id, ok := m["id"].(string); ok && id == uuid {
+			if email, ok := m["emailId"].(string); ok {
+				return email
+			}
+			return ""
+		}
+	}
+	return ""
 }
 
 // getAdminUsername retrieves the admin username from the Gin context.

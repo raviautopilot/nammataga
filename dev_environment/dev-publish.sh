@@ -5,14 +5,21 @@
 #              1. Detects git changes in taga-api and taga-web.
 #              2. Leverages Docker layer caching for fast builds.
 #              3. Builds ONLY changed services (or both if --force).
-#              4. Ships images, compose files, and deploy scripts to VPS.
+#              4. Ships images, Nginx configs, compose files, and deploy scripts to VPS.
 # ==============================================================================
 
 set -euo pipefail
 
 # VPS details
-SSH_TARGET="sys-taga@taga-prod"
+REMOTE_HOST="31.97.62.187"
+REMOTE_USER="sys-taga"
 REMOTE_PATH="/apps/taga-api/dev"
+
+# Determine SSH target depending on local hostname
+SSH_TARGET="${REMOTE_USER}@${REMOTE_HOST}"
+if [[ "$(hostname)" == "ravi-linux" ]]; then
+    SSH_TARGET="sys-taga@taga-prod"
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -117,6 +124,9 @@ else
     echo "⏭️ Skipping frontend (taga-web) build - no changes detected. Using existing $WEB_TAR."
 fi
 
+# Always upload BOTH image archives to VPS
+FILES_TO_UPLOAD=("$WEB_TAR" "$API_TAR")
+
 # Gather git and user deployment log details
 DEPLOY_TIME=$(date "+%Y-%m-%d %H:%M:%S")
 DEPLOY_USER=$(git config user.name || whoami)
@@ -126,16 +136,18 @@ COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "no-commit")
 LOG_ENTRY="[$DEPLOY_TIME] User: $DEPLOY_USER | Branch: $BRANCH_NAME | Commit: $COMMIT_HASH | Status: SHIPPED | Built: (API:$BUILD_API WEB:$BUILD_WEB)"
 
 # 3. Upload archives and configs to VPS via a staging directory (since target path requires sudo)
-# Using absolute path to home directory to prevent SCP/SFTP variable expansion issues
 TMP_UPLOAD="/home/sys-taga/taga-dev-upload"
 echo "🚚 Creating staging directory on VPS ($SSH_TARGET)..."
 ssh "$SSH_TARGET" "mkdir -p $TMP_UPLOAD/dist $TMP_UPLOAD/nginx"
 
-echo "🚚 Transferring files to VPS staging directory..."
-scp "$WEB_TAR" "$API_TAR" "$SSH_TARGET:$TMP_UPLOAD/dist/"
+echo "🚚 Transferring image archives, Nginx configs, and deployment scripts to VPS..."
+scp "${FILES_TO_UPLOAD[@]}" "$SSH_TARGET:$TMP_UPLOAD/dist/"
 scp "$SCRIPT_DIR/docker-compose.dev.yml" "$SSH_TARGET:$TMP_UPLOAD/"
 scp "$SCRIPT_DIR/dev-deploy-docker.sh" "$SCRIPT_DIR/dev-wipe-docker.sh" "$SSH_TARGET:$TMP_UPLOAD/"
-scp "$SCRIPT_DIR/nginx/dev.nammataga.com" "$SCRIPT_DIR/nginx/devapi.nammataga.com" "$SSH_TARGET:$TMP_UPLOAD/nginx/"
+
+if [ -d "$SCRIPT_DIR/nginx" ]; then
+    scp "$SCRIPT_DIR/nginx/dev.nammataga.com" "$SCRIPT_DIR/nginx/devapi.nammataga.com" "$SSH_TARGET:$TMP_UPLOAD/nginx/"
+fi
 
 echo "🌐 Deploying files to final path with sudo privileges..."
 ssh -t "$SSH_TARGET" "
@@ -151,3 +163,23 @@ echo "=================================================="
 echo "✅ Development docker image archives and configs shipped to VPS ($SSH_TARGET)!"
 echo "👉 SSH into your VPS and run: sudo bash $REMOTE_PATH/dev-deploy-docker.sh"
 echo "=================================================="
+
+# ==============================================================================
+# USAGE & COMMANDS REFERENCE GUIDE
+# ==============================================================================
+#
+# 1. Standard Smart Publish (Default):
+#    Detects git changes in taga-api and taga-web, builds ONLY changed services,
+#    and ALWAYS uploads BOTH frontend & backend archives to VPS.
+#    $ ./dev_environment/dev-publish.sh
+#
+# 2. Force Rebuild & Publish All:
+#    Ignores git diff and forces a full rebuild and upload of both frontend & backend images.
+#    $ ./dev_environment/dev-publish.sh --force
+#
+# 3. VPS Deployment Execution (On Remote Server):
+#    After running this script, SSH to the VPS and run the deployment script to apply changes:
+#    $ ssh sys-taga@taga-prod
+#    $ sudo bash /apps/taga-api/dev/dev-deploy-docker.sh
+#
+# ==============================================================================

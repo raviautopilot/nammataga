@@ -192,13 +192,46 @@ func DeleteBooking(c *gin.Context) {
 
 	booking, err := service.GetBookingByID(bookingID)
 	if err != nil {
-		c.JSON(404, gin.H{"error": "Booking not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Booking not found"})
+		return
+	}
+
+	// IDOR Protection: Check ownership or admin privileges
+	authMemberID, _ := c.Get("member_id")
+	authBookerID := c.GetString("bookerID")
+	authEmail, _ := c.Get("member_email")
+	authRole, _ := c.Get("role")
+	authUsername, _ := c.Get("username")
+
+	isOwner := false
+	if authMemberID != nil && authMemberID.(string) != "" {
+		memID := authMemberID.(string)
+		tagaID := getMemberTagaIdByUUID(memID)
+		if memID == booking.BookerID || tagaID == booking.BookerID {
+			isOwner = true
+		}
+	}
+	if !isOwner && authBookerID != "" && authBookerID == booking.BookerID {
+		isOwner = true
+	}
+	if !isOwner && authEmail != nil && authEmail.(string) != "" {
+		tagaID := getMemberTagaIdByEmail(authEmail.(string))
+		if tagaID != "" && tagaID == booking.BookerID {
+			isOwner = true
+		}
+	}
+
+	isAdmin := (authRole != nil && (authRole.(string) == "admin" || authRole.(string) == "superadmin")) ||
+		(authUsername != nil && authUsername.(string) != "")
+
+	if !isOwner && !isAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not authorized to cancel this booking"})
 		return
 	}
 
 	err = service.CancelBooking(bookingID)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -209,7 +242,7 @@ func DeleteBooking(c *gin.Context) {
 		fmt.Sprintf("Member %s (ID: %s) cancelled room booking %s", booking.BookerName, booking.BookerID, booking.ID),
 		booking, nil)
 
-	c.JSON(200, gin.H{"message": "Booking cancelled"})
+	c.JSON(http.StatusOK, gin.H{"message": "Booking cancelled"})
 }
 
 /* ---------------------------
@@ -349,18 +382,12 @@ type CreateOrderResponse struct {
 // @Success 200 {object} CreateOrderResponse
 // @Router /api/towers/create-order [post]
 func CreateOrder(c *gin.Context) {
-	razorpayKey := os.Getenv("RAZORPAY_KEY")
-	razorpaySecret := os.Getenv("RAZORPAY_SECRET")
+	bankConfig := config.GetBankGatewayConfig("room_booking")
+	razorpayKey := bankConfig.Key
+	razorpaySecret := bankConfig.Secret
 
-	if config.Config.DisablePayment {
-		if razorpayKey == "" {
-			razorpayKey = "mock_key"
-		}
-		if razorpaySecret == "" {
-			razorpaySecret = "mock_secret"
-		}
-	} else if razorpayKey == "" || razorpaySecret == "" {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Razorpay credentials not configured"})
+	if !config.Config.DisablePayment && (razorpayKey == "" || razorpaySecret == "") {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Razorpay credentials not configured for " + bankConfig.BankName})
 		return
 	}
 
@@ -374,12 +401,38 @@ func CreateOrder(c *gin.Context) {
 		return
 	}
 
+	// Validate room booking amount if booking_id is provided in notes
+	if req.Notes != nil {
+		if bookingID, ok := req.Notes["booking_id"].(string); ok && bookingID != "" {
+			booking, err := service.GetBookingByID(bookingID)
+			if err == nil && booking != nil {
+				expectedAmountPaise := booking.AdvanceAmount * 100
+				if req.Amount != expectedAmountPaise {
+					config.Logger.Warn("Mismatched room booking order amount",
+						zap.String("booking_id", bookingID),
+						zap.Int("expected_paise", expectedAmountPaise),
+						zap.Int("received_paise", req.Amount),
+					)
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid room booking advance amount"})
+					return
+				}
+			}
+		}
+	}
+
 	// Get member details for notes from context (set by middleware)
 	bookerName := c.GetString("bookerName")
 	if bookerName == "" {
-		// Try to get from logged-in user
-		if memberEmail, exists := c.Get("email"); exists {
-			if name := getMemberNameByEmail(memberEmail.(string)); name != "" {
+		// Try to get from logged-in user context
+		var memberEmail string
+		if e, exists := c.Get("member_email"); exists {
+			memberEmail, _ = e.(string)
+		} else if e, exists := c.Get("email"); exists {
+			memberEmail, _ = e.(string)
+		}
+
+		if memberEmail != "" {
+			if name := getMemberNameByEmail(memberEmail); name != "" {
 				bookerName = name
 			}
 		}
@@ -394,13 +447,19 @@ func CreateOrder(c *gin.Context) {
 
 	// Get booker email
 	bookerEmail := ""
-	if email, exists := c.Get("email"); exists {
-		bookerEmail = email.(string)
+	if e, exists := c.Get("member_email"); exists {
+		bookerEmail, _ = e.(string)
+	} else if e, exists := c.Get("email"); exists {
+		bookerEmail, _ = e.(string)
 	}
 
 	// Build notes with room booking details
 	orderNotes := map[string]interface{}{
-		"payment_type": "room_booking",
+		"payment_type":  "room_booking",
+		"bank_name":     bankConfig.BankName,
+		"bank_id":       bankConfig.BankID,
+		"account_email": bankConfig.AccountEmail,
+		"notify_email":  bankConfig.NotifyEmail,
 	}
 
 	// Merge any additional notes from frontend (contains room details, guest details, etc.)
@@ -452,6 +511,19 @@ func CreateOrder(c *gin.Context) {
 		Key:   razorpayKey,
 		Order: order,
 	})
+}
+
+func GetBookerEmailFromContextForTest(key string, value string) string {
+	c, _ := gin.CreateTestContext(nil)
+	c.Set(key, value)
+
+	email := ""
+	if e, exists := c.Get("member_email"); exists {
+		email, _ = e.(string)
+	} else if e, exists := c.Get("email"); exists {
+		email, _ = e.(string)
+	}
+	return email
 }
 
 // ConfirmPayment godoc
@@ -539,8 +611,12 @@ func getMemberNameByTagaID(tagaID string) string {
 	return ""
 }
 
+func BuildRoomBookingEmailBodyForTest(data AdminRoomBookingData) string {
+	return buildRoomBookingEmailBody(data)
+}
+
 func buildRoomBookingEmailBody(data AdminRoomBookingData) string {
-	amountInRupees := float64(data.Amount)
+	amountInRupees := float64(data.Amount) / 100.0
 
 	var body strings.Builder
 
@@ -687,11 +763,13 @@ func VerifyPayment(c *gin.Context) {
 		return
 	}
 
+	bankConfig := config.GetBankGatewayConfig("room_booking")
+
 	isMock := config.Config.DisablePayment || strings.HasPrefix(req.OrderID, "mock_order_") || req.Signature == "mock_signature"
 	if isMock {
 		config.Logger.Info("Bypassing payment signature verification for mock payment", zap.String("order_id", req.OrderID))
 	} else {
-		razorpaySecret := os.Getenv("RAZORPAY_SECRET")
+		razorpaySecret := bankConfig.Secret
 		data := req.OrderID + "|" + req.PaymentID
 		h := hmac.New(sha256.New, []byte(razorpaySecret))
 		h.Write([]byte(data))
@@ -755,7 +833,7 @@ func VerifyPayment(c *gin.Context) {
 			BookingID:     req.BookingID,
 			PaymentID:     req.PaymentID,
 			OrderID:       req.OrderID,
-			Amount:        booking.AdvanceAmount,
+			Amount:        booking.AdvanceAmount * 100,
 			CustomerEmail: customerEmail, 
 			CustomerPhone: booking.BookerPhone,
 			RoomName:      roomName,
@@ -787,17 +865,16 @@ func VerifyPayment(c *gin.Context) {
 		// Send emails with retry mechanism
 		paymentID := req.PaymentID
 		if !hasEmailBeenSent(paymentID) {
-			// 1. Send to Admin
+			// 1. Send to Default Association Admin (always nammataga@gmail.com)
 			adminEmail := config.GetConfig().AdminEmail
-			if adminEmail != "" {
-				go sendEmailWithRetry(adminEmail, subject, emailBody, paymentID, "room_booking", 2)
-			} else {
-				config.Logger.Warn("Admin email not configured, skipping admin notification")
+			if adminEmail == "" {
+				adminEmail = "nammataga@gmail.com"
 			}
+			go sendEmailWithRetry(adminEmail, subject, emailBody, paymentID, "room_booking", 2)
 			
-			// 2. Send to Customer
+			// 2. Send to Customer with Reply-To set to the default admin email (nammataga@gmail.com)
 			if customerEmail != "" {
-				go sendEmailWithRetry(customerEmail, subject, emailBody, paymentID, "room_booking", 2)
+				go sendEmailWithReplyToAndRetry(customerEmail, adminEmail, subject, emailBody, paymentID, "room_booking", 2)
 			} else {
 				config.Logger.Warn("Customer email not found, skipping customer notification")
 			}

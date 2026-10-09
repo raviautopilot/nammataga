@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"taga-api/config"
 	"taga-api/model"
 	"taga-api/service"
@@ -43,8 +44,16 @@ func GetMemberProfileByToken(c *gin.Context) {
 	for _, member := range members {
 		if id, ok := member["id"].(string); ok && id == memberID {
 			delete(member, "password")
-			member["isPaid"] = checkAnnualSubscriptionStatus(memberID.(string))
-			member["subscription_active"] = member["isPaid"]
+			isPaid := checkAnnualSubscriptionStatus(memberID.(string))
+			if !isPaid {
+				if subActive, ok := member["subscription_active"].(bool); ok && subActive {
+					isPaid = true
+				} else if pStatus, ok := member["payment_status"].(string); ok && strings.EqualFold(pStatus, "Paid") {
+					isPaid = true
+				}
+			}
+			member["isPaid"] = isPaid
+			member["subscription_active"] = isPaid
 			respondOK(c, gin.H{"user": member})
 			return
 		}

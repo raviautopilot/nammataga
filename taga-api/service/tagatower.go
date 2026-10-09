@@ -200,15 +200,34 @@ func CreateBooking(req model.CreateBookingRequest, bookerName, bookerID string) 
 		return nil, fmt.Errorf("invalid check-out date")
 	}
 
+	// Validate date ordering
+	if !checkOutDate.After(checkInDate) {
+		return nil, fmt.Errorf("check-out date must be after check-in date")
+	}
+
+	// Validate check-in date is not in the past
+	todayStr := time.Now().Format("2006-01-02")
+	if req.CheckInDate < todayStr {
+		return nil, fmt.Errorf("cannot book dates in the past")
+	}
+
+	// Validate maximum stay duration (10 days)
+	days := int(checkOutDate.Sub(checkInDate).Hours() / 24)
+	if days > 10 {
+		return nil, fmt.Errorf("maximum stay duration is 10 days")
+	}
+
 	// Get room
 	room, err := GetRoomByID(req.RoomID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Determine advance amount: 100 per bed (Self: 100, Guest: 100 per bed)
-	advanceRatePerBed := 100
-	if req.BookingFor == model.BookingForGuest {
+	// Determine advance rate per bed based on room type:
+	// Dormitory rooms (Gents & Ladies Dorm): ₹100 per bed
+	// Other rooms (Apex Suite, A/C rooms): ₹200 per bed
+	advanceRatePerBed := 200
+	if room.Type == model.RoomTypeGentsDorm || room.Type == model.RoomTypeLadiesDorm || room.ID == "gents-dorm" || room.ID == "ladies-dorm" {
 		advanceRatePerBed = 100
 	}
 	effectiveBeds := req.BedCount

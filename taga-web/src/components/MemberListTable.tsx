@@ -8,7 +8,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Textarea } from './ui/textarea';
-import { Search, Eye, RefreshCw, Pencil, Trash2, AlertTriangle, Loader2, Save, X, Download, CheckCircle } from 'lucide-react';
+import {
+  Search,
+  Eye,
+  RefreshCw,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+  Loader2,
+  Save,
+  X,
+  Download,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Users,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getMembersList,
@@ -32,6 +50,8 @@ const districts = [
   'Tirupathur', 'Tiruppur', 'Tiruvallur', 'Tiruvannamalai', 'Tiruvarur', 'Vellore',
   'Viluppuram', 'Virudhunagar'
 ];
+
+const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 
 // ---- Editable fields interface ----
 interface EditMemberForm {
@@ -107,7 +127,7 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalMembers, setTotalMembers] = useState(0);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState<number>(25);
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -166,7 +186,7 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
 
   useEffect(() => {
     fetchMembers();
-  }, [currentPage, districtFilter, paymentStatusFilter, searchQuery]);
+  }, [currentPage, itemsPerPage, districtFilter, paymentStatusFilter, searchQuery]);
 
   useEffect(() => {
     fetchDistricts();
@@ -347,6 +367,73 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
   };
 
   const displayMembers = members || [];
+  const startItem = totalMembers === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalMembers);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      if (currentPage > 3) {
+        pages.push('ellipsis-start');
+      }
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) {
+        pages.push('ellipsis-end');
+      }
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  // Segmented Outlined Filter for Page Size
+  const renderPageSizeFilter = (prefix: string = 'top') => (
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+        <span className="hidden sm:inline">Rows per page:</span>
+        <span className="sm:hidden">Rows:</span>
+      </div>
+      <div
+        className="inline-flex items-center p-0.5 rounded-lg border border-border bg-muted/40 shadow-xs gap-1"
+        data-testid={`testid-member-page-size-${prefix}-container`}
+      >
+        {PAGE_SIZE_OPTIONS.map((size) => {
+          const isSelected = itemsPerPage === size;
+          return (
+            <button
+              key={size}
+              type="button"
+              onClick={() => {
+                setItemsPerPage(size);
+                setCurrentPage(1);
+              }}
+              data-testid={
+                prefix === 'top' && size === itemsPerPage
+                  ? 'testid-member-page-size-select'
+                  : `testid-member-page-size-${prefix}-${size}`
+              }
+              className={`px-3 py-1 text-xs rounded-md transition-all cursor-pointer border ${
+                isSelected
+                  ? 'bg-primary text-primary-foreground border-primary shadow-xs font-bold'
+                  : 'border-transparent text-muted-foreground hover:border-border hover:bg-background hover:text-foreground font-medium'
+              }`}
+            >
+              {size}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   const getDisplayValue = (value: string | undefined) => (value && value !== '' ? value : '-');
 
@@ -490,9 +577,25 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
           </div>
         </div>
 
-        {/* Count */}
-        <div className="text-sm text-muted-foreground">
-          Showing {displayMembers.length} of {totalMembers} members
+        {/* Count & Outlined Page Size Filter Bar */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-card border border-border/80 rounded-xl px-4 py-3 shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+              <Users className="w-4 h-4" />
+            </div>
+            <div className="text-sm">
+              {totalMembers === 0 ? (
+                <span className="text-muted-foreground">No members found</span>
+              ) : (
+                <span className="text-muted-foreground">
+                  Showing <span className="font-semibold text-foreground">{startItem}</span>–
+                  <span className="font-semibold text-foreground">{endItem}</span> of{' '}
+                  <span className="font-semibold text-foreground">{totalMembers}</span> members
+                </span>
+              )}
+            </div>
+          </div>
+          {renderPageSizeFilter('top')}
         </div>
 
         {/* Table */}
@@ -564,32 +667,114 @@ export function MemberListTable({ onUpdateStats }: MemberListTableProps) {
           </Table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-between items-center mt-4">
+        {/* Pagination Footer */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 rounded-xl border border-border/80 bg-card shadow-2xs">
+          {/* Left: Range and Items Per Page Filter */}
+          <div className="flex flex-wrap items-center gap-4">
             <div className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages}
+              {totalMembers === 0 ? (
+                'No members to display'
+              ) : (
+                <>
+                  Showing <span className="font-semibold text-foreground">{startItem}</span>–
+                  <span className="font-semibold text-foreground">{endItem}</span> of{' '}
+                  <span className="font-semibold text-foreground">{totalMembers}</span> members
+                </>
+              )}
             </div>
-            <div className="flex gap-2">
+            <div className="h-4 w-px bg-border/80 hidden sm:block" />
+            {renderPageSizeFilter('bottom')}
+          </div>
+
+          {/* Right: Page Navigation Controls (shown after full page load) */}
+          {!loading && totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              {/* First Page */}
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                title="First page"
+                data-testid="testid-member-pagination-first"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </Button>
+
+              {/* Previous Page */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2.5 text-xs flex items-center gap-1"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
+                title="Previous page"
+                data-testid="testid-member-pagination-prev"
               >
-                Previous
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Previous</span>
               </Button>
+
+              {/* Page Number Buttons */}
+              <div className="flex items-center gap-1">
+                {getPageNumbers().map((pageItem, idx) => {
+                  if (typeof pageItem === 'string') {
+                    return (
+                      <span key={`ellipsis-${idx}`} className="px-1 text-muted-foreground text-xs">
+                        ...
+                      </span>
+                    );
+                  }
+                  const isCurrent = pageItem === currentPage;
+                  return (
+                    <Button
+                      key={pageItem}
+                      variant={isCurrent ? 'default' : 'outline'}
+                      size="sm"
+                      className={`h-8 w-8 p-0 text-xs font-medium ${
+                        isCurrent
+                          ? 'bg-primary text-primary-foreground font-bold shadow-xs'
+                          : 'hover:bg-muted'
+                      }`}
+                      onClick={() => setCurrentPage(pageItem)}
+                      data-testid={`testid-member-pagination-page-${pageItem}`}
+                    >
+                      {pageItem}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              {/* Next Page */}
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8 px-2.5 text-xs flex items-center gap-1"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
+                disabled={currentPage >= totalPages}
+                title="Next page"
+                data-testid="testid-member-pagination-next"
               >
-                Next
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+
+              {/* Last Page */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage >= totalPages}
+                title="Last page"
+                data-testid="testid-member-pagination-last"
+              >
+                <ChevronsRight className="w-4 h-4" />
               </Button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ===================== VIEW / EDIT DIALOG ===================== */}

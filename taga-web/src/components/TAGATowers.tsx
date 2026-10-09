@@ -55,10 +55,27 @@ import { loadRazorpayScript } from '../utils/razorpay';
 // CONSTANTS & TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
-const ADVANCE_AMOUNTS = {
-  self: 100,
-  guest: 100,
-} as const;
+// Room visibility configuration: set to true to hide from booking UI, false to restore
+export const ROOM_HIDE_CONFIG: Record<string, boolean> = {
+  kurinchi: true, // Kurinji room - change to false to restore
+  pasumai: true,  // Pasumai room - change to false to restore
+};
+
+const DORMITORY_ADVANCE_PER_BED = 100;
+const OTHER_ROOM_ADVANCE_PER_BED = 200;
+
+export const getAdvanceRatePerBed = (room?: Room | null): number => {
+  if (!room) return OTHER_ROOM_ADVANCE_PER_BED;
+  if (
+    room.type === 'gents-dorm' ||
+    room.type === 'ladies-dorm' ||
+    room.id === 'gents-dorm' ||
+    room.id === 'ladies-dorm'
+  ) {
+    return DORMITORY_ADVANCE_PER_BED;
+  }
+  return OTHER_ROOM_ADVANCE_PER_BED;
+};
 
 const BOOKING_DAYS_LIMIT = 10;
 const MIN_STAY_DAYS = 1;
@@ -93,7 +110,12 @@ const CONTACT_INFO = {
   address: 'Velanmai Illam, 45, Sait Colony, II Street, Egmore, Chennai - 600008, Tamil Nadu, India',
 };
 
-const CARETAKER_INFO = CONTACT_INFO;
+const CARETAKER_INFO = {
+  caretakers: [
+    { name: 'Mr. Muthu', phone: '96007 63744' },
+    { name: 'Mr. Mariyappan', phone: '96770 10300' },
+  ],
+};
 
 interface TAGATowersProps {
   isLoggedIn: boolean;
@@ -335,7 +357,17 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
   const maxCheckoutDate = addDays(today, BOOKING_DAYS_LIMIT);
   const bannerImage = `${API_BASE}/images/tagatower_final.png`;
   const effectiveBeds = bookingFor === 'self' ? 1 : (selectedRoom?.allowSingleBed ? bedCount : (selectedRoom?.capacity || 1));
-  const advanceAmount = (bookingFor === 'self' ? ADVANCE_AMOUNTS.self : ADVANCE_AMOUNTS.guest) * effectiveBeds;
+  const advanceRatePerBed = getAdvanceRatePerBed(selectedRoom);
+  const advanceAmount = advanceRatePerBed * effectiveBeds;
+
+  const visibleRooms = useMemo(() => {
+    return rooms.filter((room) => !ROOM_HIDE_CONFIG[room.id] && !room.hide);
+  }, [rooms]);
+
+  const totalBedCapacity = useMemo(() => {
+    const sum = visibleRooms.reduce((acc, r) => acc + (r.capacity || 0), 0);
+    return sum > 0 ? sum : TOTAL_BED_CAPACITY;
+  }, [visibleRooms]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // EVENT HANDLERS: Phone Input
@@ -402,7 +434,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
   // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!checkInDate || !checkOutDate || rooms.length === 0) return;
+    if (!checkInDate || !checkOutDate || visibleRooms.length === 0) return;
 
     // Stale-result guard — if deps change mid-flight, discard results from old run
     let cancelled = false;
@@ -436,7 +468,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
 
         try {
           const results = await Promise.all(
-            rooms.map(async (room) => {
+            visibleRooms.map(async (room) => {
               try {
                 const dayResults = await Promise.all(
                   dates.map((date) => checkAvailability(room.id, date))
@@ -478,7 +510,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
     return () => {
       cancelled = true;
     };
-  }, [checkInDate, checkOutDate, rooms, refreshTrigger]);
+  }, [checkInDate, checkOutDate, visibleRooms, refreshTrigger]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // FETCH: My Bookings
@@ -1091,11 +1123,13 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                 {Array.from({ length: BOOKING_DAYS_LIMIT }).map((_, i) => {
                   const date = addDays(today, i);
                   const dateStr = format(date, 'yyyy-MM-dd');
-                  const dayBookings = getOccupancyForDate(date);
+                  const dayBookings = getOccupancyForDate(date).filter(
+                    (b) => !ROOM_HIDE_CONFIG[b.roomId]
+                  );
                   const occupiedBeds = dayBookings.reduce((sum, b) => sum + (b.bedCount || 0), 0);
                   const occupancyPercentage = Math.min(
                     100,
-                    Math.round((occupiedBeds / TOTAL_BED_CAPACITY) * 100)
+                    Math.round((occupiedBeds / totalBedCapacity) * 100)
                   );
                   const byRoom: Record<string, BookingResponse[]> = {};
                   dayBookings.forEach((b) => {
@@ -1112,7 +1146,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                             {format(date, 'EEEE, MMMM dd, yyyy')}
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            {occupiedBeds} beds occupied • {TOTAL_BED_CAPACITY - occupiedBeds} beds
+                            {occupiedBeds} beds occupied • {totalBedCapacity - occupiedBeds} beds
                             free
                           </p>
                         </div>
@@ -1141,7 +1175,9 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                       </div>
                       {Object.keys(byRoom).length > 0 ? (
                         <div className="ml-1 grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {Object.entries(byRoom).map(([roomId, bookings]) => {
+                          {Object.entries(byRoom)
+                            .filter(([roomId]) => !ROOM_HIDE_CONFIG[roomId])
+                            .map(([roomId, bookings]) => {
                             const roomName =
                               rooms.find((r) => r.id === roomId)?.name || roomId;
                             const roomNo = ROOM_NUMBER_MAP[roomId];
@@ -1331,7 +1367,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                   ) : (
                     <ScrollArea className="h-[400px] pr-4">
                       <div className="space-y-4">
-                        {rooms.map((room) => {
+                        {visibleRooms.map((room) => {
                           const avail = availabilityMap[room.id];
                           const isAvailable = avail?.available ?? false;
                           const availableBeds = avail?.availableBeds ?? 0;
@@ -1611,6 +1647,26 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
               <div className="grid md:grid-cols-2 gap-8">
                 {/* LEFT SIDE */}
                 <div className="space-y-6">
+
+                  {/* CARETAKERS */}
+                  <div className="flex items-start space-x-3">
+                    <User className="w-5 h-5 text-primary mt-1 shrink-0" />
+                    <div className="space-y-1">
+                      <h4 className="font-semibold mb-1">Caretakers</h4>
+                      {CARETAKER_INFO.caretakers.map((caretaker, idx) => (
+                        <p key={idx} className="text-sm text-muted-foreground">
+                          <span className="font-medium text-foreground">{caretaker.name}: </span>
+                          <a
+                            href={`tel:${caretaker.phone.replace(/\s+/g, '')}`}
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {caretaker.phone}
+                          </a>
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* PHONE */}
                   <div className="flex items-start space-x-3">
                     <Phone className="w-5 h-5 text-primary mt-1 shrink-0" />
@@ -1620,6 +1676,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                         <a
                           href={`tel:${CONTACT_INFO.phone.replace(/\s+/g, '')}`}
                           className="hover:text-primary transition-colors font-medium text-foreground"
+                          data-testid="testid-contact-phone"
                         >
                           {CONTACT_INFO.phone}
                         </a>
@@ -1635,13 +1692,15 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                       <p className="text-sm text-muted-foreground">
                         <a
                           href={`mailto:${CONTACT_INFO.email}`}
-                          className="text-primary hover:underline"
+                          className="text-primary hover:underline font-medium"
+                          data-testid="testid-contact-email"
                         >
                           {CONTACT_INFO.email}
                         </a>
                       </p>
                     </div>
                   </div>
+
                 </div>
 
                 {/* RIGHT SIDE (ADDRESS) */}
@@ -1651,13 +1710,14 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                     <div>
                       <h4 className="font-semibold mb-2">Address</h4>
                       <div className="bg-white/50 dark:bg-gray-800/50 p-4 rounded-lg border border-primary/20 max-w-sm">
-                        <p className="text-sm text-muted-foreground leading-relaxed">
+                        <p className="text-sm text-muted-foreground leading-relaxed" data-testid="testid-contact-address">
                           {CONTACT_INFO.address}
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
+
               </div>
             </CardContent>
           </Card>
@@ -1738,7 +1798,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                     </span>
                   </div>
                   <span className="text-xs text-muted-foreground mt-1">
-                    Advance: ₹{ADVANCE_AMOUNTS.self} (1 Bed)
+                    Advance: ₹{advanceRatePerBed} (1 Bed)
                   </span>
                 </button>
 
@@ -1765,7 +1825,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                     </span>
                   </div>
                   <span className="text-xs text-muted-foreground mt-1">
-                    Advance: ₹{ADVANCE_AMOUNTS.guest} / bed
+                    Advance: ₹{advanceRatePerBed} / bed
                   </span>
                 </button>
               </div>
@@ -2006,7 +2066,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                 <p>
                   <span className="text-muted-foreground">Beds:</span>{' '}
                   <span className="font-medium">
-                    {selectedRoom?.allowSingleBed ? bedCount : selectedRoom?.capacity}
+                    {effectiveBeds}
                   </span>
                 </p>
                 <p>

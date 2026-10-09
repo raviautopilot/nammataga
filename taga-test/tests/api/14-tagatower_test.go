@@ -10,11 +10,14 @@ import (
 	"testing"
 	"time"
 
+	"e2e-template/pkg/client"
 	"e2e-template/tests"
 
 	"taga-api/config"
+	"taga-api/handler"
 	"taga-api/model"
 	"taga-api/service"
+	"taga-api/service/jwt"
 )
 
 type BookingGuestDetail struct {
@@ -78,19 +81,24 @@ func TestAPI_Tower_RoomsAndAvailability_TableDriven(t *testing.T) {
 
 	for _, tc := range cases {
 		tc := tc
-		tests.RunAPITestWithDetails(t, "[Public] "+tc.Name, tc.Description, tc.Expected, func(tctx *tests.TestContext) {
+		tests.RunAPITestWithDetails(t, "[Member] "+tc.Name, tc.Description, tc.Expected, func(tctx *tests.TestContext) {
 			var resp interface{}
 			var errResp map[string]interface{}
-			
+			memberToken, _, err := jwt.GenerateMemberToken("d11348e1-9a65-4945-bb1b-f100a5df15cg", "sudhantest08@gmail.com", "Sudhan Test")
+			if err != nil {
+				tctx.Fatalf("Failed to generate member token: %v", err)
+			}
+			memberAuth := &client.BearerTokenAuth{Token: memberToken}
+
 			if tc.ExpectedStatus == http.StatusOK {
-				err := tctx.Client.SendHttpRequest("GET", tc.Path, nil, nil, &resp, nil)
+				err := tctx.Client.SendHttpRequest("GET", tc.Path, nil, nil, &resp, memberAuth)
 				if err != nil {
 					tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
 					tctx.Fatalf("Expected 200 OK, got: %v", err)
 				}
 				tctx.Actual = "HTTP 200 OK, Retrieved availability data"
 			} else {
-				err := tctx.Client.SendHttpRequest("GET", tc.Path, nil, nil, &errResp, nil)
+				err := tctx.Client.SendHttpRequest("GET", tc.Path, nil, nil, &errResp, memberAuth)
 				assertErrorStatus(tctx, err, tc.ExpectedStatus, "")
 			}
 		})
@@ -103,6 +111,12 @@ func TestAPI_Tower_RoomsAndAvailability_TableDriven(t *testing.T) {
 
 func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 	var createdBookingID string
+
+	memberToken, _, err := jwt.GenerateMemberToken("d11348e1-9a65-4945-bb1b-f100a5df15cg", "sudhantest08@gmail.com", "Sudhan Test")
+	if err != nil {
+		t.Fatalf("Failed to generate member token: %v", err)
+	}
+	memberAuth := &client.BearerTokenAuth{Token: memberToken}
 
 	// Step A: Create Booking (Happy Path)
 	tests.RunAPITestWithDetails(t, "[Member] POST Create Booking - Happy Path", "Creates a room booking for gents-dorm.", "HTTP 201 Created with booking details", func(tctx *tests.TestContext) {
@@ -120,7 +134,7 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 		}
 
 		var resp map[string]interface{}
-		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, nil)
+		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, memberAuth)
 
 		if err != nil {
 			tctx.FailureReason = fmt.Sprintf("Expected 201 Created, got: %v", err)
@@ -140,7 +154,7 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 	if createdBookingID != "" {
 		tests.RunAPITestWithDetails(t, "[Member] GET User Bookings List", "Retrieves active bookings list for the current member.", "HTTP 200 OK containing booking list", func(tctx *tests.TestContext) {
 			var resp []interface{}
-			err := tctx.Client.SendHttpRequest("GET", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, nil, &resp, nil)
+			err := tctx.Client.SendHttpRequest("GET", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, nil, &resp, memberAuth)
 
 			if err != nil {
 				tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
@@ -153,7 +167,7 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 		tests.RunAPITestWithDetails(t, "[Member] POST Confirm Payment", "Confirms payment for the newly created room booking.", "HTTP 200 OK", func(tctx *tests.TestContext) {
 			var resp map[string]interface{}
 			confirmPayload := map[string]string{"upiId": "test-upi-id"}
-			err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings/"+createdBookingID+"/confirm-payment", nil, &confirmPayload, &resp, nil)
+			err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings/"+createdBookingID+"/confirm-payment", nil, &confirmPayload, &resp, memberAuth)
 
 			if err != nil {
 				tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
@@ -166,7 +180,9 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 	// Step D: Admin Get All Bookings
 	tests.RunAPITestWithDetails(t, "[Admin] GET Admin Bookings Catalog", "Admin lists all tower bookings.", "HTTP 200 OK with all bookings array", func(tctx *tests.TestContext) {
 		var resp []interface{}
-		err := tctx.Client.SendHttpRequest("GET", "/api/towers/admin/bookings", nil, nil, &resp, nil)
+		adminToken := getValidAdminToken(tctx.T, tctx.Client)
+		adminAuth := &client.BearerTokenAuth{Token: adminToken}
+		err := tctx.Client.SendHttpRequest("GET", "/api/towers/admin/bookings", nil, nil, &resp, adminAuth)
 
 		if err != nil {
 			tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
@@ -175,11 +191,28 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 		tctx.Actual = fmt.Sprintf("HTTP 200 OK, Admin retrieved %d total bookings", len(resp))
 	})
 
-	// Step E: Cancel/Delete Booking
 	if createdBookingID != "" {
+		// Step E1: IDOR Security Test - Attempt to cancel booking as another member
+		tests.RunAPITestWithDetails(t, "[Member] DELETE Cancel Booking - IDOR Security Attempt", "Attempts to cancel another member's booking.", "HTTP 403 Forbidden", func(tctx *tests.TestContext) {
+			var resp map[string]interface{}
+			otherToken, _, genErr := jwt.GenerateMemberToken("other-uuid-9999", "other_victim@nammataga.com", "Other Member")
+			if genErr != nil {
+				tctx.Fatalf("Failed to generate token for other member: %v", genErr)
+			}
+			otherAuth := &client.BearerTokenAuth{Token: otherToken}
+			httpErr := tctx.Client.SendHttpRequest("DELETE", "/api/towers/bookings/"+createdBookingID, nil, nil, &resp, otherAuth)
+
+			if httpErr == nil {
+				tctx.FailureReason = "IDOR vulnerability: expected 403 Forbidden when deleting another user's booking, but got 200 OK"
+				tctx.Fatalf("Expected 403 Forbidden, got 200 OK")
+			}
+			assertErrorStatus(tctx, httpErr, http.StatusForbidden, "not authorized")
+		})
+
+		// Step E2: Cancel/Delete Booking (Legitimate Owner)
 		tests.RunAPITestWithDetails(t, "[Member] DELETE Cancel Booking", "Cancels/Deletes the booking reservation.", "HTTP 200 OK with success message", func(tctx *tests.TestContext) {
 			var resp map[string]interface{}
-			err := tctx.Client.SendHttpRequest("DELETE", "/api/towers/bookings/"+createdBookingID, nil, nil, &resp, nil)
+			err := tctx.Client.SendHttpRequest("DELETE", "/api/towers/bookings/"+createdBookingID, nil, nil, &resp, memberAuth)
 
 			if err != nil {
 				tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
@@ -197,7 +230,7 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 	// Step F: Validation Failure - Empty Booking Request
 	tests.RunAPITestWithDetails(t, "[Member] POST Create Booking - Empty Payload", "Submits empty payload causing binding validation failure.", "HTTP 400 Bad Request", func(tctx *tests.TestContext) {
 		var resp map[string]interface{}
-		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings", nil, &TowerCreateBookingRequest{}, &resp, nil)
+		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings", nil, &TowerCreateBookingRequest{}, &resp, memberAuth)
 
 		assertErrorStatus(tctx, err, http.StatusBadRequest, "")
 	})
@@ -211,9 +244,10 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 			BookerPhone:  "9944637254",
 			BookingFor:   "self",
 			BedCount:     1,
+			Gender:       "male",
 		}
 		var resp map[string]interface{}
-		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, nil)
+		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, memberAuth)
 		assertErrorStatus(tctx, err, http.StatusBadRequest, "")
 	})
 
@@ -226,9 +260,10 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 			BookerPhone:  "9944637254",
 			BookingFor:   "self",
 			BedCount:     1,
+			Gender:       "male",
 		}
 		var resp map[string]interface{}
-		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, nil)
+		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, memberAuth)
 		assertErrorStatus(tctx, err, http.StatusBadRequest, "")
 	})
 
@@ -241,30 +276,33 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 			BookerPhone:  "9944637254",
 			BookingFor:   "self",
 			BedCount:     1,
+			Gender:       "male",
 		}
 		var resp map[string]interface{}
-		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, nil)
+		err := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload, &resp, memberAuth)
 		assertErrorStatus(tctx, err, http.StatusBadRequest, "")
 	})
 
 	// Step J: Overlapping Booking
 	tests.RunAPITestWithDetails(t, "[Member] POST Create Booking - Overlapping", "Attempts to book a room that overlaps with an existing booking.", "HTTP 400 Bad Request or 409 Conflict", func(tctx *tests.TestContext) {
-		// 1. Create a valid booking
+		// 1. Create a valid booking occupying all beds (ladies-dorm has 8 beds)
 		payload1 := &TowerCreateBookingRequest{
 			RoomID:       "ladies-dorm",
 			CheckInDate:  "2027-05-10",
 			CheckOutDate: "2027-05-15",
 			BookerPhone:  "9944637254",
 			BookingFor:   "self",
-			BedCount:     1,
+			BedCount:     8,
+			Gender:       "female",
 		}
 		var resp1 map[string]interface{}
-		err1 := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload1, &resp1, nil)
+		err1 := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload1, &resp1, memberAuth)
 		
 		if err1 != nil {
 			tctx.FailureReason = fmt.Sprintf("Failed to setup initial booking for overlap test: %v", err1)
 			tctx.Fatalf("Failed to setup initial booking: %v", err1)
 		}
+		initialBookingID, _ := resp1["id"].(string)
 
 		// 2. Attempt overlapping booking
 		payload2 := &TowerCreateBookingRequest{
@@ -274,9 +312,10 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 			BookerPhone:  "9944637254",
 			BookingFor:   "self",
 			BedCount:     1,
+			Gender:       "female",
 		}
 		var resp2 map[string]interface{}
-		err2 := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload2, &resp2, nil)
+		err2 := tctx.Client.SendHttpRequest("POST", "/api/towers/bookings?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg", nil, payload2, &resp2, memberAuth)
 		
 		if err2 == nil {
 			tctx.FailureReason = "Expected overlapping booking to fail with 400 or 409, got 201 Created"
@@ -287,12 +326,18 @@ func TestAPI_Tower_BookingWorkflow(t *testing.T) {
 		} else {
 			tctx.Actual = fmt.Sprintf("Correctly rejected overlapping booking with %d", err2.StatusCode())
 		}
+
+		// Cleanup initial booking
+		if initialBookingID != "" {
+			var delResp map[string]interface{}
+			_ = tctx.Client.SendHttpRequest("DELETE", "/api/towers/bookings/"+initialBookingID, nil, nil, &delResp, memberAuth)
+		}
 	})
 
 	// Step K: Get Past User Bookings
 	tests.RunAPITestWithDetails(t, "[Member] GET Past Bookings List", "Retrieves past/archived bookings for the current member.", "HTTP 200 OK containing booking list", func(tctx *tests.TestContext) {
 		var resp []interface{}
-		err := tctx.Client.SendHttpRequest("GET", "/api/towers/bookings/past?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg&year=2026", nil, nil, &resp, nil)
+		err := tctx.Client.SendHttpRequest("GET", "/api/towers/bookings/past?bookerId=d11348e1-9a65-4945-bb1b-f100a5df15cg&year=2026", nil, nil, &resp, memberAuth)
 
 		if err != nil {
 			tctx.FailureReason = fmt.Sprintf("Expected 200 OK, got: %v", err)
@@ -484,7 +529,8 @@ func TestAPI_Tower_MixedGenderRulesAndAdvanceCalculation(t *testing.T) {
 	// Seed standard rooms
 	rooms := []model.Room{
 		{ID: "apex-1", Name: "Apex Suite A/C", Type: model.RoomTypeApexSuite, Capacity: 3, AllowSingleBed: true},
-		{ID: "kurinchi", Name: "Kurinchi", Type: model.RoomTypeACRoom, Capacity: 2, AllowSingleBed: true},
+		{ID: "kurinchi", Name: "Kurinchi", Type: model.RoomTypeACRoom, Capacity: 2, AllowSingleBed: true, Hide: true},
+		{ID: "pasumai", Name: "Pasumai", Type: model.RoomTypeACRoom, Capacity: 2, AllowSingleBed: true, Hide: true},
 		{ID: "gents-dorm", Name: "Gents Dormitory", Type: model.RoomTypeGentsDorm, Capacity: 12, AllowSingleBed: true},
 		{ID: "ladies-dorm", Name: "Ladies Dormitory", Type: model.RoomTypeLadiesDorm, Capacity: 8, AllowSingleBed: true},
 	}
@@ -513,8 +559,8 @@ func TestAPI_Tower_MixedGenderRulesAndAdvanceCalculation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mixed gender couple booking in 2-bed room should succeed, got: %v", err)
 	}
-	if resKurinchi.AdvanceAmount != 200 {
-		t.Errorf("Expected advance amount for 2 beds to be 200, got %d", resKurinchi.AdvanceAmount)
+	if resKurinchi.AdvanceAmount != 400 {
+		t.Errorf("Expected advance amount for 2 beds to be 400, got %d", resKurinchi.AdvanceAmount)
 	}
 	if resKurinchi.Gender != model.GenderMixed {
 		t.Errorf("Expected booking gender to be 'mixed', got %s", resKurinchi.Gender)
@@ -537,8 +583,8 @@ func TestAPI_Tower_MixedGenderRulesAndAdvanceCalculation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mixed couple booking in Apex Suite should succeed, got: %v", err)
 	}
-	if resApex.AdvanceAmount != 200 {
-		t.Errorf("Expected advance amount for 2 beds in Apex to be 200, got %d", resApex.AdvanceAmount)
+	if resApex.AdvanceAmount != 400 {
+		t.Errorf("Expected advance amount for 2 beds in Apex to be 400, got %d", resApex.AdvanceAmount)
 	}
 
 	// 3. Verify Apex Suite availability: the 3rd bed must be blocked and room marked fully booked
@@ -612,5 +658,117 @@ func TestAPI_Tower_MixedGenderRulesAndAdvanceCalculation(t *testing.T) {
 	}
 	if resDorm5.AdvanceAmount != 500 {
 		t.Errorf("Expected advance for 5 beds to be 500, got %d", resDorm5.AdvanceAmount)
+	}
+
+	// 7. Test Self Booking Advance calculation in Dormitory (1 bed * ₹100 = ₹100)
+	reqDormSelf := model.CreateBookingRequest{
+		RoomID:       "gents-dorm",
+		CheckInDate:  now.AddDate(0, 2, 0).Format("2006-01-02"),
+		CheckOutDate: now.AddDate(0, 2, 1).Format("2006-01-02"),
+		BookerPhone:  "+919876543210",
+		BookingFor:   model.BookingForSelf,
+		BedCount:     1,
+		Gender:       model.GenderMale,
+	}
+	resDormSelf, err := service.CreateBooking(reqDormSelf, "Member User", "M001")
+	if err != nil {
+		t.Fatalf("Self booking in Gents Dorm failed: %v", err)
+	}
+	if resDormSelf.AdvanceAmount != 100 {
+		t.Errorf("Expected advance for self dorm booking to be 100, got %d", resDormSelf.AdvanceAmount)
+	}
+
+	// 8. Test Self Booking Advance calculation in Non-Dormitory Room (1 bed * ₹200 = ₹200)
+	reqApexSelf := model.CreateBookingRequest{
+		RoomID:       "apex-1",
+		CheckInDate:  now.AddDate(0, 2, 0).Format("2006-01-02"),
+		CheckOutDate: now.AddDate(0, 2, 1).Format("2006-01-02"),
+		BookerPhone:  "+919876543210",
+		BookingFor:   model.BookingForSelf,
+		BedCount:     1,
+		Gender:       model.GenderMale,
+	}
+	resApexSelf, err := service.CreateBooking(reqApexSelf, "Member User", "M001")
+	if err != nil {
+		t.Fatalf("Self booking in Apex Suite failed: %v", err)
+	}
+	if resApexSelf.AdvanceAmount != 200 {
+		t.Errorf("Expected advance for self non-dorm booking to be 200, got %d", resApexSelf.AdvanceAmount)
+	}
+
+	// 9. Test Guest Booking Advance calculation with 1 bed in Non-Dormitory (1 bed * ₹200 = ₹200)
+	reqApex1Bed := model.CreateBookingRequest{
+		RoomID:       "apex-1",
+		CheckInDate:  now.AddDate(0, 3, 0).Format("2006-01-02"),
+		CheckOutDate: now.AddDate(0, 3, 1).Format("2006-01-02"),
+		BookerPhone:  "+919876543210",
+		BookingFor:   model.BookingForGuest,
+		BedCount:     1,
+		GuestDetails: []model.GuestDetail{
+			{Name: "G1", Age: 25, Contact: "+919876543210", Gender: model.GenderMale},
+		},
+	}
+	resApex1Bed, err := service.CreateBooking(reqApex1Bed, "Member User", "M001")
+	if err != nil {
+		t.Fatalf("1 bed guest booking in Apex failed: %v", err)
+	}
+	if resApex1Bed.AdvanceAmount != 200 {
+		t.Errorf("Expected advance for 1 bed in Apex to be 200, got %d", resApex1Bed.AdvanceAmount)
+	}
+
+	// 10. Verify Kurinchi and Pasumai hide config in rooms json
+	allRooms, err := service.ReadRooms()
+	if err != nil {
+		t.Fatalf("GetAllRooms failed: %v", err)
+	}
+	var kurinchiFound, pasumaiFound bool
+	for _, r := range allRooms {
+		if r.ID == "kurinchi" {
+			kurinchiFound = true
+			if !r.Hide {
+				t.Errorf("Expected kurinchi room to have Hide=true, got %v", r.Hide)
+			}
+		}
+		if r.ID == "pasumai" {
+			pasumaiFound = true
+			if !r.Hide {
+				t.Errorf("Expected pasumai room to have Hide=true, got %v", r.Hide)
+			}
+		}
+	}
+	if !kurinchiFound {
+		t.Errorf("kurinchi room not found in GetAllRooms")
+	}
+	if !pasumaiFound {
+		t.Errorf("pasumaiFound room not found in GetAllRooms")
+	}
+}
+
+func TestRoomBookingEmailAmountConversion(t *testing.T) {
+	// Test data with Amount in paise (10000 paise = ₹100.00)
+	emailData := handler.AdminRoomBookingData{
+		BookingID:     "BK123456",
+		PaymentID:     "pay_test123",
+		OrderID:       "order_test123",
+		Amount:        10000, // 10000 paise = ₹ 100.00
+		CustomerEmail: "test@example.com",
+		CustomerPhone: "9876543210",
+		RoomName:      "Apex Suite",
+		BedCount:      1,
+		CheckInDate:   "2026-10-01",
+		CheckOutDate:  "2026-10-02",
+		BookerName:    "Test Booker",
+		BookerTagaID:  "TAGA123",
+		BookerPhone:   "9876543210",
+		BookingFor:    "self",
+	}
+
+	emailBody := handler.BuildRoomBookingEmailBodyForTest(emailData)
+
+	if !strings.Contains(emailBody, "₹ 100.00") {
+		t.Errorf("Expected email body to display '₹ 100.00' for 10000 paise, got body containing wrong amount")
+	}
+	if strings.Contains(emailBody, "₹ 10000.00") {
+		t.Errorf("Vulnerability detected: email body displayed amount in paise (₹ 10000.00) instead of Rupees")
 	}
 }

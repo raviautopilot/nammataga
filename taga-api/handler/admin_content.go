@@ -1,14 +1,18 @@
 package handler
 
 import (
+	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"html"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"taga-api/config"
 	"taga-api/model"
 	"taga-api/service"
@@ -444,6 +448,12 @@ func DeleteResource(c *gin.Context) {
 	}
 
 	if !found {
+		if categoryID == "links" {
+			if deleted, err := deleteExternalLinkFromCSV(c, documentTitle); err == nil && deleted {
+				respondMessage(c, "External link deleted successfully")
+				return
+			}
+		}
 		respondError(c, http.StatusNotFound, "Resource document not found")
 		return
 	}
@@ -459,6 +469,228 @@ func DeleteResource(c *gin.Context) {
 		audit.Sanitize(deletedDoc), nil)
 
 	respondMessage(c, "Resource document deleted successfully")
+}
+
+var externalLinksMutex sync.Mutex
+
+type AddExternalLinkRequest struct {
+	Title string `json:"title" binding:"required"`
+	URL   string `json:"url" binding:"required"`
+}
+
+type DeleteExternalLinkRequest struct {
+	Title string `json:"title"`
+}
+
+// AddExternalLink godoc
+// @Summary Add a new external link to the External Links CSV
+// @Tags Admin Content
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param link body AddExternalLinkRequest true "External link details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /api/admin/resources/external-links [post]
+func AddExternalLink(c *gin.Context) {
+	var req AddExternalLinkRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, "Title and URL are required")
+		return
+	}
+
+	title := strings.TrimSpace(req.Title)
+	linkURL := strings.TrimSpace(req.URL)
+
+	if title == "" || linkURL == "" {
+		respondError(c, http.StatusBadRequest, "Title and URL cannot be empty")
+		return
+	}
+
+	if !strings.HasPrefix(linkURL, "http://") && !strings.HasPrefix(linkURL, "https://") {
+		linkURL = "https://" + linkURL
+	}
+
+	externalLinksMutex.Lock()
+	defer externalLinksMutex.Unlock()
+
+	filePath := filepath.Join("data", "docs", "External Links.csv")
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		respondError(c, http.StatusInternalServerError, "Failed to create directory")
+		return
+	}
+
+	var records [][]string
+	if fileBytes, err := os.ReadFile(filePath); err == nil {
+		reader := csv.NewReader(bytes.NewReader(fileBytes))
+		reader.FieldsPerRecord = -1
+		records, _ = reader.ReadAll()
+	}
+
+	if len(records) == 0 {
+		records = append(records, []string{"Title", "URL"})
+	}
+
+	// Check for duplicate title
+	for i, row := range records {
+		if i == 0 {
+			continue // skip header
+		}
+		if len(row) > 0 && strings.EqualFold(strings.TrimSpace(row[0]), title) {
+			respondError(c, http.StatusConflict, fmt.Sprintf("External link with title '%s' already exists", title))
+			return
+		}
+	}
+
+	records = append(records, []string{title, linkURL})
+
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	if err := writer.WriteAll(records); err != nil {
+		respondError(c, http.StatusInternalServerError, "Failed to write CSV")
+		return
+	}
+	writer.Flush()
+
+	if err := os.WriteFile(filePath, buf.Bytes(), 0644); err != nil {
+		respondError(c, http.StatusInternalServerError, "Failed to save CSV file")
+		return
+	}
+
+	newLink := gin.H{"title": title, "url": linkURL}
+
+	// Audit resource creation
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionCreate, audit.ModuleResource,
+		"external_link", title,
+		fmt.Sprintf("Admin added external link '%s' (%s)", title, linkURL),
+		nil, audit.Sanitize(newLink))
+
+	respondOK(c, gin.H{
+		"message": "External link added successfully",
+		"link":    newLink,
+	})
+}
+
+// DeleteExternalLink godoc
+// @Summary Delete an external link from the External Links CSV
+// @Tags Admin Content
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param title path string false "Link title to delete"
+// @Param title query string false "Link title to delete (query param)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /api/admin/resources/external-links/{title} [delete]
+func DeleteExternalLink(c *gin.Context) {
+	title := c.Param("title")
+	if title == "" {
+		title = c.Query("title")
+	}
+	if title == "" {
+		var req DeleteExternalLinkRequest
+		if err := c.ShouldBindJSON(&req); err == nil {
+			title = req.Title
+		}
+	}
+
+	title = strings.TrimSpace(title)
+	if title == "" {
+		respondError(c, http.StatusBadRequest, "Title is required")
+		return
+	}
+
+	deleted, err := deleteExternalLinkFromCSV(c, title)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "Failed to delete external link: "+err.Error())
+		return
+	}
+	if !deleted {
+		respondError(c, http.StatusNotFound, fmt.Sprintf("External link '%s' not found", title))
+		return
+	}
+
+	respondMessage(c, "External link deleted successfully")
+}
+
+func deleteExternalLinkFromCSV(c *gin.Context, title string) (bool, error) {
+	title = strings.TrimSpace(title)
+	if unescaped, err := url.QueryUnescape(title); err == nil {
+		title = strings.TrimSpace(unescaped)
+	}
+	if title == "" {
+		return false, fmt.Errorf("empty title")
+	}
+
+	externalLinksMutex.Lock()
+	defer externalLinksMutex.Unlock()
+
+	filePath := filepath.Join("data", "docs", "External Links.csv")
+	fileBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	reader := csv.NewReader(bytes.NewReader(fileBytes))
+	reader.FieldsPerRecord = -1
+	records, err := reader.ReadAll()
+	if err != nil {
+		return false, err
+	}
+
+	found := false
+	var deletedURL string
+	var updatedRecords [][]string
+
+	for i, row := range records {
+		if i == 0 {
+			updatedRecords = append(updatedRecords, row)
+			continue
+		}
+
+		if len(row) > 0 && strings.EqualFold(strings.TrimSpace(row[0]), title) {
+			found = true
+			if len(row) > 1 {
+				deletedURL = strings.TrimSpace(row[1])
+			}
+			continue
+		}
+
+		updatedRecords = append(updatedRecords, row)
+	}
+
+	if !found {
+		return false, nil
+	}
+
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	if err := writer.WriteAll(updatedRecords); err != nil {
+		return false, err
+	}
+	writer.Flush()
+
+	if err := os.WriteFile(filePath, buf.Bytes(), 0644); err != nil {
+		return false, err
+	}
+
+	// Audit external link deletion
+	_ = audit.Log(c, "admin", getAdminUsername(c),
+		audit.ActionDelete, audit.ModuleResource,
+		"external_link", title,
+		fmt.Sprintf("Admin deleted external link '%s'", title),
+		audit.Sanitize(gin.H{"title": title, "url": deletedURL}), nil)
+
+	return true, nil
 }
 
 // UploadGalleryImage godoc

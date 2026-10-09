@@ -26,6 +26,9 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
+	// Max multipart memory for file uploads (50MB)
+	r.MaxMultipartMemory = 50 << 20
+
 	// Load configuration
 	appCfg := config.GetConfig()
 	env := appCfg.Environment
@@ -234,6 +237,10 @@ func SetupRouter() *gin.Engine {
 		// Content Management - Resources
 		admin.POST("/resources/upload", handler.UploadResource)
 		admin.DELETE("/resources/:categoryId/:documentTitle", handler.DeleteResource)
+		admin.GET("/resources/external-links", handler.GetExternalLinks)
+		admin.POST("/resources/external-links", handler.AddExternalLink)
+		admin.DELETE("/resources/external-links", handler.DeleteExternalLink)
+		admin.DELETE("/resources/external-links/:title", handler.DeleteExternalLink)
 
 		// Content Management - Events
 		admin.POST("/events/create", handler.CreateEvent)
