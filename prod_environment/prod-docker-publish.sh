@@ -139,7 +139,7 @@ LOG_ENTRY="[$DEPLOY_TIME] User: $DEPLOY_USER | Branch: $BRANCH_NAME | Commit: $C
 echo "🚚 Shipping production image archives, Nginx configs, and docker-compose to VPS ($SSH_TARGET)..."
 ssh "$SSH_TARGET" "mkdir -p $REMOTE_PATH/dist $REMOTE_PATH/nginx"
 scp "${FILES_TO_UPLOAD[@]}" "$SSH_TARGET:$REMOTE_PATH/dist/"
-scp "$SCRIPT_DIR/docker-compose.prod.yml" "$SSH_TARGET:$REMOTE_PATH/"
+scp "$SCRIPT_DIR/docker-compose-prod.yml" "$SSH_TARGET:$REMOTE_PATH/"
 scp "$SCRIPT_DIR/prd-deploy-docker.sh" "$SCRIPT_DIR/prd-wipe-docker.sh" "$SSH_TARGET:$REMOTE_PATH/"
 if [ -d "$SCRIPT_DIR/nginx" ]; then
     scp "$SCRIPT_DIR/nginx/nammataga.com" "$SCRIPT_DIR/nginx/api.nammataga.com" "$SSH_TARGET:$REMOTE_PATH/nginx/"

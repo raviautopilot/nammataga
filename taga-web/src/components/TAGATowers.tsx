@@ -61,8 +61,8 @@ export const ROOM_HIDE_CONFIG: Record<string, boolean> = {
   pasumai: true,  // Pasumai room - change to false to restore
 };
 
-const DORMITORY_ADVANCE_PER_BED = 100;
-const OTHER_ROOM_ADVANCE_PER_BED = 200;
+const DORMITORY_ADVANCE_PER_BED = 1;
+const OTHER_ROOM_ADVANCE_PER_BED = 1;
 
 export const getAdvanceRatePerBed = (room?: Room | null): number => {
   if (!room) return OTHER_ROOM_ADVANCE_PER_BED;
