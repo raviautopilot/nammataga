@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -168,3 +169,164 @@ func TestGetMemberProfileByToken_PreservesPaidStatusWithFallback(t *testing.T) {
 	assert.Equal(t, true, user["isPaid"], "Profile endpoint must return isPaid: true for offline paid member")
 	assert.Equal(t, true, user["subscription_active"], "Profile endpoint must return subscription_active: true for offline paid member")
 }
+
+func TestGetMemberPaidSubscriptions_WithEmailChangeAndOfflineStatus(t *testing.T) {
+	_, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
+	cfg := config.GetConfig()
+	subsFile := filepath.Join(filepath.Dir(cfg.MembersFile), "..", "subscriptions", "member_subscriptions.json")
+
+	// Case 1: Member originally had sudhanop04@gmail.com, then changed email to sudhanop05@gmail.com
+	memberUUID := uuid.New().String()
+	memberChanged := map[string]interface{}{
+		"id":                  memberUUID,
+		"tagaId":              "TAGA_007",
+		"emailId":             "sudhanop05@gmail.com",
+		"name":                "Sudhan",
+		"payment_status":      "Paid",
+		"subscription_active": true,
+	}
+
+	// Case 2: Offline member with Paid status but no record in subscriptions
+	offlineUUID := uuid.New().String()
+	offlineMember := map[string]interface{}{
+		"id":                  offlineUUID,
+		"tagaId":              "TAGA_OFFLINE_2",
+		"emailId":             "offline2@test.com",
+		"name":                "Offline Payer 2",
+		"payment_status":      "Paid",
+		"subscription_active": true,
+	}
+
+	// Case 3: Truly unpaid member
+	unpaidUUID := uuid.New().String()
+	unpaidMember := map[string]interface{}{
+		"id":                  unpaidUUID,
+		"tagaId":              "TAGA_UNPAID",
+		"emailId":             "unpaid@test.com",
+		"name":                "Unpaid User",
+		"payment_status":      "Unpaid",
+		"subscription_active": false,
+	}
+
+	membersData, _ := json.MarshalIndent([]map[string]interface{}{memberChanged, offlineMember, unpaidMember}, "", "  ")
+	os.WriteFile(cfg.MembersFile, membersData, 0644)
+
+	// Save subscription with old email sudhanop04@gmail.com, but member_id = TAGA_007
+	now := time.Now()
+	nextYearEnd := getMembershipYearEnd(now)
+	subs := []model.MemberSubscription{
+		{
+			ID:               uuid.New().String(),
+			MemberID:         "TAGA_007",
+			MemberEmail:      "sudhanop04@gmail.com",
+			MemberName:       "Sudhan",
+			SubscriptionID:   "annual-subscription",
+			SubscriptionName: "Annual Subscription",
+			Status:           "active",
+			StartDate:        now,
+			EndDate:          nextYearEnd,
+		},
+	}
+	subsData, _ := json.MarshalIndent(subs, "", "  ")
+	os.WriteFile(subsFile, subsData, 0644)
+
+	r := gin.New()
+	r.GET("/api/subscriptions/member-paid", GetMemberPaidSubscriptions)
+
+	// Test 1: Query with new email sudhanop05@gmail.com -> MUST return annual-subscription
+	req1, _ := http.NewRequest("GET", "/api/subscriptions/member-paid?email=sudhanop05@gmail.com", nil)
+	w1 := httptest.NewRecorder()
+	r.ServeHTTP(w1, req1)
+	assert.Equal(t, http.StatusOK, w1.Code)
+
+	var paidIDs1 []string
+	json.Unmarshal(w1.Body.Bytes(), &paidIDs1)
+	assert.Contains(t, paidIDs1, "annual-subscription", "Member with changed email must be recognized as paid")
+
+	// Test 2: Query offline member -> MUST return annual-subscription
+	req2, _ := http.NewRequest("GET", "/api/subscriptions/member-paid?email=offline2@test.com", nil)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+	assert.Equal(t, http.StatusOK, w2.Code)
+
+	var paidIDs2 []string
+	json.Unmarshal(w2.Body.Bytes(), &paidIDs2)
+	assert.Contains(t, paidIDs2, "annual-subscription", "Offline paid member must be recognized as paid")
+
+	// Test 3: Query unpaid member -> MUST NOT contain annual-subscription
+	req3, _ := http.NewRequest("GET", "/api/subscriptions/member-paid?email=unpaid@test.com", nil)
+	w3 := httptest.NewRecorder()
+	r.ServeHTTP(w3, req3)
+	assert.Equal(t, http.StatusOK, w3.Code)
+
+	var paidIDs3 []string
+	json.Unmarshal(w3.Body.Bytes(), &paidIDs3)
+	assert.NotContains(t, paidIDs3, "annual-subscription", "Unpaid member must NOT have annual-subscription")
+}
+
+func TestSyncMemberEmailInSubscriptions(t *testing.T) {
+	_, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
+	cfg := config.GetConfig()
+	subsFile := filepath.Join(filepath.Dir(cfg.MembersFile), "..", "subscriptions", "member_subscriptions.json")
+
+	memberUUID := uuid.New().String()
+	tagaID := "TAGA_SYNC_TEST"
+	oldEmail := "oldemail@test.com"
+	newEmail := "newemail@test.com"
+
+	now := time.Now()
+	nextYearEnd := getMembershipYearEnd(now)
+	subs := []model.MemberSubscription{
+		{
+			ID:               uuid.New().String(),
+			MemberID:         tagaID,
+			MemberEmail:      oldEmail,
+			MemberName:       "Sync Tester",
+			SubscriptionID:   "annual-subscription",
+			SubscriptionName: "Annual Subscription",
+			Status:           "active",
+			StartDate:        now,
+			EndDate:          nextYearEnd,
+		},
+	}
+	subsData, _ := json.MarshalIndent(subs, "", "  ")
+	os.WriteFile(subsFile, subsData, 0644)
+
+	// Call sync helper
+	syncMemberEmailInSubscriptions(memberUUID, tagaID, oldEmail, newEmail)
+
+	// Verify file on disk
+	data, err := os.ReadFile(subsFile)
+	assert.NoError(t, err)
+
+	var updatedSubs []model.MemberSubscription
+	err = json.Unmarshal(data, &updatedSubs)
+	assert.NoError(t, err)
+	assert.Len(t, updatedSubs, 1)
+	assert.Equal(t, newEmail, updatedSubs[0].MemberEmail, "Subscription email must be updated to new email")
+}
+
+func TestCreateSubscriptionOrder_NegativeOrZeroAmount(t *testing.T) {
+	_, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	// Send negative amount payload
+	c.Request = httptest.NewRequest("POST", "/api/subscriptions/create-order", strings.NewReader(`{"subscriptionId":"donation","amount":-500,"email":"test@nammataga.com"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	CreateSubscriptionOrder(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var resp map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Contains(t, resp["error"], "Payment amount must be greater than zero")
+}
+

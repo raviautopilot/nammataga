@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
-import { FileText, ExternalLink, Calendar } from 'lucide-react';
+import { FileText, ExternalLink, Calendar, AlertCircle } from 'lucide-react';
 import {
   getCategories,
   getDocumentsByCategory,
@@ -16,6 +16,8 @@ import API_BASE_URL from '../config/api';
 
 interface ResourcesProps {
   isLoggedIn: boolean;
+  isPaidMember?: boolean;
+  onNavigateToMembership?: () => void;
 }
 
 interface Category {
@@ -30,7 +32,7 @@ interface Document {
   url?: string;
 }
 
-export function Resources({ isLoggedIn }: ResourcesProps) {
+export function Resources({ isLoggedIn, isPaidMember = true, onNavigateToMembership }: ResourcesProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -118,6 +120,52 @@ export function Resources({ isLoggedIn }: ResourcesProps) {
 
     loadLinks();
   }, [selectedCategory]);
+
+  if (!isPaidMember) {
+    return (
+      <div className="space-y-8" data-testid="testid-resources-locked-page">
+        <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+          <div className="absolute inset-0">
+            <img
+              src={bannerImage}
+              alt="Resources Banner"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-green-900/80" />
+          </div>
+          <div className="relative p-10 text-white">
+            <Badge className="mb-4 bg-green-600">
+              <FileText className="w-3 h-3 mr-1" />
+              For Paid Members Only
+            </Badge>
+            <h1 className="text-4xl font-bold mb-2">
+              Resources Center
+            </h1>
+            <p>
+              Official documents, government orders, and agricultural circulars
+            </p>
+          </div>
+        </div>
+
+        <Card className="max-w-2xl mx-auto bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+          <CardContent className="pt-6 text-center py-12">
+            <AlertCircle className="w-16 h-16 mx-auto text-yellow-600 mb-4" />
+            <h3 className="text-xl font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+              Subscriber Access Only
+            </h3>
+            <p className="text-yellow-800 dark:text-yellow-200 mb-4">
+              Access to TAGA official resources and government orders is reserved for active paid subscribers. Please complete or renew your annual subscription to view resources.
+            </p>
+            {onNavigateToMembership && (
+              <Button onClick={onNavigateToMembership} data-testid="testid-manage-subscription-button">
+                Manage Subscription
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

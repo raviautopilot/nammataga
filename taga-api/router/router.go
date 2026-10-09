@@ -121,6 +121,7 @@ func SetupRouter() *gin.Engine {
 
 	// Subscriptions Listing (Public)
 	r.GET("/api/subscriptions", handler.GetSubscriptions)
+	r.GET("/api/subscription", handler.GetSubscriptions)
 
 	// Razorpay Webhook for payment notifications (Verified via HMAC signature)
 	r.POST("/api/webhook/razorpay", handler.WebhookHandler)
@@ -199,7 +200,7 @@ func SetupRouter() *gin.Engine {
 	// TAGA Towers Admin Occupancy Schedule
 	r.GET("/api/towers/admin/bookings", middleware.AdminAuthMiddleware(), handler.GetAllBookingsAdmin)
 
-	// Subscription Payments (Protected with Member Auth)
+	// Subscription Payments (Protected with Member Auth - Plural & Singular aliases)
 	subscriptionPaymentProtected := r.Group("/api/subscriptions")
 	subscriptionPaymentProtected.Use(middleware.MemberAuthMiddleware())
 	{
@@ -207,6 +208,15 @@ func SetupRouter() *gin.Engine {
 		subscriptionPaymentProtected.POST("/verify-payment", handler.VerifySubscriptionPayment)
 		subscriptionPaymentProtected.GET("/status", handler.GetMemberSubscriptionStatus)
 		subscriptionPaymentProtected.GET("/member-paid", handler.GetMemberPaidSubscriptions)
+	}
+
+	subscriptionSingular := r.Group("/api/subscription")
+	subscriptionSingular.Use(middleware.MemberAuthMiddleware())
+	{
+		subscriptionSingular.POST("/create-order", handler.CreateSubscriptionOrder)
+		subscriptionSingular.POST("/verify-payment", handler.VerifySubscriptionPayment)
+		subscriptionSingular.GET("/status", handler.GetMemberSubscriptionStatus)
+		subscriptionSingular.GET("/member-paid", handler.GetMemberPaidSubscriptions)
 	}
 
 	// Generic Payment Routes (Protected with Member Auth)

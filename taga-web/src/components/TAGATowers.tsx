@@ -50,6 +50,7 @@ import {
 } from '../api/tagatower';
 import type { Room, BookingResponse, RoomAvailability } from '../api/tagatower';
 import { loadRazorpayScript } from '../utils/razorpay';
+import { getMemberProfile } from '../api/member';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONSTANTS & TYPES
@@ -121,6 +122,7 @@ interface TAGATowersProps {
   isLoggedIn: boolean;
   isPaidMember: boolean;
   isAdmin?: boolean;
+  onNavigateToMembership?: () => void;
 }
 
 interface GuestDetail {
@@ -150,25 +152,66 @@ interface BookingStatusConfig {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Calculates age from birth date string (DD/MM/YYYY or YYYY-MM-DD)
+ * Parses birth date string in various formats:
+ * - DD/MM/YYYY or DD-MM-YYYY
+ * - YYYY-MM-DD or YYYY/MM/DD
+ * - ISO string or Date parseable string
+ */
+function parseBirthDate(dobStr?: string): Date | null {
+  if (!dobStr) return null;
+  const str = dobStr.trim();
+  if (!str || str === '-') return null;
+
+  // DD/MM/YYYY or DD-MM-YYYY (day first)
+  if (str.includes('/') || (str.includes('-') && str.split('-')[0].length <= 2)) {
+    const sep = str.includes('/') ? '/' : '-';
+    const parts = str.split(sep).map(Number);
+    if (parts.length === 3) {
+      if (parts[2] >= 1900) {
+        // DD/MM/YYYY
+        const [day, month, year] = parts;
+        const d = new Date(year, month - 1, day);
+        if (!isNaN(d.getTime())) return d;
+      } else if (parts[0] >= 1900) {
+        // YYYY/MM/DD
+        const [year, month, day] = parts;
+        const d = new Date(year, month - 1, day);
+        if (!isNaN(d.getTime())) return d;
+      }
+    }
+  }
+
+  // YYYY-MM-DD or YYYY/MM/DD (year first)
+  if (str.includes('-') || str.includes('/')) {
+    const sep = str.includes('-') ? '-' : '/';
+    const parts = str.split(sep).map(Number);
+    if (parts.length === 3 && parts[0] >= 1900) {
+      const [year, month, day] = parts;
+      const d = new Date(year, month - 1, day);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+
+  // Fallback to standard new Date(str)
+  const fallback = new Date(str);
+  if (!isNaN(fallback.getTime())) return fallback;
+
+  return null;
+}
+
+/**
+ * Calculates age from birth date string (DD/MM/YYYY, YYYY-MM-DD, etc.)
  */
 function calculateAge(dobStr?: string): number {
-  if (!dobStr) return 0;
-  let birthDate: Date;
-  if (dobStr.includes('/')) {
-    const [day, month, year] = dobStr.split('/').map(Number);
-    birthDate = new Date(year, month - 1, day);
-  } else {
-    birthDate = new Date(dobStr);
-  }
-  if (isNaN(birthDate.getTime())) return 0;
+  const birthDate = parseBirthDate(dobStr);
+  if (!birthDate) return 0;
   const today = new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
   const m = today.getMonth() - birthDate.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
     age--;
   }
-  return age;
+  return age > 0 ? age : 0;
 }
 
 /**
@@ -181,11 +224,11 @@ function getLoggedInUser(): LoggedInUser {
     const u = JSON.parse(raw);
     return {
       name: u.name || 'Member',
-      tagaId: u.tagaId || '',
-      email: u.emailId || u.username || '',
+      tagaId: u.tagaId || u.taga_id || '',
+      email: u.emailId || u.username || u.email || '',
       gender: u.gender,
-      mobileNumber: u.mobileNumber || u.mobile_number,
-      dateOfBirth: u.dateOfBirth || u.date_of_birth,
+      mobileNumber: u.mobileNumber || u.mobile_number || u.contact || u.phone,
+      dateOfBirth: u.dateOfBirth || u.date_of_birth || u.dob || u.DOB,
     };
   } catch (error) {
     console.warn('Failed to parse user from localStorage:', error);
@@ -282,10 +325,19 @@ function getRoomTypeLabel(type: string): string {
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATowersProps) {
+export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNavigateToMembership }: TAGATowersProps) {
   const loggedInUser = getLoggedInUser();
   const BOOKER_NAME = loggedInUser.name;
   const BOOKER_ID = loggedInUser.tagaId;
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      getMemberProfile()
+        .then((p) => setUserProfile(p))
+        .catch((err) => console.warn('Could not fetch profile for TAGA Towers:', err));
+    }
+  }, [isLoggedIn]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // STATE: Dates
@@ -1055,7 +1107,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
               TAGA Towers booking is available only for paid subscribers. Please ensure your
               subscription is active to book rooms.
             </p>
-            <Button data-testid="testid-manage-subscription-button">Manage Subscription</Button>
+            <Button onClick={onNavigateToMembership} data-testid="testid-manage-subscription-button">Manage Subscription</Button>
           </CardContent>
         </Card>
       </div>
@@ -1934,17 +1986,31 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false }: TAGATo
                                 const user = getLoggedInUser();
                                 const isSelfFilled = guest.name === user.name && guest.contact === (user.mobileNumber || '');
                                 if (!isSelfFilled) {
-                                  const age = calculateAge(user.dateOfBirth);
-                                  updateGuestDetail(0, 'name', user.name);
-                                  if (age > 0) updateGuestDetail(0, 'age', age);
-                                  if (user.mobileNumber) updateGuestDetail(0, 'contact', user.mobileNumber);
-                                  const g = user.gender?.toLowerCase();
-                                  if (g === 'male' || g === 'female') updateGuestDetail(0, 'gender', g);
+                                  const effectiveDob = user.dateOfBirth || userProfile?.dateOfBirth;
+                                  const age = calculateAge(effectiveDob);
+                                  setGuestDetails((prev) => {
+                                    const updated = [...prev];
+                                    const g = user.gender?.toLowerCase();
+                                    const validGender = (g === 'male' || g === 'female') ? (g as 'male' | 'female') : (updated[0]?.gender || '');
+                                    updated[0] = {
+                                      name: user.name || '',
+                                      age: age > 0 ? age : (updated[0]?.age || 0),
+                                      contact: user.mobileNumber || updated[0]?.contact || '',
+                                      gender: validGender,
+                                    };
+                                    return updated;
+                                  });
                                 } else {
-                                  updateGuestDetail(0, 'name', '');
-                                  updateGuestDetail(0, 'age', 0);
-                                  updateGuestDetail(0, 'contact', '');
-                                  updateGuestDetail(0, 'gender', '');
+                                  setGuestDetails((prev) => {
+                                    const updated = [...prev];
+                                    updated[0] = {
+                                      name: '',
+                                      age: 0,
+                                      contact: '',
+                                      gender: '',
+                                    };
+                                    return updated;
+                                  });
                                 }
                               }}
                               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-2xs ${

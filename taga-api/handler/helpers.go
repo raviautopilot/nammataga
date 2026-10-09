@@ -11,7 +11,9 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 	"taga-api/config"
+	"taga-api/model"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -242,6 +244,94 @@ func sendEmailWithReplyTo(to, replyTo, subject, body string) error {
 	return nil
 }
 
+// MemberBasicInfo holds essential identity and payment fields for member lookup
+type MemberBasicInfo struct {
+	ID                 string
+	TagaID             string
+	Email              string
+	Name               string
+	PaymentStatus      string
+	SubscriptionActive bool
+}
+
+// getMemberDetailsByEmail returns basic member info for a given email (case-insensitive)
+func getMemberDetailsByEmail(email string) *MemberBasicInfo {
+	if email == "" {
+		return nil
+	}
+	members, err := readExistingMembers()
+	if err != nil {
+		return nil
+	}
+	for _, m := range members {
+		if mEmail, ok := m["emailId"].(string); ok && strings.EqualFold(mEmail, email) {
+			id, _ := m["id"].(string)
+			tagaId, _ := m["tagaId"].(string)
+			name, _ := m["name"].(string)
+			pStatus, _ := m["payment_status"].(string)
+			subActive, _ := m["subscription_active"].(bool)
+			return &MemberBasicInfo{
+				ID:                 id,
+				TagaID:             tagaId,
+				Email:              mEmail,
+				Name:               name,
+				PaymentStatus:      pStatus,
+				SubscriptionActive: subActive,
+			}
+		}
+	}
+	return nil
+}
+
+// syncMemberEmailInSubscriptions updates member_email in member_subscriptions.json
+// when a member changes their email address.
+func syncMemberEmailInSubscriptions(memberUUID, tagaID, oldEmail, newEmail string) {
+	if newEmail == "" {
+		return
+	}
+	subscriptionsFileLock.Lock()
+	defer subscriptionsFileLock.Unlock()
+
+	filePath := getMemberSubscriptionsFilePath()
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return
+	}
+
+	var subscriptions []model.MemberSubscription
+	if err := json.Unmarshal(data, &subscriptions); err != nil {
+		return
+	}
+
+	updated := false
+	now := time.Now()
+	for i, sub := range subscriptions {
+		matches := false
+		if memberUUID != "" && sub.MemberID == memberUUID {
+			matches = true
+		} else if tagaID != "" && sub.MemberID == tagaID {
+			matches = true
+		} else if oldEmail != "" && strings.EqualFold(sub.MemberEmail, oldEmail) {
+			matches = true
+		}
+
+		if matches {
+			subscriptions[i].MemberEmail = newEmail
+			subscriptions[i].UpdatedAt = now
+			updated = true
+		}
+	}
+
+	if updated {
+		updatedData, _ := json.MarshalIndent(subscriptions, "", "  ")
+		_ = os.WriteFile(filePath, updatedData, 0644)
+		config.Logger.Info("Synced member email in subscriptions",
+			zap.String("old_email", oldEmail),
+			zap.String("new_email", newEmail),
+			zap.String("member_id", memberUUID))
+	}
+}
+
 // getMemberTagaIdByEmail returns the tagaId for a given email
 // If tagaId is empty, falls back to internal UUID (for old members without tagaId)
 func getMemberTagaIdByEmail(email string) string {
@@ -250,7 +340,7 @@ func getMemberTagaIdByEmail(email string) string {
 		return ""
 	}
 	for _, m := range members {
-		if mEmail, ok := m["emailId"].(string); ok && mEmail == email {
+		if mEmail, ok := m["emailId"].(string); ok && strings.EqualFold(mEmail, email) {
 			// Try to get tagaId first (preferred)
 			if tagaId, ok := m["tagaId"].(string); ok && tagaId != "" {
 				return tagaId
