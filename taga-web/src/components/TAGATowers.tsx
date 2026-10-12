@@ -107,7 +107,7 @@ const TOTAL_BED_CAPACITY = 35;
 
 const CONTACT_INFO = {
   phone: '044 34919949',
-  email: 'tagatower@nammataga.com',
+  email: 'nammataga@gmail.com',
   address: 'Velanmai Illam, 45, Sait Colony, II Street, Egmore, Chennai - 600008, Tamil Nadu, India',
 };
 
@@ -1833,8 +1833,8 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
                   data-testid="testid-booking-for-self"
                   onClick={() => setBookingFor('self')}
                   className={`flex flex-col items-start p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${bookingFor === 'self'
-                      ? 'border-primary bg-primary/10 text-primary font-semibold shadow-sm ring-2 ring-primary/20'
-                      : 'border-input bg-card hover:bg-muted/60 text-muted-foreground'
+                    ? 'border-primary bg-primary/10 text-primary font-semibold shadow-sm ring-2 ring-primary/20'
+                    : 'border-input bg-card hover:bg-muted/60 text-muted-foreground'
                     }`}
                 >
                   <div className="flex items-center justify-between w-full">
@@ -1858,8 +1858,8 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
                   data-testid="testid-booking-for-guest"
                   onClick={() => setBookingFor('guest')}
                   className={`flex flex-col items-start p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${bookingFor === 'guest'
-                      ? 'border-primary bg-primary/10 text-primary font-semibold shadow-sm ring-2 ring-primary/20'
-                      : 'border-input bg-card hover:bg-muted/60 text-muted-foreground'
+                    ? 'border-primary bg-primary/10 text-primary font-semibold shadow-sm ring-2 ring-primary/20'
+                    : 'border-input bg-card hover:bg-muted/60 text-muted-foreground'
                     }`}
                 >
                   <div className="flex items-center justify-between w-full">
@@ -2010,8 +2010,8 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
                                 }
                               }}
                               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-2xs ${guest.name && guest.name === getLoggedInUser().name
-                                  ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary/20'
-                                  : 'bg-muted/80 hover:bg-muted text-foreground border-input'
+                                ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary/20'
+                                : 'bg-muted/80 hover:bg-muted text-foreground border-input'
                                 }`}
                             >
                               <UserCheck className="w-3.5 h-3.5" />
