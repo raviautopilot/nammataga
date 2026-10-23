@@ -469,6 +469,7 @@ const NetworkInterceptorScript = `
 const MockRazorpayScript = `
 (function() {
     window.Razorpay = function(options) {
+        window.__lastRazorpayOptions = options;
         this.open = function() {
             if (options && typeof options.handler === 'function') {
                 var orderId = (options.order_id) || "mock_order_auto_" + Math.random().toString(36).substring(2, 10);

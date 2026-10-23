@@ -424,9 +424,10 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
         key: order.key,
         amount: order.amount,
         currency: order.currency,
-        name: "TAGA Membership",
-        description: selectedSubscription.name,
+        name: selectedSubscription.name || "TAGA Membership",
+        description: selectedSubscription.description || selectedSubscription.name,
         order_id: order.orderId,
+        notes: notes,
         //image: `${import.meta.env.VITE_API_BASE_URL}/images/logo/logo1.jpg`,
         prefill: {
           name: user.name || memberProfile?.name || "",

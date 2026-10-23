@@ -34,8 +34,11 @@ import {
   UserCheck,
   Info,
 } from 'lucide-react';
-import { format, addDays, isBefore, startOfDay, isAfter } from 'date-fns';
+import { format, addDays, isBefore, startOfDay, isAfter, differenceInDays } from 'date-fns';
 import { toast } from 'sonner';
+
+export const CURRENT_CHECKIN_TIME = "12:00 AM";
+export const CURRENT_CHECKOUT_TIME = "12:00 AM (Midnight)";
 import {
   getAllRooms,
   checkAvailability,
@@ -1309,6 +1312,10 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
                 <Clock className="w-4 h-4" />
                 <span>Book up to {BOOKING_DAYS_LIMIT} days ahead</span>
               </div>
+              <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg" data-testid="testid-tagatowers-hero-timings-badge">
+                <Clock className="w-4 h-4 text-green-200" />
+                <span>24-Hour Cycle • Check-in: {CURRENT_CHECKIN_TIME} • Check-out: {CURRENT_CHECKOUT_TIME}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1320,6 +1327,39 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
         </TabsList>
 
         <TabsContent value="room-availability" className="space-y-6">
+          {/* ── Noticeable Timing Information Banner (Matching Green Palette) ── */}
+          <div
+            className="rounded-xl border border-green-200 bg-green-50/90 dark:border-green-900/60 dark:bg-green-950/40 p-4 shadow-sm"
+            data-testid="testid-tagatowers-timing-notice-card"
+          >
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-lg bg-green-700 text-white shrink-0 shadow-sm">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-green-950 dark:text-green-100 text-base">
+                    TAGA Towers 24-Hour Stay Schedule
+                  </h3>
+                  <p className="text-xs text-green-800 dark:text-green-300 mt-0.5">
+                    Room bookings run on a full 24-hour cycle from 12:00 AM Midnight to 12:00 AM Midnight.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="px-3.5 py-2 rounded-lg bg-white dark:bg-green-900/50 border border-green-200 dark:border-green-800 text-center shadow-xs">
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-green-700 dark:text-green-300">Check-in Time</p>
+                  <p className="text-sm font-bold text-green-950 dark:text-green-100">{CURRENT_CHECKIN_TIME}</p>
+                </div>
+                <div className="px-3.5 py-2 rounded-lg bg-white dark:bg-green-900/50 border border-green-200 dark:border-green-800 text-center shadow-xs">
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-green-700 dark:text-green-300">Check-out Time</p>
+                  <p className="text-sm font-bold text-green-950 dark:text-green-100">{CURRENT_CHECKOUT_TIME}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Date Selection + Room Availability */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Date Selection Card */}
@@ -1375,9 +1415,12 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
                 />
                 {checkInDate && checkOutDate && (
                   <div className="mt-4 p-3 bg-primary/10 rounded-lg">
-                    <p className="text-sm font-medium">Selected Dates</p>
-                    <p className="text-lg font-bold text-primary">
-                      {format(checkInDate, 'MMM dd, yyyy')} → {format(checkOutDate, 'MMM dd, yyyy')}
+                    <p className="text-sm font-medium">Selected Stay</p>
+                    <p className="text-sm font-bold text-primary mt-0.5">
+                      {format(checkInDate, 'MMM dd, yyyy')} ({CURRENT_CHECKIN_TIME}) → {format(checkOutDate, 'MMM dd, yyyy')} ({CURRENT_CHECKOUT_TIME})
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {differenceInDays(checkOutDate, checkInDate)} Day(s) ({differenceInDays(checkOutDate, checkInDate) * 24} Hours Total)
                     </p>
                   </div>
                 )}
@@ -2113,15 +2156,21 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
                   <span className="font-medium">{selectedRoom?.name}</span>
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Check-in Date:</span>{' '}
+                  <span className="text-muted-foreground">Check-in:</span>{' '}
                   <span className="font-medium">
-                    {checkInDate && format(checkInDate, 'MMM dd, yyyy')}
+                    {checkInDate && format(checkInDate, 'MMM dd, yyyy')} &bull; {CURRENT_CHECKIN_TIME}
                   </span>
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Check-out Date:</span>{' '}
+                  <span className="text-muted-foreground">Check-out:</span>{' '}
                   <span className="font-medium">
-                    {checkOutDate && format(checkOutDate, 'MMM dd, yyyy')}
+                    {checkOutDate && format(checkOutDate, 'MMM dd, yyyy')} &bull; {CURRENT_CHECKOUT_TIME}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Stay Duration:</span>{' '}
+                  <span className="font-medium">
+                    {checkInDate && checkOutDate && `${differenceInDays(checkOutDate, checkInDate)} Day(s) (${differenceInDays(checkOutDate, checkInDate) * 24} Hours Total)`}
                   </span>
                 </p>
                 <p>

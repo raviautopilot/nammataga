@@ -771,4 +771,13 @@ func TestRoomBookingEmailAmountConversion(t *testing.T) {
 	if strings.Contains(emailBody, "₹ 10000.00") {
 		t.Errorf("Vulnerability detected: email body displayed amount in paise (₹ 10000.00) instead of Rupees")
 	}
+	if !strings.Contains(emailBody, "2026-10-01 (12:00 AM Midnight)") {
+		t.Errorf("Expected email body to contain Check-in time '2026-10-01 (12:00 AM Midnight)'")
+	}
+	if !strings.Contains(emailBody, "2026-10-02 (12:00 AM Midnight)") {
+		t.Errorf("Expected email body to contain Check-out time '2026-10-02 (12:00 AM Midnight)'")
+	}
+	if !strings.Contains(emailBody, "24-Hour Cycle (12:00 AM to 12:00 AM Midnight)") {
+		t.Errorf("Expected email body to contain Stay Cycle '24-Hour Cycle (12:00 AM to 12:00 AM Midnight)'")
+	}
 }

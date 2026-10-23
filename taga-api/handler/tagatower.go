@@ -706,8 +706,9 @@ func buildRoomBookingEmailBody(data AdminRoomBookingData) string {
             <table style="width: 100%%; border-collapse: collapse; margin-bottom: 24px;">
                 <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b; width: 40%%;">Room Category</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%s</td></tr>
                 <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Beds Booked</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500;">%d</td></tr>
-                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Check-in</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #065f46;">%s</td></tr>
-                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Check-out</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #991b1b;">%s</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Check-in</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #065f46;">%s (12:00 AM Midnight)</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Check-out</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #991b1b;">%s (12:00 AM Midnight)</td></tr>
+                <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Booking Cycle</td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500; color: #065f46;">24-Hour Cycle (12:00 AM to 12:00 AM Midnight)</td></tr>
             </table>
 
             <!-- Guest Details -->
