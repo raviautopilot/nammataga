@@ -10,6 +10,8 @@ graphify-out/.rebuild.lock
 # ============================================
 # BINARIES & EXECUTABLES
 # ============================================
+*.apk
+*.aab
 *.exe
 *.exe~
 *.dll
