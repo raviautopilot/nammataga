@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -7,6 +8,8 @@ import '../../../../core/widgets/bouncy_button.dart';
 import '../providers/profile_provider.dart';
 import 'widgets/profile_subpage_scaffold.dart';
 
+/// Screen 7: Membership Details
+/// Displays verified member subscription status and association privileges matching reference.
 class MembershipDetailsScreen extends ConsumerWidget {
   const MembershipDetailsScreen({super.key});
 
@@ -25,7 +28,7 @@ class MembershipDetailsScreen extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Main Membership Card
+              // 1. Membership Status Card matching reference
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -39,7 +42,7 @@ class MembershipDetailsScreen extends ConsumerWidget {
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x061B4332),
-                      blurRadius: 14,
+                      blurRadius: 16,
                       offset: Offset(0, 4),
                     ),
                   ],
@@ -47,7 +50,7 @@ class MembershipDetailsScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header Row: Crown Icon & Status
+                    // Top Row: Crown Icon, Title, and Active Pill
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -83,12 +86,13 @@ class MembershipDetailsScreen extends ConsumerWidget {
                                       fontSize: 16.5,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.textPrimary,
+                                      letterSpacing: -0.2,
                                     ),
                                   ),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3,
+                                      horizontal: 9,
+                                      vertical: 3.5,
                                     ),
                                     decoration: BoxDecoration(
                                       color: isSubscribed
@@ -102,15 +106,31 @@ class MembershipDetailsScreen extends ConsumerWidget {
                                         width: 1,
                                       ),
                                     ),
-                                    child: Text(
-                                      isSubscribed ? 'Active' : 'Pending',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: isSubscribed
-                                            ? AppColors.primary
-                                            : const Color(0xFFB45309),
-                                      ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 6,
+                                          height: 6,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: isSubscribed
+                                                ? const Color(0xFF2D6A4F)
+                                                : const Color(0xFFD97706),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          isSubscribed ? 'Active' : 'Pending',
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: isSubscribed
+                                                ? const Color(0xFF2D6A4F)
+                                                : const Color(0xFF92400E),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -121,7 +141,7 @@ class MembershipDetailsScreen extends ConsumerWidget {
                                     ? 'Your membership is active and in good standing.'
                                     : 'Subscribe to access full association member privileges.',
                                 style: const TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 12.5,
                                   color: AppColors.textSecondary,
                                   height: 1.35,
                                 ),
@@ -131,11 +151,15 @@ class MembershipDetailsScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                    const Divider(height: 1, color: Color(0xFFEFF4F0)),
+                    const SizedBox(height: 16),
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFEFF4F0),
+                    ),
                     const SizedBox(height: 14),
 
-                    // Details
+                    // Status rows
                     _buildStatusRow(
                       label: 'Membership Type',
                       value: isSubscribed ? 'Subscriber' : 'General Member',
@@ -148,33 +172,43 @@ class MembershipDetailsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 18),
 
-                    // Manage Button
+                    // Manage Button matching reference
                     BouncyButton(
                       onTap: () {
+                        HapticFeedback.lightImpact();
                         context.push('/profile/subscriptions');
                       },
                       child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        height: 48,
                         decoration: BoxDecoration(
-                          color: AppColors.primaryDark,
-                          borderRadius: BorderRadius.circular(12),
+                          color: const Color(0xFF0D2C1B),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0D2C1B)
+                                  .withValues(alpha: 0.25),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              LucideIcons.creditCard,
+                              LucideIcons.crown,
                               size: 15,
                               color: Color(0xFFFDE68A),
                             ),
                             SizedBox(width: 8),
                             Text(
-                              'View Subscription Plans & Pay',
+                              'Manage Membership',
                               style: TextStyle(
-                                fontSize: 13.5,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
+                                letterSpacing: 0.1,
                               ),
                             ),
                             SizedBox(width: 6),
@@ -190,9 +224,9 @@ class MembershipDetailsScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
-              // Subscriber Benefits Card
+              // 2. Subscriber Benefits Card matching reference
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -206,7 +240,7 @@ class MembershipDetailsScreen extends ConsumerWidget {
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x061B4332),
-                      blurRadius: 14,
+                      blurRadius: 16,
                       offset: Offset(0, 4),
                     ),
                   ],
@@ -214,25 +248,44 @@ class MembershipDetailsScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(
-                          LucideIcons.shieldCheck,
-                          size: 18,
-                          color: AppColors.primary,
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5EE),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: const Color(0xFFCBE3D5),
+                              width: 1,
+                            ),
+                          ),
+                          child: const Icon(
+                            LucideIcons.shieldCheck,
+                            size: 19,
+                            color: AppColors.primary,
+                          ),
                         ),
-                        SizedBox(width: 8),
-                        Text(
+                        const SizedBox(width: 12),
+                        const Text(
                           'Subscriber Benefits',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 16.5,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
+                            letterSpacing: -0.2,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFEFF4F0),
+                    ),
+                    const SizedBox(height: 14),
                     _buildBenefitItem('Access to exclusive resources & bylaws'),
                     _buildBenefitItem(
                       'Priority event and conference registrations',
@@ -250,9 +303,14 @@ class MembershipDetailsScreen extends ConsumerWidget {
             ],
           );
         },
-        loading: () => const Center(
-          child: Padding(
-            padding: EdgeInsets.all(40),
+        loading: () => Container(
+          height: 340,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE2EBE5)),
+          ),
+          child: const Center(
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
         ),
@@ -276,7 +334,7 @@ class MembershipDetailsScreen extends ConsumerWidget {
   Widget _buildStatusRow({
     required String label,
     required String value,
-    bool? isPositive,
+    bool isPositive = false,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -284,27 +342,30 @@ class MembershipDetailsScreen extends ConsumerWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: 13.5,
             color: Color(0xFF5C7164),
             fontWeight: FontWeight.w500,
           ),
         ),
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (isPositive != null) ...[
-              Icon(
-                isPositive ? LucideIcons.circleCheck : LucideIcons.circleAlert,
+            if (isPositive) ...[
+              const Icon(
+                LucideIcons.check,
                 size: 14,
-                color: isPositive ? AppColors.primary : const Color(0xFFD97706),
+                color: Color(0xFF2D6A4F),
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 4),
             ],
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isPositive
+                    ? const Color(0xFF2D6A4F)
+                    : AppColors.textPrimary,
               ),
             ),
           ],
@@ -320,25 +381,27 @@ class MembershipDetailsScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(3),
+            width: 22,
+            height: 22,
             decoration: const BoxDecoration(
-              color: Color(0xFFE8F5EE),
               shape: BoxShape.circle,
+              color: Color(0xFFE8F5EE),
             ),
             child: const Icon(
               LucideIcons.check,
               size: 13,
-              color: AppColors.primary,
+              color: Color(0xFF2D6A4F),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
               style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-                height: 1.35,
+                fontSize: 13.5,
+                color: AppColors.textPrimary,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),

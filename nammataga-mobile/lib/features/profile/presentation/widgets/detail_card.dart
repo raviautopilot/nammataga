@@ -9,6 +9,8 @@ class DetailItem {
   const DetailItem({required this.label, required this.value, this.icon});
 }
 
+/// A premium, rounded detail card conforming strictly to the reference image.
+/// Displays an icon badge, title, subtitle, divider, and structured key-value rows.
 class DetailCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -37,7 +39,7 @@ class DetailCard extends StatelessWidget {
         boxShadow: const [
           BoxShadow(
             color: Color(0x061B4332),
-            blurRadius: 14,
+            blurRadius: 16,
             offset: Offset(0, 4),
           ),
         ],
@@ -50,14 +52,17 @@ class DetailCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8F5EE),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFCBE3D5), width: 1),
+                  border: Border.all(
+                    color: const Color(0xFFCBE3D5),
+                    width: 1.1,
+                  ),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(icon, color: AppColors.primary, size: 21),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -67,7 +72,7 @@ class DetailCard extends StatelessWidget {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 16.5,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                         letterSpacing: -0.2,
@@ -77,7 +82,7 @@ class DetailCard extends StatelessWidget {
                     Text(
                       subtitle,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 12.5,
                         color: AppColors.textSecondary,
                         height: 1.35,
                       ),
@@ -87,9 +92,9 @@ class DetailCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          const Divider(height: 1, color: Color(0xFFEFF4F0)),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFEFF4F0)),
+          const SizedBox(height: 16),
 
           // Custom Content or Key-Value Rows
           if (customContent != null)
@@ -114,22 +119,23 @@ class DetailCard extends StatelessWidget {
                       child: Text(
                         item.label,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w500,
                           color: Color(0xFF5C7164),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
-                      flex: 5,
+                      flex: 6,
                       child: Text(
                         item.value.isNotEmpty ? item.value : '—',
                         textAlign: TextAlign.right,
                         style: const TextStyle(
-                          fontSize: 13.5,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
+                          letterSpacing: -0.1,
                         ),
                       ),
                     ),

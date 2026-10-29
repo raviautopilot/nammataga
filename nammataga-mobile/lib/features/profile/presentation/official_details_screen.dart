@@ -6,6 +6,8 @@ import '../providers/profile_provider.dart';
 import 'widgets/detail_card.dart';
 import 'widgets/profile_subpage_scaffold.dart';
 
+/// Screen 6: Official Details
+/// Displays authenticated member official numbers and educational qualifications.
 class OfficialDetailsScreen extends ConsumerWidget {
   const OfficialDetailsScreen({super.key});
 
@@ -15,26 +17,37 @@ class OfficialDetailsScreen extends ConsumerWidget {
 
     return ProfileSubpageScaffold(
       title: 'Official Details',
-      watermarkIcon: LucideIcons.fileBadge,
+      watermarkIcon: LucideIcons.fileText,
       body: profileAsync.when(
         data: (profile) {
           return DetailCard(
             title: 'Official Details',
             subtitle: 'Your official and educational information.',
-            icon: LucideIcons.fileBadge,
+            icon: LucideIcons.fileCheck,
             items: [
               DetailItem(
                 label: 'Educational Qualification',
                 value: profile.educationalQualification,
               ),
-              DetailItem(label: 'TBF Number', value: profile.tbfNumber),
-              DetailItem(label: 'CPS/GPF Number', value: profile.cpsGpfNumber),
+              DetailItem(
+                label: 'TBF Number',
+                value: profile.tbfNumber,
+              ),
+              DetailItem(
+                label: 'CPS/GPF Number',
+                value: profile.cpsGpfNumber,
+              ),
             ],
           );
         },
-        loading: () => const Center(
-          child: Padding(
-            padding: EdgeInsets.all(40),
+        loading: () => Container(
+          height: 220,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE2EBE5)),
+          ),
+          child: const Center(
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
         ),

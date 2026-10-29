@@ -6,6 +6,8 @@ import '../providers/profile_provider.dart';
 import 'widgets/detail_card.dart';
 import 'widgets/profile_subpage_scaffold.dart';
 
+/// Screen 3: Contact Details
+/// Displays authenticated member communication information.
 class ContactDetailsScreen extends ConsumerWidget {
   const ContactDetailsScreen({super.key});
 
@@ -36,9 +38,14 @@ class ContactDetailsScreen extends ConsumerWidget {
             ],
           );
         },
-        loading: () => const Center(
-          child: Padding(
-            padding: EdgeInsets.all(40),
+        loading: () => Container(
+          height: 180,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE2EBE5)),
+          ),
+          child: const Center(
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
         ),
