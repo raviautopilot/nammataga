@@ -145,11 +145,19 @@ void main() {
       await tester.tap(find.text('Sign In'));
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Invalid credentials'), findsOneWidget);
+      expect(find.text('Invalid credentials'), findsWidgets);
       expect(
         find.textContaining('The email address or password you entered is incorrect'),
-        findsOneWidget,
+        findsWidgets,
       );
+      // Verify popup dialog appeared
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('Try Again'), findsOneWidget);
+
+      // Dismiss popup dialog
+      await tester.tap(find.text('Try Again'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(AlertDialog), findsNothing);
     },
   );
 
