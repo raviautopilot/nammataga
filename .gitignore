@@ -187,3 +187,13 @@ varam/.promote_hash
 
 # todo issue txt files for references 
 issue todo on taga.txt
+
+# ============================================
+# LOCAL RUNTIME & UNWANTED REFERENCE FILES
+# ============================================
+/data/
+image copy.png
+*.png~
+.last_env
+.web_server.pid
+.web_server.log
