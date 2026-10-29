@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nammataga_mobile/core/router/app_router.dart';
+import 'package:nammataga_mobile/core/storage/secure_storage_service.dart';
 import 'package:nammataga_mobile/features/auth/data/auth_repository.dart';
 import 'package:nammataga_mobile/features/auth/domain/member_session.dart';
 import 'package:nammataga_mobile/features/auth/presentation/login_screen.dart';
@@ -69,8 +70,9 @@ void main() {
   testWidgets(
     'App router navigates from /splash to /login after timer duration',
     (WidgetTester tester) async {
+      final testRouter = createRouter();
       await tester.pumpWidget(
-        ProviderScope(child: MaterialApp.router(routerConfig: appRouter)),
+        ProviderScope(child: MaterialApp.router(routerConfig: testRouter)),
       );
 
       // Initially on Splash
@@ -161,11 +163,33 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('Namma TAGA'), findsWidgets);
+      expect(find.text('Member Portal'), findsOneWidget);
+      expect(find.text('Guest Portal'), findsNothing);
       expect(find.text('Association Services'), findsOneWidget);
       expect(find.text('Office Bearers'), findsOneWidget);
       expect(find.text('About Us'), findsOneWidget);
       expect(find.text('Our Objectives'), findsOneWidget);
       expect(find.text('Contact Us'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'App router guard prevents unauthenticated direct access to /home and redirects to /login',
+    (WidgetTester tester) async {
+      StorageService.setMockAuthenticated(false);
+
+      // Launch router directly at /home while unauthenticated
+      final testRouter = createRouter(initialLocation: '/home');
+      await tester.pumpWidget(
+        ProviderScope(child: MaterialApp.router(routerConfig: testRouter)),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // Guard immediately intercepts and redirects to /login
+      expect(find.text('Member Login'), findsOneWidget);
+      expect(find.text('Sign In'), findsOneWidget);
+      expect(find.text('Guest Portal'), findsNothing);
+      expect(find.text('Vanakkam, Guest'), findsNothing);
     },
   );
 }

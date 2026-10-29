@@ -14,12 +14,10 @@ import 'widgets/forgot_password_sheet.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final VoidCallback? onLoginSuccess;
-  final VoidCallback? onBrowseAsGuest;
 
   const LoginScreen({
     super.key,
     this.onLoginSuccess,
-    this.onBrowseAsGuest,
   });
 
   @override

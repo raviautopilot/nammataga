@@ -19,8 +19,6 @@ class AuthNotifier extends AsyncNotifier<MemberSession> {
     if (isValid) {
       final token = await StorageService.getToken();
       final rawUser = await StorageService.getUserData();
-      final isGuest = await StorageService.isGuestMode();
-      final role = isGuest ? 'guest' : 'member';
 
       Map<String, dynamic>? user;
       bool isPaid = false;
@@ -28,24 +26,23 @@ class AuthNotifier extends AsyncNotifier<MemberSession> {
         try {
           user = jsonDecode(rawUser) as Map<String, dynamic>;
           isPaid =
-              user['isPaid'] == true || user['subscription_active'] == true;
+              user['isPaid'] == true ||
+              user['subscription_active'] == true ||
+              (user['payment_status'] as String? ?? '').toLowerCase() == 'paid';
         } catch (_) {}
       }
 
       return MemberSession(
         token: token,
-        role: role,
+        role: 'member',
         isPaid: isPaid,
         user: user,
         isGuest: false,
       );
     }
 
-    final isGuest = await StorageService.isGuestMode();
-    if (isGuest) {
-      return MemberSession.guest();
-    }
-
+    // Unauthenticated: Guest browsing is disallowed
+    await StorageService.setGuestMode(false);
     return MemberSession.unauthenticated();
   }
 
@@ -67,12 +64,6 @@ class AuthNotifier extends AsyncNotifier<MemberSession> {
     });
 
     return state.requireValue;
-  }
-
-  /// Enable guest browsing mode
-  Future<void> enterGuestMode() async {
-    await StorageService.setGuestMode(true);
-    state = AsyncValue.data(MemberSession.guest());
   }
 
   /// Submit password recovery

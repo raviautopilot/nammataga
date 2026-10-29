@@ -63,7 +63,7 @@ class ProfileRepository {
     throw Exception('Failed to load profile data from server');
   }
 
-  /// Fetches the official 38 Tamil Nadu districts from `GET /api/membership/districts`
+  /// Fetches the official Tamil Nadu districts strictly from backend `GET /api/membership/districts`
   Future<List<String>> getDistricts() async {
     try {
       final response = await _dio.get(ApiEndpoints.districts);
@@ -71,50 +71,10 @@ class ProfileRepository {
         return (response.data as List).map((e) => e.toString().trim()).toList();
       }
     } catch (e) {
-      debugPrint('[ProfileRepository] Error fetching districts: $e');
+      debugPrint('[ProfileRepository] Error fetching districts from API: $e');
+      rethrow;
     }
-
-    // Standard Tamil Nadu 38 administrative districts fallback
-    return const [
-      'Ariyalur',
-      'Chengalpattu',
-      'Chennai',
-      'Coimbatore',
-      'Cuddalore',
-      'Dharmapuri',
-      'Dindigul',
-      'Erode',
-      'Kallakurichi',
-      'Kanchipuram',
-      'Kanyakumari',
-      'Karur',
-      'Krishnagiri',
-      'Madurai',
-      'Mayiladuthurai',
-      'Nagapattinam',
-      'Namakkal',
-      'Nilgiris',
-      'Perambalur',
-      'Pudukkottai',
-      'Ramanathapuram',
-      'Ranipet',
-      'Salem',
-      'Sivaganga',
-      'Tenkasi',
-      'Thanjavur',
-      'Theni',
-      'Thoothukudi',
-      'Tiruchirappalli',
-      'Tirunelveli',
-      'Tirupathur',
-      'Tiruppur',
-      'Tiruvallur',
-      'Tiruvannamalai',
-      'Tiruvarur',
-      'Vellore',
-      'Viluppuram',
-      'Virudhunagar',
-    ];
+    throw Exception('Failed to load districts from server');
   }
 
   /// Submits profile change request to `POST /api/member/edit-request`

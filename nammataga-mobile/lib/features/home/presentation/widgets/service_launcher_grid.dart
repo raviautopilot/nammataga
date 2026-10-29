@@ -4,17 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
-import '../../../auth/providers/auth_provider.dart';
-import 'guest_restriction_sheet.dart';
 
 class ServiceLauncherGrid extends ConsumerWidget {
   const ServiceLauncherGrid({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessionAsync = ref.watch(authProvider);
-    final isGuest = sessionAsync.value?.isGuest ?? true;
-
     final services = [
       _ServiceItem(
         title: 'Office Bearers',
@@ -101,11 +96,7 @@ class ServiceLauncherGrid extends ConsumerWidget {
 
             return BouncyButton(
               onTap: () {
-                if (isGuest && item.isRestricted) {
-                  GuestRestrictionSheet.show(context, featureName: item.title);
-                } else {
-                  context.push(item.route);
-                }
+                context.push(item.route);
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -130,44 +121,22 @@ class ServiceLauncherGrid extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8F5EE),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFFCBE3D5),
-                              width: 1.2,
-                            ),
-                          ),
-                          child: Icon(
-                            item.icon,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5EE),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFCBE3D5),
+                          width: 1.2,
                         ),
-                        if (isGuest && item.isRestricted)
-                          Positioned(
-                            right: -2,
-                            top: -2,
-                            child: Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF1B4332),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                LucideIcons.lock,
-                                size: 9,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                      ],
+                      ),
+                      child: Icon(
+                        item.icon,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(

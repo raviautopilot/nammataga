@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../auth/providers/auth_provider.dart';
+import '../../../profile/providers/profile_provider.dart';
 import '../../providers/home_provider.dart';
 
 class HomeHeroCard extends ConsumerWidget {
@@ -11,27 +12,34 @@ class HomeHeroCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionAsync = ref.watch(authProvider);
+    final profileAsync = ref.watch(memberProfileProvider);
     final aboutAsync = ref.watch(aboutInfoProvider);
 
-    final isGuest = sessionAsync.value?.isGuest ?? true;
-    final displayName = sessionAsync.value?.displayName ?? 'Guest';
+    final memberName = profileAsync.value?.fullNameWithInitial.isNotEmpty == true
+        ? profileAsync.value!.fullNameWithInitial
+        : (sessionAsync.value?.displayName.isNotEmpty == true
+            ? sessionAsync.value!.displayName
+            : 'Member');
+    final tagaId = profileAsync.value?.tagaId ?? '';
+    final isPaid = profileAsync.value?.isPaid ?? sessionAsync.value?.isPaid ?? false;
 
     return aboutAsync.when(
       data: (about) => _buildHero(
         context: context,
-        isGuest: isGuest,
-        displayName: displayName,
+        memberName: memberName,
+        tagaId: tagaId,
+        isPaid: isPaid,
         establishedYear: about.establishedYear,
         associationName: about.name,
         tagline: about.tagline,
         heroImageUrl: about.heroImageUrl,
       ),
-      loading: () =>
-          _buildHeroSkeleton(isGuest: isGuest, displayName: displayName),
+      loading: () => _buildHeroSkeleton(memberName: memberName),
       error: (error, stack) => _buildHero(
         context: context,
-        isGuest: isGuest,
-        displayName: displayName,
+        memberName: memberName,
+        tagaId: tagaId,
+        isPaid: isPaid,
         establishedYear: 0,
         associationName: '',
         tagline: '',
@@ -42,8 +50,9 @@ class HomeHeroCard extends ConsumerWidget {
 
   Widget _buildHero({
     required BuildContext context,
-    required bool isGuest,
-    required String displayName,
+    required String memberName,
+    required String tagaId,
+    required bool isPaid,
     required int establishedYear,
     required String associationName,
     required String tagline,
@@ -199,7 +208,7 @@ class HomeHeroCard extends ConsumerWidget {
                         ],
                       ),
 
-                      // Member/Guest Access Pill
+                      // Verified Member / Subscriber Status Pill
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
@@ -209,9 +218,7 @@ class HomeHeroCard extends ConsumerWidget {
                           color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isGuest
-                                ? Colors.white.withValues(alpha: 0.25)
-                                : const Color(0xFF52B788),
+                            color: const Color(0xFF52B788),
                             width: 1.1,
                           ),
                         ),
@@ -221,16 +228,14 @@ class HomeHeroCard extends ConsumerWidget {
                             Container(
                               width: 6.5,
                               height: 6.5,
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: isGuest
-                                    ? const Color(0xFFE2EBE5)
-                                    : const Color(0xFF52B788),
+                                color: Color(0xFF52B788),
                               ),
                             ),
                             const SizedBox(width: 5),
                             Text(
-                              isGuest ? 'Guest Access' : 'Verified Member',
+                              isPaid ? 'Subscriber Member' : 'Verified Member',
                               style: const TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.bold,
@@ -244,9 +249,9 @@ class HomeHeroCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 18),
 
-                  // Greeting & Name
+                  // Greeting & Real Member Name from Backend Profile
                   Text(
-                    'Vanakkam, $displayName',
+                    'Vanakkam, $memberName',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -254,6 +259,20 @@ class HomeHeroCard extends ConsumerWidget {
                       letterSpacing: -0.3,
                     ),
                   ),
+
+                  // TAGA ID when available
+                  if (tagaId.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      'TAGA ID: $tagaId',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFB7E4C7),
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
 
                   // Official Association Name from Backend API
                   if (associationName.isNotEmpty) ...[
@@ -290,10 +309,7 @@ class HomeHeroCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeroSkeleton({
-    required bool isGuest,
-    required String displayName,
-  }) {
+  Widget _buildHeroSkeleton({required String memberName}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -354,7 +370,7 @@ class HomeHeroCard extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'Vanakkam, $displayName',
+            'Vanakkam, $memberName',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,

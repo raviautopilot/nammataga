@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/widgets/bouncy_button.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/home_provider.dart';
 import 'widgets/about_us_section.dart';
@@ -21,9 +20,6 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessionAsync = ref.watch(authProvider);
-    final isGuest = sessionAsync.value?.isGuest ?? true;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -54,8 +50,8 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
+              children: const [
+                Text(
                   'Namma TAGA',
                   style: TextStyle(
                     fontSize: 16,
@@ -65,8 +61,8 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  isGuest ? 'Guest Portal' : 'Member Portal',
-                  style: const TextStyle(
+                  'Member Portal',
+                  style: TextStyle(
                     fontSize: 11,
                     color: AppColors.primary,
                     fontWeight: FontWeight.w600,
@@ -77,62 +73,29 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         actions: [
-          if (isGuest)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: BouncyButton(
-                onTap: () => context.go('/login'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(LucideIcons.logIn, color: Colors.white, size: 13),
-                      SizedBox(width: 5),
-                      Text(
-                        'Sign In',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(
+                  LucideIcons.user,
+                  color: AppColors.primary,
+                  size: 22,
                 ),
+                tooltip: 'My Profile',
+                onPressed: () => context.push('/profile'),
               ),
-            )
-          else
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    LucideIcons.user,
-                    color: AppColors.primary,
-                    size: 22,
-                  ),
-                  tooltip: 'My Profile',
-                  onPressed: () => context.push('/profile'),
+              IconButton(
+                icon: const Icon(
+                  LucideIcons.logOut,
+                  color: AppColors.destructive,
+                  size: 20,
                 ),
-                IconButton(
-                  icon: const Icon(
-                    LucideIcons.logOut,
-                    color: AppColors.destructive,
-                    size: 20,
-                  ),
-                  tooltip: 'Sign Out',
-                  onPressed: () => _confirmSignOut(context, ref),
-                ),
-              ],
-            ),
+                tooltip: 'Sign Out',
+                onPressed: () => _confirmSignOut(context, ref),
+              ),
+            ],
+          ),
         ],
       ),
       body: RefreshIndicator(

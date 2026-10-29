@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../domain/member_profile.dart';
 import '../providers/profile_provider.dart';
 import 'widgets/initials_avatar.dart';
@@ -15,14 +14,6 @@ class ProfileOverviewScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessionAsync = ref.watch(authProvider);
-    final session = sessionAsync.value;
-    final isAuthenticated = session != null && session.isAuthenticated;
-
-    if (!isAuthenticated) {
-      return _buildGuestScreen(context);
-    }
-
     final profileAsync = ref.watch(memberProfileProvider);
 
     return Scaffold(
@@ -233,13 +224,13 @@ class ProfileOverviewScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 10),
 
-                  // Association Motto
+                  // Association Motto (Estd. 1929)
                   const Text(
-                    '"Together for a Stronger Community"',
+                    'பயிர் வளர்ப்போம் • உயிர் காப்போம்  (Estd. 1929)',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,
-                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w600,
                       color: Color(0xFFD8F3DC),
                       letterSpacing: 0.2,
                     ),
@@ -565,81 +556,6 @@ class ProfileOverviewScreen extends ConsumerWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE2EBE5)),
-      ),
-    );
-  }
-
-  Widget _buildGuestScreen(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FAF7),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: const Text('Member Profile'),
-        elevation: 0,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE8F5EE),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  LucideIcons.lock,
-                  color: AppColors.primary,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Member Access Required',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Profile details, government records, and membership options are exclusively available to verified TAGA members.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                  height: 1.45,
-                ),
-              ),
-              const SizedBox(height: 24),
-              BouncyButton(
-                onTap: () => context.go('/login'),
-                child: Container(
-                  width: double.infinity,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'Sign In to Your Account',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

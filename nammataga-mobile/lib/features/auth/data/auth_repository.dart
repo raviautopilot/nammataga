@@ -26,6 +26,11 @@ class AuthRepository {
           ? response.data as Map<String, dynamic>
           : jsonDecode(response.data.toString()) as Map<String, dynamic>;
 
+      // Explicit error verification in JSON body
+      if (data['error'] != null && data['error'].toString().isNotEmpty) {
+        throw Exception(data['error'].toString());
+      }
+
       // Check if user must change temporary password first
       final bool forceChange = data['forceChangePassword'] == true;
       if (forceChange) {
@@ -36,22 +41,24 @@ class AuthRepository {
       }
 
       final String? token = data['token'];
-      final String role = data['role'] ?? 'member';
-      final userData = data['user'] as Map<String, dynamic>?;
-
-      final bool isPaid =
-          userData != null &&
-          (userData['isPaid'] == true ||
-              userData['subscription_active'] == true);
-
-      if (token != null && token.isNotEmpty) {
-        final int? expiresIn = data['expires_in'];
-        await StorageService.saveToken(token, expiresInSeconds: expiresIn);
-
-        if (userData != null) {
-          await StorageService.saveUserData(jsonEncode(userData), role: role);
-        }
+      if (token == null || token.toString().trim().isEmpty) {
+        throw Exception('Invalid credentials');
       }
+
+      final userData = data['user'] as Map<String, dynamic>?;
+      if (userData == null) {
+        throw Exception('Invalid credentials');
+      }
+
+      final String role = data['role'] ?? 'member';
+      final bool isPaid =
+          userData['isPaid'] == true ||
+          userData['subscription_active'] == true ||
+          (userData['payment_status'] as String? ?? '').toLowerCase() == 'paid';
+
+      final int? expiresIn = data['expires_in'];
+      await StorageService.saveToken(token, expiresInSeconds: expiresIn);
+      await StorageService.saveUserData(jsonEncode(userData), role: role);
 
       if (rememberMe) {
         await StorageService.setRememberEmail(identifier.trim());
@@ -144,18 +151,34 @@ class AuthRepository {
   }
 
   String _extractErrorMessage(DioException e) {
+    if (e.response?.statusCode == 401) {
+      return 'Invalid credentials';
+    }
     if (e.response?.data != null) {
       final data = e.response!.data;
       if (data is Map<String, dynamic>) {
-        return data['error'] ?? data['message'] ?? 'Authentication failed.';
-      } else if (data is String) {
-        return data;
+        final err = data['error'] ?? data['message'];
+        if (err != null && err.toString().isNotEmpty) {
+          return err.toString();
+        }
+      } else if (data is String && data.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(data);
+          if (decoded is Map<String, dynamic>) {
+            final err = decoded['error'] ?? decoded['message'];
+            if (err != null && err.toString().isNotEmpty) {
+              return err.toString();
+            }
+          }
+        } catch (_) {
+          return data;
+        }
       }
     }
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
       return 'Connection timed out. Please check your internet connection.';
     }
-    return e.message ?? 'An unexpected network error occurred.';
+    return e.message ?? 'Invalid credentials';
   }
 }

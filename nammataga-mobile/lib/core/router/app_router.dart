@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/storage/secure_storage_service.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/profile/presentation/account_settings_screen.dart';
@@ -16,9 +17,31 @@ import '../../features/profile/presentation/request_profile_edit_screen.dart';
 import '../../features/profile/presentation/subscription_plans_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 
-/// Application routing table powered by GoRouter
-final GoRouter appRouter = GoRouter(
-  initialLocation: '/splash',
+/// Factory to create an isolated GoRouter instance (useful for testing and fresh state)
+GoRouter createRouter({String initialLocation = '/splash'}) {
+  return GoRouter(
+    initialLocation: initialLocation,
+  refreshListenable: StorageService.authStateListenable,
+  redirect: (context, state) {
+    final hasValidToken = StorageService.isAuthenticatedSync;
+    final loc = state.matchedLocation;
+    final isAuthRoute = loc == '/login' || loc == '/splash';
+
+    // If unauthenticated, prohibit entering internal application routes
+    if (!hasValidToken) {
+      if (!isAuthRoute) {
+        return '/login';
+      }
+      return null;
+    }
+
+    // If authenticated and trying to visit login, redirect to home
+    if (loc == '/login') {
+      return '/home';
+    }
+
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/splash',
@@ -257,7 +280,11 @@ final GoRouter appRouter = GoRouter(
       ),
     ),
   ],
-);
+  );
+}
+
+/// Global application router singleton
+final GoRouter appRouter = createRouter();
 
 class _PlaceholderScreen extends StatelessWidget {
   final String title;
