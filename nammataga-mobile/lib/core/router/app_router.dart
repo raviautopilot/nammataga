@@ -4,6 +4,10 @@ import '../../core/constants/app_colors.dart';
 import '../../core/storage/secure_storage_service.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
+import '../../features/grievance/presentation/grievance_form_screen.dart';
+import '../../features/grievance/presentation/grievance_intro_screen.dart';
+import '../../features/grievance/presentation/grievance_success_screen.dart';
+import '../../features/grievance/presentation/widgets/grievance_access_restricted_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/profile/presentation/account_settings_screen.dart';
 import '../../features/profile/presentation/address_details_screen.dart';
@@ -243,13 +247,45 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
       name: 'grievance',
       pageBuilder: (context, state) => CustomTransitionPage(
         key: state.pageKey,
-        child: const _PlaceholderScreen(
-          title: 'Member Grievances',
-          phase: 'Phase 07',
-        ),
+        child: const GrievanceIntroScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
+      routes: [
+        GoRoute(
+          path: 'form',
+          name: 'grievance-form',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            key: state.pageKey,
+            child: const GrievanceFormScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+        GoRoute(
+          path: 'success',
+          name: 'grievance-success',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            key: state.pageKey,
+            child: const GrievanceSuccessScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+        GoRoute(
+          path: 'restricted',
+          name: 'grievance-restricted',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            key: state.pageKey,
+            child: const GrievanceAccessRestrictedScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+      ],
     ),
     GoRoute(
       path: '/resources',
