@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/storage/secure_storage_service.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/events/presentation/events_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/profile/presentation/account_settings_screen.dart';
 import '../../features/profile/presentation/address_details_screen.dart';
@@ -99,10 +100,7 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
       name: 'events',
       pageBuilder: (context, state) => CustomTransitionPage(
         key: state.pageKey,
-        child: const _PlaceholderScreen(
-          title: 'Events & Gallery',
-          phase: 'Phase 05',
-        ),
+        child: const EventsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
