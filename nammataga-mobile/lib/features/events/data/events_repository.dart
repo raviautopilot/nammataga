@@ -11,13 +11,25 @@ class EventsRepository {
   EventsRepository({Dio? dio}) : _dio = dio ?? ApiClient.instance;
 
   /// Fetches list of upcoming association events.
+  /// Filters out any events with finished or passed dates, and sorts chronologically.
   Future<List<EventModel>> getUpcomingEvents() async {
     try {
       final response = await _dio.get(ApiEndpoints.upcomingEvents);
       if (response.statusCode == 200 && response.data is List) {
-        return (response.data as List)
+        final events = (response.data as List)
             .map((item) => EventModel.fromJson(item as Map<String, dynamic>))
+            .where((event) => event.isUpcoming)
             .toList();
+
+        // Sort chronologically ascending (soonest event first)
+        events.sort((a, b) {
+          if (a.date == null && b.date == null) return 0;
+          if (a.date == null) return 1;
+          if (b.date == null) return -1;
+          return a.date!.compareTo(b.date!);
+        });
+
+        return events;
       }
       return [];
     } on DioException catch (e) {

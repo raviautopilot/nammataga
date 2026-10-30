@@ -111,7 +111,8 @@ class UpcomingEventsScreen extends ConsumerWidget {
             ),
           ],
         ),
-        data: (events) {
+        data: (rawEvents) {
+          final events = rawEvents.where((e) => e.isUpcoming).toList();
           if (events.isEmpty) {
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(

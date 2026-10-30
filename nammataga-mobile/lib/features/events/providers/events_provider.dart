@@ -13,7 +13,8 @@ class UpcomingEventsNotifier extends AsyncNotifier<List<EventModel>> {
   @override
   Future<List<EventModel>> build() async {
     final repo = ref.watch(eventsRepositoryProvider);
-    return repo.getUpcomingEvents();
+    final events = await repo.getUpcomingEvents();
+    return events.where((e) => e.isUpcoming).toList();
   }
 
   /// Triggers a pull-to-refresh reload.
@@ -21,7 +22,8 @@ class UpcomingEventsNotifier extends AsyncNotifier<List<EventModel>> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(eventsRepositoryProvider);
-      return repo.getUpcomingEvents();
+      final events = await repo.getUpcomingEvents();
+      return events.where((e) => e.isUpcoming).toList();
     });
   }
 }

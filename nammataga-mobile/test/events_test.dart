@@ -134,6 +134,75 @@ void main() {
     expect(url, contains('JDA%27s'));
     expect(url.contains("'"), isFalse);
   });
+
+  group('Upcoming Events Filtering & Date Handling', () {
+    test('Past dates (e.g. May 2026, March 2025) are flagged as isUpcoming: false and isPast: true', () {
+      final pastEvent1 = EventModel.fromJson({
+        'id': 'p1',
+        'title': 'Past Hello Event',
+        'date': '2026-05-18',
+        'location': 'Chennai',
+        'status': 'upcoming', // Backend returned upcoming but date passed!
+      });
+
+      final pastEvent2 = EventModel.fromJson({
+        'id': 'p2',
+        'title': 'Annual General Meeting 2025',
+        'date': '2025-03-15 16:50',
+        'location': 'TAGA Towers',
+        'status': 'upcoming',
+      });
+
+      expect(pastEvent1.isUpcoming, isFalse);
+      expect(pastEvent1.isPast, isTrue);
+      expect(pastEvent1.daysRemaining, isNull);
+      expect(pastEvent1.formattedTime, 'All Day');
+
+      expect(pastEvent2.isUpcoming, isFalse);
+      expect(pastEvent2.isPast, isTrue);
+      expect(pastEvent2.daysRemaining, isNull);
+    });
+
+    test('Future dates (e.g. Nov 2026, Dec 2026, Jan 2027) are flagged as isUpcoming: true', () {
+      final futureEvent1 = EventModel.fromJson({
+        'id': 'f1',
+        'title': 'TAGA State Agriculture Convention 2026',
+        'date': '2026-11-28 09:30',
+        'location': 'TAGA Auditorium, Chennai',
+        'status': 'upcoming',
+      });
+
+      final futureEvent2 = EventModel.fromJson({
+        'id': 'f2',
+        'title': 'TAGA Conclave 2027',
+        'date': '2027-01-24 14:00',
+        'location': 'Trichy',
+        'status': 'upcoming',
+      });
+
+      expect(futureEvent1.isUpcoming, isTrue);
+      expect(futureEvent1.isPast, isFalse);
+      expect(futureEvent1.daysRemaining, isNotNull);
+      expect(futureEvent1.daysRemaining! > 0, isTrue);
+      expect(futureEvent1.formattedTime, '09:30 AM');
+
+      expect(futureEvent2.isUpcoming, isTrue);
+      expect(futureEvent2.isPast, isFalse);
+    });
+
+    test('Status "completed" or "cancelled" is excluded even with future date', () {
+      final completedEvent = EventModel.fromJson({
+        'id': 'c1',
+        'title': 'Cancelled Event',
+        'date': '2026-11-28 09:30',
+        'location': 'Chennai',
+        'status': 'completed',
+      });
+
+      expect(completedEvent.isUpcoming, isFalse);
+      expect(completedEvent.isPast, isTrue);
+    });
+  });
 }
 
 class _MockUpcomingEventsNotifier extends UpcomingEventsNotifier {
