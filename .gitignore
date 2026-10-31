@@ -195,7 +195,16 @@ issue todo on taga.txt
 # ============================================
 /data/
 image copy.png
+image.png
+tagaicon02.png
 *.png~
 .last_env
 .web_server.pid
 .web_server.log
+
+# ============================================
+# PLAY STORE DEPLOYMENT ARTIFACTS
+# ============================================
+nammataga-mobile/playstore_deployment/
+playstore_deployment/
+

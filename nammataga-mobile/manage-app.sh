@@ -321,24 +321,212 @@ logs_web() {
 # ------------------------------------------------------------------------------
 # 5. Interactive Build Pipeline (APK & Play Store AAB)
 # ------------------------------------------------------------------------------
+build_playstore_deployment() {
+    print_banner
+    print_header "GOOGLE PLAY STORE AAB DEPLOYMENT BUNDLER"
+
+    echo -e "  ${CLR_BOLD}${CLR_WHITE}Select Target Environment for Play Store Bundle:${CLR_RESET}"
+    echo -e "    ${CLR_GOLD}${CLR_BOLD}[1] Production${CLR_RESET}  ${CLR_GRAY}→  https://api.nammataga.com/api (Official Live Release)${CLR_RESET}"
+    echo -e "    ${CLR_CYAN}${CLR_BOLD}[2] Development${CLR_RESET} ${CLR_GRAY}→  https://devapi.nammataga.com/api (Internal Testing / QA Track)${CLR_RESET}"
+    echo ""
+    read -rp "  Select environment [1-2] (Default: 1 - Production): " target_choice
+    target_choice="${target_choice:-1}"
+
+    if [ "$target_choice" = "2" ]; then
+        TARGET_ENV="dev"
+        TARGET_API="https://devapi.nammataga.com/api"
+    else
+        TARGET_ENV="prod"
+        TARGET_API="https://api.nammataga.com/api"
+    fi
+
+    echo "$TARGET_ENV" > "$ENV_FILE"
+
+    echo ""
+    echo -e "  ${CLR_BOLD}${CLR_WHITE}Play Store Application Release Version:${CLR_RESET}"
+    echo -e "  ${CLR_GRAY}Enter the version for this build. Examples:${CLR_RESET}"
+    echo -e "    ${CLR_CYAN}• 1.0.0+1${CLR_RESET}   ${CLR_GRAY}(Version Name: 1.0.0, Version Code: 1)${CLR_RESET}"
+    echo -e "    ${CLR_CYAN}• 1.0.1${CLR_RESET}     ${CLR_GRAY}(Version Name: 1.0.1, Version Code will prompt or default to 1)${CLR_RESET}"
+    echo ""
+    read -rp "  Enter release version (e.g., 1.0.0+1) [Default: 1.0.0+1]: " input_version
+    input_version="${input_version:-1.0.0+1}"
+
+    local build_name=""
+    local build_number=""
+
+    if [[ "$input_version" == *"+"* ]]; then
+        build_name="${input_version%%+*}"
+        build_number="${input_version##*+}"
+    else
+        build_name="$input_version"
+        read -rp "  Enter build number / version code [Default: 1]: " input_code
+        build_number="${input_code:-1}"
+    fi
+
+    # Fallback sanity
+    build_name="${build_name:-1.0.0}"
+    build_number="${build_number:-1}"
+    local app_full_version="${build_name}+${build_number}"
+
+    local DEPLOY_ROOT="$APP_DIR/playstore_deployment"
+    local DEPLOY_DIR="$DEPLOY_ROOT/$TARGET_ENV"
+    local TIMESTAMP
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+    print_header "PLAY STORE BUNDLE SPECIFICATIONS"
+    echo -e "    ${CLR_GRAY}• Target Track:${CLR_RESET}     ${CLR_GOLD}${CLR_BOLD}Google Play Console Release (AAB)${CLR_RESET}"
+    echo -e "    ${CLR_GRAY}• Package ID:${CLR_RESET}       ${CLR_MINT}${CLR_BOLD}$PACKAGE_NAME${CLR_RESET}"
+    echo -e "    ${CLR_GRAY}• App Version:${CLR_RESET}      ${CLR_WHITE}${CLR_BOLD}$app_full_version${CLR_RESET} ${CLR_GRAY}(VersionName: $build_name, VersionCode: $build_number)${CLR_RESET}"
+    echo -e "    ${CLR_GRAY}• Environment:${CLR_RESET}      ${CLR_EMERALD}${CLR_BOLD}${TARGET_ENV^^}${CLR_RESET}"
+    echo -e "    ${CLR_GRAY}• Backend API URL:${CLR_RESET}  ${CLR_CYAN}${CLR_BOLD}$TARGET_API${CLR_RESET}"
+    echo -e "    ${CLR_GRAY}• Deployment Dir:${CLR_RESET}   ${CLR_WHITE}${CLR_BOLD}$DEPLOY_DIR${CLR_RESET}"
+    echo ""
+
+    # Ensure deployment directories exist
+    mkdir -p "$DEPLOY_DIR"
+
+    cd "$APP_DIR"
+    local start_time
+    start_time=$(date +%s)
+
+    print_info "Executing: flutter build appbundle --release --build-name=$build_name --build-number=$build_number --dart-define=API_ENV=$TARGET_ENV --dart-define=API_BASE_URL=$TARGET_API"
+    flutter build appbundle --release \
+        --build-name="$build_name" \
+        --build-number="$build_number" \
+        --dart-define=API_ENV="$TARGET_ENV" \
+        --dart-define=API_BASE_URL="$TARGET_API"
+
+    local output_file="$APP_DIR/build/app/outputs/bundle/release/app-release.aab"
+    local end_time
+    end_time=$(date +%s)
+    local elapsed=$((end_time - start_time))
+
+    if [ ! -f "$output_file" ]; then
+        print_error "Play Store AAB build failed! File not found at $output_file"
+        return 1
+    fi
+
+    local file_size
+    file_size=$(du -h "$output_file" | awk '{print $1}')
+
+    # Clean up previous AAB builds in the target environment directory
+    # so only the latest, newly built AAB exists
+    rm -f "$DEPLOY_DIR"/*.aab
+
+    # Package deployment artifacts into target folder
+    local target_aab="$DEPLOY_DIR/app-${TARGET_ENV}-release.aab"
+    cp "$output_file" "$target_aab"
+
+    # Copy official store assets into deployment folder
+    if [ -f "$APP_DIR/assets/images/app_icon.png" ]; then
+        cp "$APP_DIR/assets/images/app_icon.png" "$DEPLOY_DIR/playstore_icon_512x512.png"
+    fi
+    if [ -f "$APP_DIR/assets/images/logo.png" ]; then
+        cp "$APP_DIR/assets/images/logo.png" "$DEPLOY_DIR/official_logo.png"
+    fi
+
+    # Copy signing certificate and security artifacts
+    if [ -f "$APP_DIR/android/keystore/nammataga_release.jks" ]; then
+        cp "$APP_DIR/android/keystore/nammataga_release.jks" "$DEPLOY_DIR/nammataga_release.jks"
+    fi
+    if [ -f "$APP_DIR/android/key.properties" ]; then
+        cp "$APP_DIR/android/key.properties" "$DEPLOY_DIR/key.properties"
+    fi
+
+    # Extract SHA-1 and SHA-256 fingerprints for Google Play Console / Firebase
+    local sha1_fingerprint=""
+    local sha256_fingerprint=""
+    if [ -f "$DEPLOY_DIR/nammataga_release.jks" ]; then
+        sha1_fingerprint=$(keytool -list -v -keystore "$DEPLOY_DIR/nammataga_release.jks" -storepass "nammataga@2026" -alias "nammataga" 2>/dev/null | grep "SHA1:" | awk '{print $2}')
+        sha256_fingerprint=$(keytool -list -v -keystore "$DEPLOY_DIR/nammataga_release.jks" -storepass "nammataga@2026" -alias "nammataga" 2>/dev/null | grep "SHA256:" | awk '{print $2}')
+    fi
+
+    # Generate complete deployment manifest and metadata
+    cat << EOF > "$DEPLOY_DIR/deployment_info.txt"
+================================================================================
+NAMMATAGA MOBILE - GOOGLE PLAY STORE PRODUCTION DEPLOYMENT PACKAGE
+================================================================================
+Generated At:      $(date)
+Environment:       ${TARGET_ENV^^}
+App Version:       $app_full_version (Version Name: $build_name, Version Code: $build_number)
+Backend API URL:   $TARGET_API
+Package Name:      $PACKAGE_NAME
+AAB File:          $(basename "$target_aab")
+File Size:         $file_size
+Build Duration:    ${elapsed}s
+
+KEYSTORE & SIGNING DETAILS:
+--------------------------------------------------------------------------------
+Keystore File:     nammataga_release.jks
+Key Alias:         nammataga
+Key / Store Pass:  nammataga@2026
+Store Type:        PKCS12
+Certificate Owner: CN=NammaTAGA Admin, OU=IT, O=Tamil Nadu Agricultural Graduates Association
+Validity:          10,000 days (Until 2054)
+SHA-1 Fingerprint:   ${sha1_fingerprint:-Unknown}
+SHA-256 Fingerprint: ${sha256_fingerprint:-Unknown}
+
+COMPLETE DEPLOYMENT ASSETS INCLUDED IN THIS FOLDER:
+--------------------------------------------------------------------------------
+1. app-${TARGET_ENV}-release.aab     -> Official Signed Release Android App Bundle (AAB)
+2. playstore_icon_512x512.png       -> High-resolution 512x512 Play Store icon (no white padding)
+3. official_logo.png                -> Official association logo
+4. nammataga_release.jks            -> Cryptographic release keystore for updates
+5. key.properties                   -> Gradle signing configuration file
+6. deployment_info.txt              -> Full manifest and upload instructions
+
+GOOGLE PLAY CONSOLE STEP-BY-STEP UPLOAD:
+--------------------------------------------------------------------------------
+1. Log in to Google Play Console: https://play.google.com/console
+2. Select your application ($PACKAGE_NAME).
+3. Under Release > Production (or Internal / Closed testing):
+   - Click 'Create new release'.
+   - Upload 'app-${TARGET_ENV}-release.aab'.
+   - Add release notes.
+4. Under Store presence > Main store listing:
+   - App icon: Upload 'playstore_icon_512x512.png' (512x512 32-bit PNG).
+5. For Google Cloud / OAuth / Firebase / Maps integration (if needed):
+   - SHA-1:   $sha1_fingerprint
+   - SHA-256: $sha256_fingerprint
+================================================================================
+EOF
+
+    echo ""
+    echo -e "  ${BG_EMERALD}${CLR_WHITE}${CLR_BOLD}  ✓ PLAY STORE DEPLOYMENT READY  ${CLR_RESET} ${CLR_EMERALD}AAB bundle generated in ${elapsed}s!${CLR_RESET}"
+    echo ""
+    echo -e "  ${CLR_BOLD}${CLR_WHITE}All Play Store Deployment Artifacts Staged At:${CLR_RESET}"
+    echo -e "  ${CLR_GOLD}${CLR_BOLD}$DEPLOY_DIR${CLR_RESET}"
+    echo ""
+    echo -e "  ${CLR_GRAY}Artifacts:${CLR_RESET}"
+    echo -e "    ${CLR_WHITE}• AAB Bundle:   ${CLR_GOLD}${CLR_BOLD}$target_aab${CLR_RESET} ${CLR_GRAY}($file_size)${CLR_RESET}"
+    echo -e "    ${CLR_WHITE}• Store Icon:   ${CLR_MINT}$DEPLOY_DIR/playstore_icon_512x512.png${CLR_RESET}"
+    echo -e "    ${CLR_WHITE}• Official Logo:${CLR_MINT}$DEPLOY_DIR/official_logo.png${CLR_RESET}"
+    echo -e "    ${CLR_WHITE}• Manifest:     ${CLR_CYAN}$DEPLOY_DIR/deployment_info.txt${CLR_RESET}"
+    echo ""
+}
+
 build_app() {
     print_banner
     print_header "MOBILE APPLICATION BUILD PIPELINE"
 
     echo -e "  ${CLR_BOLD}${CLR_WHITE}Select Target Artifact Type:${CLR_RESET}"
-    echo -e "    ${CLR_EMERALD}[1] Universal Release APK${CLR_RESET}   ${CLR_GRAY}→ Direct installable file for physical phone sideloading${CLR_RESET}"
-    echo -e "    ${CLR_CYAN}[2] Development Debug APK${CLR_RESET}   ${CLR_GRAY}→ Quick testing build with debug logging enabled${CLR_RESET}"
-    echo -e "    ${CLR_GOLD}[3] Google Play Store AAB${CLR_RESET}   ${CLR_GRAY}→ Optimized Android App Bundle for Google Play Store upload${CLR_RESET}"
+    echo -e "    ${CLR_GOLD}[1] Google Play Store AAB Package${CLR_RESET} ${CLR_GRAY}→ Generates playstore_deployment/(dev|prod) with AAB + store icons${CLR_RESET}"
+    echo -e "    ${CLR_EMERALD}[2] Universal Release APK${CLR_RESET}        ${CLR_GRAY}→ Direct installable file for physical phone sideloading${CLR_RESET}"
+    echo -e "    ${CLR_CYAN}[3] Development Debug APK${CLR_RESET}        ${CLR_GRAY}→ Quick testing build with debug logging enabled${CLR_RESET}"
     echo ""
     read -rp "  Enter artifact choice [1-3] (Default: 1): " build_type
     build_type="${build_type:-1}"
+
+    if [ "$build_type" = "1" ]; then
+        build_playstore_deployment
+        return 0
+    fi
 
     select_environment "prod"
 
     local artifact_name="Release APK"
     case "$build_type" in
-        2) artifact_name="Debug APK" ;;
-        3) artifact_name="Play Store Release AAB" ;;
+        3) artifact_name="Debug APK" ;;
         *) artifact_name="Release APK" ;;
     esac
 
@@ -354,7 +542,7 @@ build_app() {
     start_time=$(date +%s)
 
     case "$build_type" in
-        1)
+        2)
             print_info "Executing: flutter build apk --release..."
             flutter build apk --release \
                 --dart-define=API_ENV="$TARGET_ENV" \
@@ -376,7 +564,7 @@ build_app() {
                 echo -e "  ${CLR_GRAY}File Size: ${CLR_WHITE}${file_size}${CLR_RESET}"
             fi
             ;;
-        2)
+        3)
             print_info "Executing: flutter build apk --debug..."
             flutter build apk --debug \
                 --dart-define=API_ENV="$TARGET_ENV" \
@@ -395,28 +583,6 @@ build_app() {
                 echo ""
                 echo -e "  ${CLR_BOLD}${CLR_WHITE}Artifact Location:${CLR_RESET}"
                 echo -e "  ${CLR_CYAN}${CLR_BOLD}$output_file${CLR_RESET}"
-                echo -e "  ${CLR_GRAY}File Size: ${CLR_WHITE}${file_size}${CLR_RESET}"
-            fi
-            ;;
-        3)
-            print_info "Executing: flutter build appbundle --release..."
-            flutter build appbundle --release \
-                --dart-define=API_ENV="$TARGET_ENV" \
-                --dart-define=API_BASE_URL="$TARGET_API"
-
-            local output_file="$APP_DIR/build/app/outputs/bundle/release/app-release.aab"
-            local end_time
-            end_time=$(date +%s)
-            local elapsed=$((end_time - start_time))
-
-            if [ -f "$output_file" ]; then
-                local file_size
-                file_size=$(du -h "$output_file" | awk '{print $1}')
-                echo ""
-                echo -e "  ${BG_EMERALD}${CLR_WHITE}${CLR_BOLD}  ✓ BUILD SUCCEEDED  ${CLR_RESET} ${CLR_EMERALD}Play Store Bundle created in ${elapsed}s!${CLR_RESET}"
-                echo ""
-                echo -e "  ${CLR_BOLD}${CLR_WHITE}Artifact Location:${CLR_RESET}"
-                echo -e "  ${CLR_GOLD}${CLR_BOLD}$output_file${CLR_RESET}"
                 echo -e "  ${CLR_GRAY}File Size: ${CLR_WHITE}${file_size}${CLR_RESET}"
             fi
             ;;
@@ -529,6 +695,9 @@ case "${1:-}" in
         ;;
     build)
         build_app
+        ;;
+    build-playstore|playstore)
+        build_playstore_deployment
         ;;
     analyze)
         run_analyze
