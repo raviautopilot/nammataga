@@ -106,14 +106,24 @@ class ApiEndpoints {
   static String get externalLinks => '$baseUrl/resources/external-links';
 
   // TAGA Towers
+  static String get towersBannerImage => '$baseUrl/images/tagatower_final.png';
   static String get towersRooms => '$baseUrl/towers/rooms';
-  static String towersAvailability(String date) =>
-      '$baseUrl/towers/availability?date=$date';
-  static String towersAvailabilityRange(String start, String end) =>
-      '$baseUrl/towers/availability-range?start=$start&end=$end';
+  static String towersAvailability(String roomId, String date) =>
+      '$baseUrl/towers/availability?roomId=${Uri.encodeComponent(roomId)}&date=${Uri.encodeComponent(date)}';
+  static String towersAvailabilityRange(String checkIn, String checkOut) =>
+      '$baseUrl/towers/availability-range?checkIn=${Uri.encodeComponent(checkIn)}&checkOut=${Uri.encodeComponent(checkOut)}';
   static String get towersBookings => '$baseUrl/towers/bookings';
-  static String cancelTowersBooking(String id) =>
+  static String towersPastBookings(String bookerId, [String? year, String? month]) {
+    final yearParam =
+        year != null && year.isNotEmpty ? '&year=${Uri.encodeComponent(year)}' : '';
+    final monthParam = month != null && month.isNotEmpty
+        ? '&month=${Uri.encodeComponent(month)}'
+        : '';
+    return '$baseUrl/towers/bookings/past?bookerId=${Uri.encodeComponent(bookerId)}$yearParam$monthParam';
+  }
+  static String towersCancelBooking(String id) =>
       '$baseUrl/towers/bookings/$id';
+  static String cancelTowersBooking(String id) => towersCancelBooking(id);
   static String get towersCreateOrder => '$baseUrl/towers/create-order';
   static String get towersVerifyPayment => '$baseUrl/towers/verify-payment';
 }

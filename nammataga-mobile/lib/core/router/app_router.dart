@@ -21,6 +21,18 @@ import '../../features/profile/presentation/profile_overview_screen.dart';
 import '../../features/profile/presentation/request_profile_edit_screen.dart';
 import '../../features/profile/presentation/subscription_plans_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
+import '../../features/tagatowers/domain/booking_model.dart';
+import '../../features/tagatowers/presentation/booking_bed_selection_screen.dart';
+import '../../features/tagatowers/presentation/booking_confirmation_screen.dart';
+import '../../features/tagatowers/presentation/booking_details_screen.dart';
+import '../../features/tagatowers/presentation/booking_review_screen.dart';
+import '../../features/tagatowers/presentation/cancellation_screen.dart';
+import '../../features/tagatowers/presentation/guest_details_screen.dart';
+import '../../features/tagatowers/presentation/my_bookings_screen.dart';
+import '../../features/tagatowers/presentation/payment_recovery_screen.dart';
+import '../../features/tagatowers/presentation/payment_review_screen.dart';
+import '../../features/tagatowers/presentation/room_availability_screen.dart';
+import '../../features/tagatowers/presentation/tagatowers_home_screen.dart';
 
 /// Factory to create an isolated GoRouter instance (useful for testing and fresh state)
 GoRouter createRouter({String initialLocation = '/splash'}) {
@@ -305,13 +317,264 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
       name: 'taga-towers',
       pageBuilder: (context, state) => CustomTransitionPage(
         key: state.pageKey,
-        child: const _PlaceholderScreen(
-          title: 'TAGA Towers Booking',
-          phase: 'Phase 09',
-        ),
+        child: const TagaTowersHomeScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
+      routes: [
+        GoRoute(
+          path: 'availability',
+          name: 'taga-towers-availability',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            key: state.pageKey,
+            child: const RoomAvailabilityScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+        GoRoute(
+          path: 'my-bookings',
+          name: 'taga-towers-my-bookings',
+          pageBuilder: (context, state) {
+            final tabIndexStr = state.uri.queryParameters['tab'];
+            final tabIndex = int.tryParse(tabIndexStr ?? '') ?? 0;
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: MyBookingsScreen(initialTabIndex: tabIndex),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                  FadeTransition(opacity: animation, child: child),
+            );
+          },
+        ),
+        GoRoute(
+          path: 'confirmation',
+          name: 'taga-towers-confirmation',
+          pageBuilder: (context, state) {
+            final extra = state.extra;
+            BookingResponse? booking;
+            String? paymentId;
+            String? orderId;
+
+            if (extra is BookingResponse) {
+              booking = extra;
+            } else if (extra is Map<String, dynamic>) {
+              if (extra['booking'] is BookingResponse) {
+                booking = extra['booking'] as BookingResponse;
+              }
+              paymentId = extra['paymentId']?.toString();
+              orderId = extra['orderId']?.toString();
+            }
+
+            booking ??= const BookingResponse(
+              id: '',
+              roomId: '',
+              roomName: 'TAGA Towers Room',
+              checkInDate: '',
+              checkOutDate: '',
+              bookerName: '',
+              bookerId: '',
+              bookerPhone: '',
+              bookingFor: 'self',
+              bedCount: 1,
+              gender: 'male',
+              guestDetails: [],
+              paymentStatus: 'confirmed',
+              advanceAmount: 0,
+              bookingStatus: 'confirmed',
+            );
+
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: BookingConfirmationScreen(
+                booking: booking,
+                razorpayPaymentId: paymentId,
+                razorpayOrderId: orderId,
+              ),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                  FadeTransition(opacity: animation, child: child),
+            );
+          },
+        ),
+        GoRoute(
+          path: 'payment-recovery',
+          name: 'taga-towers-payment-recovery',
+          pageBuilder: (context, state) {
+            final extra = state.extra;
+            String? bookingId;
+            String? orderId;
+            String? paymentId;
+            String? signature;
+            int? amount;
+            String? roomName;
+
+            if (extra is Map<String, dynamic>) {
+              if (extra['booking'] is BookingResponse) {
+                final b = extra['booking'] as BookingResponse;
+                bookingId = b.id;
+                amount = b.advanceAmount;
+                roomName = b.roomName;
+              } else if (extra['booking'] is Map) {
+                final bMap = extra['booking'] as Map;
+                bookingId = bMap['id']?.toString();
+                amount = bMap['advanceAmount'] is int ? bMap['advanceAmount'] as int : null;
+                roomName = bMap['roomName']?.toString();
+              }
+              bookingId ??= extra['bookingId']?.toString();
+              orderId = extra['orderId']?.toString() ?? extra['razorpayOrderId']?.toString();
+              paymentId = extra['paymentId']?.toString() ?? extra['razorpayPaymentId']?.toString();
+              signature = extra['signature']?.toString() ?? extra['razorpaySignature']?.toString();
+              amount ??= extra['amount'] is int ? extra['amount'] as int : null;
+              roomName ??= extra['roomName']?.toString();
+            }
+
+            bookingId ??= state.uri.queryParameters['bookingId'];
+            orderId ??= state.uri.queryParameters['orderId'];
+            paymentId ??= state.uri.queryParameters['paymentId'];
+
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: PaymentRecoveryScreen(
+                bookingId: bookingId,
+                razorpayOrderId: orderId,
+                razorpayPaymentId: paymentId,
+                razorpaySignature: signature,
+                amount: amount,
+                roomName: roomName,
+              ),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                  FadeTransition(opacity: animation, child: child),
+            );
+          },
+        ),
+        GoRoute(
+          path: 'booking/bed-selection',
+          name: 'taga-towers-bed-selection',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            key: state.pageKey,
+            child: const BookingBedSelectionScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+        GoRoute(
+          path: 'booking/guest-details',
+          name: 'taga-towers-guest-details',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            key: state.pageKey,
+            child: const GuestDetailsScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+        GoRoute(
+          path: 'booking/review',
+          name: 'taga-towers-booking-review',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            key: state.pageKey,
+            child: const BookingReviewScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+        GoRoute(
+          path: 'booking/payment-review',
+          name: 'taga-towers-payment-review',
+          pageBuilder: (context, state) {
+            final extra = state.extra;
+            BookingResponse? booking;
+            if (extra is BookingResponse) {
+              booking = extra;
+            } else if (extra is Map<String, dynamic> && extra['booking'] is BookingResponse) {
+              booking = extra['booking'] as BookingResponse;
+            }
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: PaymentReviewScreen(booking: booking),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                  FadeTransition(opacity: animation, child: child),
+            );
+          },
+        ),
+        GoRoute(
+          path: 'booking/details/:id',
+          name: 'taga-towers-booking-details',
+          pageBuilder: (context, state) {
+            final bookingId = state.pathParameters['id'] ?? '';
+            final extra = state.extra;
+            BookingResponse? initialBooking;
+            if (extra is BookingResponse) {
+              initialBooking = extra;
+            } else if (extra is Map<String, dynamic> && extra['booking'] is BookingResponse) {
+              initialBooking = extra['booking'] as BookingResponse;
+            }
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: BookingDetailsScreen(
+                bookingId: bookingId,
+                initialBooking: initialBooking,
+              ),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                  FadeTransition(opacity: animation, child: child),
+            );
+          },
+        ),
+        GoRoute(
+          path: 'booking/cancel/:id',
+          name: 'taga-towers-booking-cancel-id',
+          pageBuilder: (context, state) {
+            final bookingId = state.pathParameters['id'] ?? '';
+            final extra = state.extra;
+            BookingResponse? booking;
+            if (extra is BookingResponse) {
+              booking = extra;
+            } else if (extra is Map<String, dynamic> && extra['booking'] is BookingResponse) {
+              booking = extra['booking'] as BookingResponse;
+            }
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: CancellationScreen(
+                booking: booking,
+                bookingId: bookingId,
+              ),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                  FadeTransition(opacity: animation, child: child),
+            );
+          },
+        ),
+        GoRoute(
+          path: 'cancel',
+          name: 'taga-towers-cancel',
+          pageBuilder: (context, state) {
+            final extra = state.extra;
+            BookingResponse? booking;
+            String? bookingId;
+            if (extra is BookingResponse) {
+              booking = extra;
+              bookingId = extra.id;
+            } else if (extra is String) {
+              bookingId = extra;
+            } else if (extra is Map<String, dynamic>) {
+              if (extra['booking'] is BookingResponse) {
+                booking = extra['booking'] as BookingResponse;
+              }
+              bookingId = extra['bookingId']?.toString() ?? booking?.id;
+            }
+            bookingId ??= state.uri.queryParameters['bookingId'] ??
+                state.uri.queryParameters['id'];
+
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: CancellationScreen(
+                booking: booking,
+                bookingId: bookingId,
+              ),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) =>
+                      FadeTransition(opacity: animation, child: child),
+            );
+          },
+        ),
+      ],
     ),
   ],
   );

@@ -263,30 +263,36 @@ class GalleryScreen extends ConsumerWidget {
                 );
               }
 
-              // 1 image per row in a single continuous feed
+              // 1 image per row in a single continuous feed with smooth scroll performance
               return SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final img = images[index];
-                      return Padding(
+                      final tile = Padding(
                         padding: const EdgeInsets.only(bottom: 18),
                         child: GalleryTile(
                           image: img,
                           allImages: images,
                           index: index,
-                        )
+                        ),
+                      );
+
+                      // Animate only the initial viewport items (first 4) to eliminate per-frame animation tickers during deep scroll
+                      if (index < 4) {
+                        return tile
                             .animate()
                             .fadeIn(
-                              duration: 350.ms,
+                              duration: 300.ms,
                               delay: (index * 40).ms,
                             )
                             .slideY(
-                              begin: 0.05,
+                              begin: 0.04,
                               end: 0,
-                            ),
-                      );
+                            );
+                      }
+                      return tile;
                     },
                     childCount: images.length,
                   ),

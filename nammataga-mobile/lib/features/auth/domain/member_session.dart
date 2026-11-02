@@ -29,11 +29,20 @@ class MemberSession {
     return 'Member';
   }
 
+  String get memberName => displayName;
+
   String get memberEmail {
     if (user != null) {
       return (user!['emailId'] ?? user!['email'] ?? '').toString();
     }
     return tempEmail ?? '';
+  }
+
+  String get tagaId {
+    if (user != null) {
+      return (user!['tagaId'] ?? user!['taga_id'] ?? user!['id'] ?? '').toString();
+    }
+    return '';
   }
 
   MemberSession copyWith({

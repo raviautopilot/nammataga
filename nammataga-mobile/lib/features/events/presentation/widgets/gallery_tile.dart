@@ -23,31 +23,38 @@ class GalleryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BouncyButton(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        GalleryLightbox.open(
-          context,
-          images: allImages,
-          initialIndex: index,
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: const Color(0xFFE2EBE5),
-            width: 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF1B4332).withValues(alpha: 0.06),
-              blurRadius: 18,
-              offset: const Offset(0, 5),
+    final mediaQuery = MediaQuery.maybeOf(context);
+    final screenWidth = mediaQuery?.size.width ?? 400.0;
+    final pixelRatio = mediaQuery?.devicePixelRatio ?? 2.0;
+    // Cap decoding resolution to screen width * DPR (max 1200px) so 6526x4350 camera photos don't choke the raster thread
+    final targetPixelWidth = (screenWidth * pixelRatio).round().clamp(600, 1200);
+
+    return RepaintBoundary(
+      child: BouncyButton(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          GalleryLightbox.open(
+            context,
+            images: allImages,
+            initialIndex: index,
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: const Color(0xFFE2EBE5),
+              width: 1.2,
             ),
-          ],
-        ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1B4332).withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -139,6 +146,9 @@ class GalleryTile extends StatelessWidget {
                           imageUrl: image.fullImageUrl,
                           width: double.infinity,
                           fit: BoxFit.fitWidth, // Natural proportion, 100% visible
+                          memCacheWidth: targetPixelWidth,
+                          maxWidthDiskCache: 1400,
+                          filterQuality: FilterQuality.medium,
                           placeholder: (context, url) => Container(
                             height: 220,
                             decoration: BoxDecoration(
@@ -299,6 +309,7 @@ class GalleryTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
