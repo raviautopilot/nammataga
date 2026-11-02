@@ -139,10 +139,15 @@ func CreateSubscriptionOrder(c *gin.Context) {
 				if expectedAmtFloat, ok := sub["amount"].(float64); ok && expectedAmtFloat > 0 {
 					expectedAmtPaise := int(expectedAmtFloat * 100)
 					if req.Amount != expectedAmtPaise {
-						config.Logger.Warn("Mismatched subscription amount",
+						expectedINR := expectedAmtFloat
+						receivedINR := float64(req.Amount) / 100.0
+						config.Logger.Warn(fmt.Sprintf("Mismatched subscription amount: expected ₹%.2f (%d paise), received ₹%.2f (%d paise)",
+							expectedINR, expectedAmtPaise, receivedINR, req.Amount),
 							zap.String("subscription_id", req.SubscriptionID),
 							zap.Int("expected_paise", expectedAmtPaise),
+							zap.Float64("expected_inr", expectedINR),
 							zap.Int("received_paise", req.Amount),
+							zap.Float64("received_inr", receivedINR),
 						)
 						c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid subscription amount"})
 						return
@@ -389,15 +394,17 @@ func VerifySubscriptionPayment(c *gin.Context) {
 	}
 
 	// Audit subscription payment confirmation
+	amountINR := float64(req.Amount) / 100.0
 	_ = audit.Log(c, memberID, req.Email,
 		audit.ActionPaymentConfirmed, audit.ModulePayment,
 		"subscription", req.SubscriptionID,
-		fmt.Sprintf("Member %s paid %d for subscription '%s' (Order: %s, Payment: %s)",
-			req.Email, req.Amount, subscriptionName, req.OrderID, req.PaymentID),
+		fmt.Sprintf("Member %s paid ₹%.2f (%d paise) for subscription '%s' (Order: %s, Payment: %s)",
+			req.Email, amountINR, req.Amount, subscriptionName, req.OrderID, req.PaymentID),
 		nil, map[string]interface{}{
 			"subscription_id":   req.SubscriptionID,
 			"subscription_name": subscriptionName,
-			"amount":            req.Amount,
+			"amount_paise":      req.Amount,
+			"amount_inr":        amountINR,
 			"order_id":          req.OrderID,
 			"payment_id":        req.PaymentID,
 		})

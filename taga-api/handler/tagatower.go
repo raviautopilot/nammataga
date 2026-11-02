@@ -408,10 +408,15 @@ func CreateOrder(c *gin.Context) {
 			if err == nil && booking != nil {
 				expectedAmountPaise := booking.AdvanceAmount * 100
 				if req.Amount != expectedAmountPaise {
-					config.Logger.Warn("Mismatched room booking order amount",
+					expectedINR := float64(expectedAmountPaise) / 100.0
+					receivedINR := float64(req.Amount) / 100.0
+					config.Logger.Warn(fmt.Sprintf("Mismatched room booking order amount: expected ₹%.2f (%d paise), received ₹%.2f (%d paise)",
+						expectedINR, expectedAmountPaise, receivedINR, req.Amount),
 						zap.String("booking_id", bookingID),
 						zap.Int("expected_paise", expectedAmountPaise),
+						zap.Float64("expected_inr", expectedINR),
 						zap.Int("received_paise", req.Amount),
+						zap.Float64("received_inr", receivedINR),
 					)
 					c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid room booking advance amount"})
 					return
@@ -455,11 +460,13 @@ func CreateOrder(c *gin.Context) {
 
 	// Build notes with room booking details
 	orderNotes := map[string]interface{}{
-		"payment_type":  "room_booking",
-		"bank_name":     bankConfig.BankName,
-		"bank_id":       bankConfig.BankID,
-		"account_email": bankConfig.AccountEmail,
-		"notify_email":  bankConfig.NotifyEmail,
+		"payment_type":         "room_booking",
+		"bank_name":            bankConfig.BankName,
+		"bank_id":              bankConfig.BankID,
+		"account_email":        bankConfig.AccountEmail,
+		"notify_email":         bankConfig.NotifyEmail,
+		"advance_amount_paise": req.Amount,
+		"advance_amount_inr":   fmt.Sprintf("%.2f", float64(req.Amount)/100.0),
 	}
 
 	// Merge any additional notes from frontend (contains room details, guest details, etc.)
@@ -563,9 +570,14 @@ func ConfirmPayment(c *gin.Context) {
 		_ = audit.Log(c, booking.BookerID, booking.BookerName,
 			audit.ActionPaymentConfirmed, audit.ModulePayment,
 			"booking", bookingID,
-			fmt.Sprintf("Payment confirmed for room booking %s via UPI ID: %s (Amount: %d)",
-				bookingID, upiID, booking.AdvanceAmount),
-			nil, map[string]interface{}{"upi_id": upiID, "booking_id": bookingID})
+			fmt.Sprintf("Payment confirmed for room booking %s via UPI ID: %s (Advance Amount: ₹%d / %d paise)",
+				bookingID, upiID, booking.AdvanceAmount, booking.AdvanceAmount*100),
+			nil, map[string]interface{}{
+				"upi_id":         upiID,
+				"booking_id":     bookingID,
+				"amount_inr":     booking.AdvanceAmount,
+				"amount_paise":   booking.AdvanceAmount * 100,
+			})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Payment confirmed"})
@@ -798,9 +810,15 @@ func VerifyPayment(c *gin.Context) {
 		_ = audit.Log(c, booking.BookerID, booking.BookerName,
 			audit.ActionPaymentConfirmed, audit.ModulePayment,
 			"booking", req.BookingID,
-			fmt.Sprintf("Razorpay payment confirmed for room booking %s (Order: %s, Payment: %s)",
-				req.BookingID, req.OrderID, req.PaymentID),
-			nil, map[string]interface{}{"order_id": req.OrderID, "payment_id": req.PaymentID, "booking_id": req.BookingID})
+			fmt.Sprintf("Razorpay payment confirmed for room booking %s (Order: %s, Payment: %s, Advance: ₹%d / %d paise)",
+				req.BookingID, req.OrderID, req.PaymentID, booking.AdvanceAmount, booking.AdvanceAmount*100),
+			nil, map[string]interface{}{
+				"order_id":     req.OrderID,
+				"payment_id":   req.PaymentID,
+				"booking_id":   req.BookingID,
+				"amount_inr":   booking.AdvanceAmount,
+				"amount_paise": booking.AdvanceAmount * 100,
+			})
 	}
 
 	// ========== SEND ADMIN EMAIL FOR ROOM BOOKING ==========
