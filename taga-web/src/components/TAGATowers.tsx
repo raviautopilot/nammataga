@@ -893,9 +893,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
       setIsProcessingPayment(true);
       const loaded = await loadRazorpayScript();
       if (!loaded || !(window as any).Razorpay) {
-        toast.error('Payment system failed to load. Please try again.');
-        setIsProcessingPayment(false);
-        return;
+        throw new Error('Payment system failed to load. Please try again.');
       }
       const amount = advanceAmount * 100; // ₹ → paise
 
@@ -905,6 +903,7 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
       const roomNumber = selectedRoom ? ROOM_NUMBER_MAP[selectedRoom.id] || 0 : 0;
 
       const notes = {
+        booking_id: bookingId,
         room_name: selectedRoom?.name || "",
         room_number: roomNumber.toString(),
         bed_count: selectedRoom?.allowSingleBed ? bedCount.toString() : (selectedRoom?.capacity || 0).toString(),
@@ -916,6 +915,8 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
         booker_email: loggedInUser.email || "",
         booking_type: bookingFor,
         guest_details: guestDetailsJSON,
+        advance_amount_paise: amount.toString(),
+        advance_amount_inr: (amount / 100).toString(),
       };
 
       const { key, order } = await createOrder(amount, notes);
@@ -990,6 +991,17 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
       rzp.open();
     } catch (err: any) {
       console.error('Razorpay error:', err);
+      // 🔥 Clean up pending booking if payment setup/initialization failed (e.g. missing Razorpay credentials)
+      if (bookingId) {
+        try {
+          await cancelBooking(bookingId);
+          fetchMyBookings();
+          refreshAvailability();
+        } catch (cleanupErr) {
+          console.error('Booking cleanup error after payment failure:', cleanupErr);
+        }
+      }
+      setPendingBookingId(null);
       toast.error(err.message || 'Payment system error');
     } finally {
       setIsProcessingPayment(false);
