@@ -10,6 +10,7 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Roboto',
       fontFamilyFallback: fontFallbacks,
       colorScheme: const ColorScheme(
         brightness: Brightness.light,
@@ -35,6 +36,7 @@ class AppTheme {
         scrolledUnderElevation: 1.5,
         surfaceTintColor: Colors.transparent,
         titleTextStyle: TextStyle(
+          fontFamily: 'Roboto',
           color: AppColors.textPrimary,
           fontSize: 18,
           fontWeight: FontWeight.bold,
@@ -63,6 +65,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
+            fontFamily: 'Roboto',
             fontSize: 15,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.1,
@@ -78,13 +81,21 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontFamily: 'Roboto',
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primary,
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontFamily: 'Roboto',
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -95,6 +106,7 @@ class AppTheme {
           vertical: 11,
         ),
         hintStyle: const TextStyle(
+          fontFamily: 'Roboto',
           color: Color(0xFF8A9A90),
           fontSize: 13.5,
           fontWeight: FontWeight.normal,

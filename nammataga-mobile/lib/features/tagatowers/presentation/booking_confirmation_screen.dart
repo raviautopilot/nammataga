@@ -322,7 +322,7 @@ class _BookingConfirmationScreenState
 
         // Celebratory headline
         const Text(
-          '🎉 Booking Confirmed!',
+          'Booking Confirmed!',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 25,

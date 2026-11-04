@@ -99,8 +99,8 @@ class ContactGlassHub extends ConsumerWidget {
                             InkWell(
                               onTap: () =>
                                   _launch('mailto:${contact.primaryEmail}'),
-                              child: RichText(
-                                text: TextSpan(
+                              child: Text.rich(
+                                TextSpan(
                                   style: const TextStyle(
                                     fontSize: 12.5,
                                     color: AppColors.textSecondary,
@@ -129,8 +129,8 @@ class ContactGlassHub extends ConsumerWidget {
                               InkWell(
                                 onTap: () =>
                                     _launch('mailto:${contact.secondaryEmail}'),
-                                child: RichText(
-                                  text: TextSpan(
+                                child: Text.rich(
+                                  TextSpan(
                                     style: const TextStyle(
                                       fontSize: 12.5,
                                       color: AppColors.textSecondary,

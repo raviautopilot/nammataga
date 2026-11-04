@@ -213,18 +213,9 @@ class TagaTowersHeroCard extends StatelessWidget {
       );
     }
 
-    // Determine target pixel cache size based on device layout to eliminate memory bloat & raster lag
-    final mediaQuery = MediaQuery.maybeOf(context);
-    final screenWidth = mediaQuery?.size.width ?? 400.0;
-    final pixelRatio = mediaQuery?.devicePixelRatio ?? 2.0;
-    // Cap decoding to max 580dp chassis width * DPR to prevent excessive GPU decoding work
-    final displayWidth = screenWidth > 580 ? 580.0 : screenWidth;
-    final targetPixelWidth = (displayWidth * pixelRatio).round().clamp(600, 1200);
-
     return Image.asset(
       AppAssets.tagatower,
       fit: BoxFit.cover,
-      cacheWidth: targetPixelWidth,
       filterQuality: FilterQuality.medium,
       errorBuilder: (context, error, stackTrace) => Container(
         color: TagaTowersDesignTokens.deepEmerald,

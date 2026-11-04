@@ -182,7 +182,7 @@ class PriceBreakdownCard extends StatelessWidget {
             label: 'Stay Duration',
             value: '$effectiveDays Day(s) • ${effectiveDays * 24} Hours',
             subValue: hasDates
-                ? '${dateFormat.format(checkInDate!)} → ${dateFormat.format(checkOutDate!)}'
+                ? '${dateFormat.format(checkInDate!)} to ${dateFormat.format(checkOutDate!)}'
                 : '12:00 AM Check-in to 12:00 AM Checkout',
           ),
           const SizedBox(height: 10),

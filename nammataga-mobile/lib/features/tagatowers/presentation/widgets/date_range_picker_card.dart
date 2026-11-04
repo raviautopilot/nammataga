@@ -557,7 +557,7 @@ class DateRangePickerCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    '24-Hour stay window: ${dateFormat.format(checkInDate)} 12:00 AM → ${dateFormat.format(checkOutDate)} 12:00 AM.',
+                    '24-Hour stay window: ${dateFormat.format(checkInDate)} 12:00 AM to ${dateFormat.format(checkOutDate)} 12:00 AM.',
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.textPrimary,

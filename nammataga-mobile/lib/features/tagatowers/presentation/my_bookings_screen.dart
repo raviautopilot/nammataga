@@ -932,6 +932,7 @@ class _BookingCard extends ConsumerWidget {
                       label: const Text(
                         'Cancel Booking',
                         style: TextStyle(
+                          fontFamily: 'Roboto',
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFFDC2626),

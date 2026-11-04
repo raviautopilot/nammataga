@@ -319,7 +319,7 @@ class _RoomAvailabilityScreenState
 
     final dateFormat = DateFormat('MMM d, yyyy');
     final formattedDateRange =
-        '${dateFormat.format(checkIn)} → ${dateFormat.format(checkOut)} • $nights Day${nights > 1 ? 's' : ''} ($totalHours Hours)';
+        '${dateFormat.format(checkIn)} to ${dateFormat.format(checkOut)} • $nights Day${nights > 1 ? 's' : ''} ($totalHours Hours)';
 
     return Scaffold(
       backgroundColor: TagaTowersDesignTokens.surfaceLight,

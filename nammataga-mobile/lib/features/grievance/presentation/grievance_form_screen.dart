@@ -1240,8 +1240,8 @@ class _GrievanceFormScreenState extends ConsumerState<GrievanceFormScreen> {
   }
 
   Widget _buildFieldLabel(String label, {required bool isRequired}) {
-    return RichText(
-      text: TextSpan(
+    return Text.rich(
+      TextSpan(
         text: label,
         style: const TextStyle(
           fontSize: 13,

@@ -781,8 +781,12 @@ class _BookingBedSelectionScreenState
                     ),
                     SizedBox(width: 8),
                     Text(
-                      '🇮🇳',
-                      style: TextStyle(fontSize: 16),
+                      '+91',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: TagaTowersDesignTokens.deepEmerald,
+                      ),
                     ),
                   ],
                 ),

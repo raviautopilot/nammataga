@@ -689,7 +689,7 @@ class _GuestDetailsScreenState extends ConsumerState<GuestDetailsScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  '$checkIn → $checkOut (12:00 AM Midnight Cycle)',
+                  '$checkIn to $checkOut (12:00 AM Midnight Cycle)',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,

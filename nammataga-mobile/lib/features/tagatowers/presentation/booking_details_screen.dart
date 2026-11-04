@@ -1325,8 +1325,8 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
                 const Icon(LucideIcons.badgePercent, size: 16, color: TagaTowersDesignTokens.deepEmerald),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: RichText(
-                    text: TextSpan(
+                  child: Text.rich(
+                    TextSpan(
                       style: TextStyle(fontSize: 12, color: Colors.grey.shade700, height: 1.35),
                       children: const [
                         TextSpan(

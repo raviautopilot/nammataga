@@ -943,7 +943,7 @@ class _CancellationScreenState extends ConsumerState<CancellationScreen> {
           _buildSummaryRow(
             icon: LucideIcons.calendar,
             label: 'Stay Dates',
-            value: '$checkInStr → $checkOutStr',
+            value: '$checkInStr to $checkOutStr',
             subValue: '$stayNights Night(s) • 12:00 AM Cycle',
           ),
           const SizedBox(height: 12),

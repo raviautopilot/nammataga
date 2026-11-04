@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NammaTAGA Mobile Application — Official Template Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1B4332;
+      --primary-dark: #0D281E;
+      --primary-deep: #061A0F;
+      --accent: #2D6A4F;
+      --emerald: #52B788;
+      --light-mint: #D8F3DC;
+      --bg: #0B1410;
+      --card-bg: #14221B;
+      --border: #233A2E;
+      --text-white: #FFFFFF;
+      --text-muted: #9BB3A4;
+      --gold: #D4AF37;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text-white);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    header {
+      background: linear-gradient(180deg, rgba(13, 40, 30, 0.95) 0%, rgba(11, 20, 16, 0.9) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-badge {
+      background: linear-gradient(135deg, #2D6A4F 0%, #1B4332 100%);
+      border: 1px solid rgba(82, 183, 136, 0.3);
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 20px;
+      color: var(--emerald);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    }
+    .brand-info h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #FFFFFF;
+    }
+    .brand-info p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .btn-download {
+      background: linear-gradient(135deg, var(--emerald) 0%, var(--accent) 100%);
+      color: #FFFFFF;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 10px 20px;
+      border-radius: 999px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(82, 183, 136, 0.3);
+      transition: all 0.2s ease;
+    }
+    .btn-download:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(82, 183, 136, 0.45);
+    }
+    .status-badge {
+      background: rgba(82, 183, 136, 0.15);
+      border: 1px solid var(--emerald);
+      color: var(--light-mint);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 999px;
+    }
+
+    /* Main Showcase Container */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 36px 24px 80px 24px;
+    }
+    .intro {
+      text-align: center;
+      max-width: 760px;
+      margin: 0 auto 40px auto;
+    }
+    .intro h2 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #FFFFFF 0%, #D8F3DC 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .intro p {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
+    /* Filter Tabs */
+    .tabs {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 36px;
+    }
+    .tab-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .tab-btn.active, .tab-btn:hover {
+      background: var(--primary);
+      border-color: var(--emerald);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(82, 183, 136, 0.2);
+    }
+
+    /* Grid of Screen Mockups */
+    .screens-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 28px;
+    }
+    .screen-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+    .screen-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--emerald);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+    }
+    .phone-mockup-wrapper {
+      padding: 16px 16px 8px 16px;
+      background: radial-gradient(circle at 50% 30%, #1A3125 0%, #0F1D16 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .phone-mockup-frame {
+      width: 100%;
+      max-width: 250px;
+      aspect-ratio: 9 / 19.5;
+      background: #000000;
+      border: 4px solid #2C3E35;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+    .phone-mockup-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .screen-meta {
+      padding: 16px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .screen-tag {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--emerald);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .screen-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 6px;
+    }
+    .screen-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Modal for Fullscreen Inspection */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 26, 15, 0.88);
+      backdrop-filter: blur(16px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+    }
+    .modal.open {
+      display: flex;
+    }
+    .modal-content {
+      position: relative;
+      max-height: 94vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .modal-img-frame {
+      max-height: 82vh;
+      border-radius: 28px;
+      border: 6px solid #233A2E;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.8);
+    }
+    .modal-img-frame img {
+      max-height: 82vh;
+      width: auto;
+      display: block;
+    }
+    .modal-close {
+      position: absolute;
+      top: -46px;
+      right: 0;
+      color: #FFFFFF;
+      font-size: 28px;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .modal-title {
+      margin-top: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--light-mint);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-badge">T</div>
+      <div class="brand-info">
+        <h1>NammaTAGA Mobile Template Showcase</h1>
+        <p>Tamil Nadu Agricultural Engineers Association • Executive Application Catalog</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="status-badge">● 34 Live Production Screens</span>
+      <a class="btn-download" href="nammataga_app_screens_showcase.zip" download>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download All (ZIP)
+      </a>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="intro">
+      <h2>Complete Mobile Application Design & Flow</h2>
+      <p>This catalog contains 100% authentic, high-resolution native Flutter captures directly compiled from the application source code. Every screen state, booking flow, payment verification, grievance process, and member management utility is represented below.</p>
+    </div>
+
+    <!-- Category Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="filterScreens('all', this)">All Screens (34)</button>
+      <button class="tab-btn" onclick="filterScreens('towers', this)">TAGA Towers (12)</button>
+      <button class="tab-btn" onclick="filterScreens('grievance', this)">Grievance Redressal (4)</button>
+      <button class="tab-btn" onclick="filterScreens('profile', this)">Member Services & Profile (12)</button>
+      <button class="tab-btn" onclick="filterScreens('events', this)">Events & Gallery (3)</button>
+      <button class="tab-btn" onclick="filterScreens('core', this)">Core & Auth (3)</button>
+    </div>
+
+    <!-- Grid Container -->
+    <div class="screens-grid" id="screensGrid">
+      <!-- 01 -->
+      <div class="screen-card" data-category="core" onclick="openModal('screenshots/01_splash_screen.png', '01. Cinematic Splash Screen')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/01_splash_screen.png" alt="Splash Screen" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Core • Screen 01</div><div class="screen-title">Cinematic Splash Screen</div><div class="screen-desc">Architectural TAGA Towers hero reveal with smooth loading progression.</div></div>
+      </div>
+      <!-- 02 -->
+      <div class="screen-card" data-category="core" onclick="openModal('screenshots/02_login_screen.png', '02. Member Authentication')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/02_login_screen.png" alt="Login Screen" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Core • Screen 02</div><div class="screen-title">Member Authentication</div><div class="screen-desc">Official login portal with secure credentials and password retrieval.</div></div>
+      </div>
+      <!-- 03 -->
+      <div class="screen-card" data-category="core" onclick="openModal('screenshots/03_home_dashboard.png', '03. Main Member Dashboard')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/03_home_dashboard.png" alt="Home Dashboard" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Core • Screen 03</div><div class="screen-title">Main Member Dashboard</div><div class="screen-desc">Central hub for TAGA Towers, Grievances, Events, and Association Services.</div></div>
+      </div>
+      <!-- 04 -->
+      <div class="screen-card" data-category="towers" onclick="openModal('screenshots/04_tagatowers_home.png', '04. TAGA Towers Home')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/04_tagatowers_home.png" alt="TAGA Towers Home" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">TAGA Towers • Screen 04</div><div class="screen-title">TAGA Towers Home</div><div class="screen-desc">Date-first stay selection, architectural card, and 12 AM to 12 AM policy notes.</div></div>
+      </div>
+      <!-- 05 -->
+      <div class="screen-card" data-category="towers" onclick="openModal('screenshots/05_tagatowers_restricted.png', '05. Towers Access Restricted')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/05_tagatowers_restricted.png" alt="Access Restricted" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">TAGA Towers • Screen 05</div><div class="screen-title">Access Restricted Paywall</div><div class="screen-desc">Security guard screen prompting unpaid members to activate their membership.</div></div>
+      </div>
+      <!-- 06 -->
+      <div class="screen-card" data-category="towers" onclick="openModal('screenshots/06_room_availability.png', '06. Room Availability Matrix')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/06_room_availability.png" alt="Room Availability" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">TAGA Towers • Screen 06</div><div class="screen-title">Room Availability Matrix</div><div class="screen-desc">Real-time room occupancy, available bed counters, and pricing breakdown.</div></div>
+      </div>
+      <!-- 07 -->
+      <div class="screen-card" data-category="towers" onclick="openModal('screenshots/07_bed_selection.png', '07. Bed & Occupancy Selection')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/07_bed_selection.png" alt="Bed Selection" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">TAGA Towers • Screen 07</div><div class="screen-title">Bed & Occupancy Selection</div><div class="screen-desc">Self Booking vs Guest Booking toggles with real-time capacity constraints.</div></div>
+      </div>
+      <!-- 08 -->
+      <div class="screen-card" data-category="towers" onclick="openModal('screenshots/08_guest_details_form.png', '08. Guest Details Form')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/08_guest_details_form.png" alt="Guest Details Form" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">TAGA Towers • Screen 08</div><div class="screen-title">Guest Details Form</div><div class="screen-desc">Validated occupant forms capturing name, age, phone number, and gender.</div></div>
+      </div>
+      <!-- 09 -->
+      <div class="screen-card" data-category="towers" onclick="openModal('screenshots/09_booking_review.png', '09. Booking Summary Review')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/09_booking_review.png" alt="Booking Review" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">TAGA Towers • Screen 09</div><div class="screen-title">Booking Summary Review</div><div class="screen-desc">Stay itinerary verification, stay duration, and policy acknowledgment.</div></div>
+      </div>
+      <!-- 10 -->
+      <div class="screen-card" data-category="towers" onclick="openModal('screenshots/10_payment_review.png', '10. Payment & Advance Calculation')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/10_payment_review.png" alt="Payment Review" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">TAGA Towers • Screen 10</div><div class="screen-title">Payment & Advance Calculation</div><div class="screen-desc">Official ₹200 advance payment gateway integration card via Razorpay.</div></div>
+      </div>
+      <!-- 11 -->
+      <div class="screen-card" data-category="towers" onclick="openModal('screenshots/11_booking_confirmation.png', '11. Booking Confirmation')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/11_booking_confirmation.png" alt="Booking Confirmation" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">TAGA Towers • Screen 11</div><div class="screen-title">Booking Confirmation</div><div class="screen-desc">Official confirmation badge, booking reference, and caretaker contact numbers.</div></div>
+      </div>
+      <!-- 12 -->
+      <div class="screen-card" data-category="towers" onclick="openModal('screenshots/12_my_bookings.png', '12. My Bookings Hub')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/12_my_bookings.png" alt="My Bookings" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">TAGA Towers • Screen 12</div><div class="screen-title">My Bookings Hub</div><div class="screen-desc">Dual tabs for upcoming active stays and past 3-year stay archives.</div></div>
+      </div>
+      <!-- 13 -->
+      <div class="screen-card" data-category="towers" onclick="openModal('screenshots/13_booking_details.png', '13. Booking Details Inspector')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/13_booking_details.png" alt="Booking Details" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">TAGA Towers • Screen 13</div><div class="screen-title">Booking Details Inspector</div><div class="screen-desc">Complete stay inspection card displaying occupant contact and payment receipts.</div></div>
+      </div>
+      <!-- 14 -->
+      <div class="screen-card" data-category="towers" onclick="openModal('screenshots/14_cancellation_screen.png', '14. Cancellation & Refund Policy')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/14_cancellation_screen.png" alt="Cancellation Screen" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">TAGA Towers • Screen 14</div><div class="screen-title">Cancellation & Policy Review</div><div class="screen-desc">Policy disclosure card outlining the non-refundable advance fee.</div></div>
+      </div>
+      <!-- 15 -->
+      <div class="screen-card" data-category="towers" onclick="openModal('screenshots/15_payment_recovery.png', '15. Payment Recovery Resolution')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/15_payment_recovery.png" alt="Payment Recovery" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">TAGA Towers • Screen 15</div><div class="screen-title">Payment Recovery Resolution</div><div class="screen-desc">Automated self-healing screen recovering interrupted banking transactions.</div></div>
+      </div>
+      <!-- 16 -->
+      <div class="screen-card" data-category="grievance" onclick="openModal('screenshots/16_grievance_intro.png', '16. Grievance Intro Portal')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/16_grievance_intro.png" alt="Grievance Intro" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Grievance • Screen 16</div><div class="screen-title">Grievance Intro Portal</div><div class="screen-desc">Overview of the member grievance redressal process and guidelines.</div></div>
+      </div>
+      <!-- 17 -->
+      <div class="screen-card" data-category="grievance" onclick="openModal('screenshots/17_grievance_form.png', '17. Grievance Submission Form')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/17_grievance_form.png" alt="Grievance Form" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Grievance • Screen 17</div><div class="screen-title">Grievance Submission Form</div><div class="screen-desc">Comprehensive category picker, subject, priority, and document attachment.</div></div>
+      </div>
+      <!-- 18 -->
+      <div class="screen-card" data-category="grievance" onclick="openModal('screenshots/18_grievance_success.png', '18. Grievance Confirmation')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/18_grievance_success.png" alt="Grievance Success" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Grievance • Screen 18</div><div class="screen-title">Grievance Confirmation</div><div class="screen-desc">Official docket number generation for tracking redressal status.</div></div>
+      </div>
+      <!-- 19 -->
+      <div class="screen-card" data-category="grievance" onclick="openModal('screenshots/19_grievance_restricted.png', '19. Grievance Restricted State')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/19_grievance_restricted.png" alt="Grievance Restricted" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Grievance • Screen 19</div><div class="screen-title">Grievance Restricted Guard</div><div class="screen-desc">Security banner preventing non-registered visitors from submitting claims.</div></div>
+      </div>
+      <!-- 20 -->
+      <div class="screen-card" data-category="events" onclick="openModal('screenshots/20_events_hub.png', '20. Events & Celebrations Hub')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/20_events_hub.png" alt="Events Hub" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Events • Screen 20</div><div class="screen-title">Events & Celebrations Hub</div><div class="screen-desc">Association symposiums, technical seminars, and photo exhibition gateway.</div></div>
+      </div>
+      <!-- 21 -->
+      <div class="screen-card" data-category="events" onclick="openModal('screenshots/21_upcoming_events.png', '21. Upcoming Events Calendar')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/21_upcoming_events.png" alt="Upcoming Events" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Events • Screen 21</div><div class="screen-title">Upcoming Events Calendar</div><div class="screen-desc">Detailed itinerary cards with date, venue, and attendee RSVP counters.</div></div>
+      </div>
+      <!-- 22 -->
+      <div class="screen-card" data-category="events" onclick="openModal('screenshots/22_gallery_feed.png', '22. Photo Gallery Feed')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/22_gallery_feed.png" alt="Gallery Feed" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Events • Screen 22</div><div class="screen-title">Photo Gallery Feed</div><div class="screen-desc">Optimized media gallery showcasing historical conclaves and celebrations.</div></div>
+      </div>
+      <!-- 23 -->
+      <div class="screen-card" data-category="profile" onclick="openModal('screenshots/23_profile_overview.png', '23. Member Profile Hub')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/23_profile_overview.png" alt="Profile Hub" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Profile • Screen 23</div><div class="screen-title">Member Profile Hub</div><div class="screen-desc">Executive member ID badge, seniority ranking, and service navigation tiles.</div></div>
+      </div>
+      <!-- 24 -->
+      <div class="screen-card" data-category="profile" onclick="openModal('screenshots/24_personal_info.png', '24. Personal Information')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/24_personal_info.png" alt="Personal Info" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Profile • Screen 24</div><div class="screen-title">Personal Information</div><div class="screen-desc">Full legal name, gender, date of birth, and parents details.</div></div>
+      </div>
+      <!-- 25 -->
+      <div class="screen-card" data-category="profile" onclick="openModal('screenshots/25_employment_details.png', '25. Employment & Batch')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/25_employment_details.png" alt="Employment Details" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Profile • Screen 25</div><div class="screen-title">Employment & Designation</div><div class="screen-desc">Government rank, recruitment batch, and working district records.</div></div>
+      </div>
+      <!-- 26 -->
+      <div class="screen-card" data-category="profile" onclick="openModal('screenshots/26_official_details.png', '26. Official Government Records')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/26_official_details.png" alt="Official Records" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Profile • Screen 26</div><div class="screen-title">Official Government Records</div><div class="screen-desc">Seniority serial number, TBF ID, and CPS/GPF retirement accounting.</div></div>
+      </div>
+      <!-- 27 -->
+      <div class="screen-card" data-category="profile" onclick="openModal('screenshots/27_membership_details.png', '27. Association Membership')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/27_membership_details.png" alt="Membership Details" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Profile • Screen 27</div><div class="screen-title">Association Membership</div><div class="screen-desc">Active subscription validity, TAGA ID badge, and membership tier.</div></div>
+      </div>
+      <!-- 28 -->
+      <div class="screen-card" data-category="profile" onclick="openModal('screenshots/28_contact_details.png', '28. Contact Communication')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/28_contact_details.png" alt="Contact Details" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Profile • Screen 28</div><div class="screen-title">Contact Communication</div><div class="screen-desc">Verified mobile phone number and official departmental email address.</div></div>
+      </div>
+      <!-- 29 -->
+      <div class="screen-card" data-category="profile" onclick="openModal('screenshots/29_address_details.png', '29. Residential & Permanent Address')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/29_address_details.png" alt="Address Details" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Profile • Screen 29</div><div class="screen-title">Residential & Permanent Address</div><div class="screen-desc">Native district and residential addresses with PIN code verification.</div></div>
+      </div>
+      <!-- 30 -->
+      <div class="screen-card" data-category="profile" onclick="openModal('screenshots/30_subscription_plans.png', '30. Subscription Plans')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/30_subscription_plans.png" alt="Subscription Plans" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Profile • Screen 30</div><div class="screen-title">Subscription Plans</div><div class="screen-desc">Tiered membership contribution packages with direct renewal actions.</div></div>
+      </div>
+      <!-- 31 -->
+      <div class="screen-card" data-category="profile" onclick="openModal('screenshots/31_announcements.png', '31. Official Announcements')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/31_announcements.png" alt="Announcements" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Profile • Screen 31</div><div class="screen-title">Official Announcements</div><div class="screen-desc">Broadcast bulletins from the central executive committee.</div></div>
+      </div>
+      <!-- 32 -->
+      <div class="screen-card" data-category="profile" onclick="openModal('screenshots/32_notifications.png', '32. Notification Center')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/32_notifications.png" alt="Notification Center" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Profile • Screen 32</div><div class="screen-title">Notification Center</div><div class="screen-desc">Personalized stay updates, dues reminders, and circulars.</div></div>
+      </div>
+      <!-- 33 -->
+      <div class="screen-card" data-category="profile" onclick="openModal('screenshots/33_request_profile_edit.png', '33. Request Profile Edit')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/33_request_profile_edit.png" alt="Request Profile Edit" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Profile • Screen 33</div><div class="screen-title">Request Profile Edit</div><div class="screen-desc">Formal correction petition submitted to the administrative board.</div></div>
+      </div>
+      <!-- 34 -->
+      <div class="screen-card" data-category="profile" onclick="openModal('screenshots/34_account_settings.png', '34. Account & Security Settings')">
+        <div class="phone-mockup-wrapper"><div class="phone-mockup-frame"><img src="screenshots/34_account_settings.png" alt="Account Settings" loading="lazy"></div></div>
+        <div class="screen-meta"><div class="screen-tag">Profile • Screen 34</div><div class="screen-title">Account & Security Settings</div><div class="screen-desc">Password modification, biometric lock, and account session controls.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen Modal Viewer -->
+  <div class="modal" id="modal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <div class="modal-img-frame">
+        <img id="modalImg" src="" alt="Fullscreen preview">
+      </div>
+      <div class="modal-title" id="modalTitle"></div>
+    </div>
+  </div>
+
+  <script>
+    function filterScreens(cat, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const cards = document.querySelectorAll('.screen-card');
+      cards.forEach(card => {
+        if (cat === 'all' || card.getAttribute('data-category') === cat) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    function openModal(imgSrc, title) {
+      document.getElementById('modalImg').src = imgSrc;
+      document.getElementById('modalTitle').innerText = title;
+      document.getElementById('modal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+  </script>
+</body>
+</html>

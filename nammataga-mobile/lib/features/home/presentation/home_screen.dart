@@ -54,6 +54,7 @@ class HomeScreen extends ConsumerWidget {
                 Text(
                   'Namma TAGA',
                   style: TextStyle(
+                    fontFamily: 'Roboto',
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
@@ -63,6 +64,7 @@ class HomeScreen extends ConsumerWidget {
                 Text(
                   'Member Portal',
                   style: TextStyle(
+                    fontFamily: 'Roboto',
                     fontSize: 11,
                     color: AppColors.primary,
                     fontWeight: FontWeight.w600,
