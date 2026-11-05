@@ -10,8 +10,10 @@ import 'package:nammataga_mobile/features/profile/providers/profile_provider.dar
 import 'package:nammataga_mobile/features/resources/domain/external_link.dart';
 import 'package:nammataga_mobile/features/resources/domain/resource_category.dart';
 import 'package:nammataga_mobile/features/resources/domain/resource_document.dart';
+import 'package:nammataga_mobile/features/resources/presentation/category_documents_screen.dart';
 import 'package:nammataga_mobile/features/resources/presentation/resources_access_restricted_screen.dart';
 import 'package:nammataga_mobile/features/resources/presentation/resources_screen.dart';
+import 'package:nammataga_mobile/features/resources/presentation/widgets/category_card.dart';
 import 'package:nammataga_mobile/features/resources/presentation/widgets/category_chips_bar.dart';
 import 'package:nammataga_mobile/features/resources/presentation/widgets/document_card.dart';
 import 'package:nammataga_mobile/features/resources/presentation/widgets/external_links_view.dart';
@@ -20,7 +22,52 @@ import 'package:nammataga_mobile/features/resources/presentation/widgets/subcate
 import 'package:nammataga_mobile/features/resources/providers/resources_provider.dart';
 
 void main() {
-  group('CategoryChipsBar Widget Tests', () {
+  group('CategoryCard Widget Tests', () {
+    const testCategory = ResourceCategory(
+      id: 'scheme-gos',
+      name: 'Scheme Government Orders and Guidelines',
+      subcategories: ['Central', 'State'],
+    );
+
+    testWidgets('renders category name without truncation, subcategories, icon, and chevron', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CategoryCard(
+              category: testCategory,
+              onTap: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Scheme Government Orders and Guidelines'), findsOneWidget);
+      expect(find.text('Central • State'), findsOneWidget);
+      expect(find.byIcon(LucideIcons.landmark), findsOneWidget);
+      expect(find.byIcon(LucideIcons.chevronRight), findsOneWidget);
+    });
+
+    testWidgets('tapping CategoryCard fires onTap callback', (tester) async {
+      bool tapped = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CategoryCard(
+              category: testCategory,
+              onTap: () => tapped = true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(CategoryCard));
+      await tester.pumpAndSettle();
+
+      expect(tapped, isTrue);
+    });
+  });
+
+  group('CategoryChipsBar Backward Compatibility Tests', () {
     final testCategories = [
       const ResourceCategory(id: 'establishment', name: 'Establishment'),
       const ResourceCategory(
@@ -55,43 +102,6 @@ void main() {
       expect(find.byIcon(LucideIcons.fileSpreadsheet), findsOneWidget);
       expect(find.byIcon(LucideIcons.link2), findsOneWidget);
     });
-
-    testWidgets('triggers onCategorySelected when a chip is tapped', (tester) async {
-      String? selected;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: CategoryChipsBar(
-              categories: testCategories,
-              selectedCategoryId: 'establishment',
-              onCategorySelected: (id) => selected = id,
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Scheme G.Os'));
-      await tester.pumpAndSettle();
-
-      expect(selected, 'scheme-gos');
-    });
-
-    testWidgets('returns empty widget when categories list is empty', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: CategoryChipsBar(
-              categories: const [],
-              selectedCategoryId: null,
-              onCategorySelected: (_) {},
-            ),
-          ),
-        ),
-      );
-
-      expect(find.byType(ListView), findsNothing);
-    });
   });
 
   group('SubcategoryChipsBar Widget Tests', () {
@@ -113,29 +123,7 @@ void main() {
       expect(find.text('All'), findsOneWidget);
       expect(find.text('Central'), findsOneWidget);
       expect(find.text('State'), findsOneWidget);
-      // "All" is active, so it has check icon
       expect(find.byIcon(LucideIcons.check), findsOneWidget);
-    });
-
-    testWidgets('tapping All triggers callback with null', (tester) async {
-      String? selected = 'Central';
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SubcategoryChipsBar(
-              subcategories: subcategories,
-              selectedSubcategory: selected,
-              onSubcategorySelected: (sub) => selected = sub,
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('All'));
-      await tester.pumpAndSettle();
-
-      expect(selected, isNull);
     });
 
     testWidgets('tapping specific subcategory triggers callback with its name', (tester) async {
@@ -219,26 +207,22 @@ void main() {
     });
   });
 
-  group('ResourcesShimmer Widget Tests', () {
-    testWidgets('renders shimmer boxes and document card skeletons', (tester) async {
+  group('ResourcesShimmer & CategoryDirectoryShimmer Tests', () {
+    testWidgets('renders category directory shimmer placeholders', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: ResourcesShimmer(
-              itemCount: 3,
-              includeChips: true,
-            ),
+            body: CategoryDirectoryShimmer(itemCount: 3),
           ),
         ),
       );
 
-      expect(find.byType(CategoryChipsShimmer), findsOneWidget);
-      expect(find.byType(DocumentCardShimmer), findsNWidgets(3));
+      expect(find.byType(CategoryCardShimmer), findsNWidgets(3));
       expect(find.byType(ShimmerLoadingBox), findsWidgets);
     });
   });
 
-  group('ResourcesScreen Integration & Access Guard Tests', () {
+  group('Resources Landing Page – Category Directory Tests', () {
     testWidgets('shows loading indicator when memberProfile is loading and session not paid', (tester) async {
       final completer = Completer<MemberProfile>();
 
@@ -302,7 +286,7 @@ void main() {
       expect(find.text('Subscriber Access Only'), findsOneWidget);
     });
 
-    testWidgets('renders full ResourcesScreen when member is paid', (tester) async {
+    testWidgets('renders Category Directory with Browse Categories heading and vertical cards without document count', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 2.0;
       addTearDown(() {
@@ -311,8 +295,77 @@ void main() {
       });
 
       final mockCategories = [
-        const ResourceCategory(id: 'scheme-gos', name: 'Scheme G.Os', subcategories: ['Central', 'State']),
-        const ResourceCategory(id: 'links', name: 'Useful Links'),
+        const ResourceCategory(
+          id: 'scheme-gos',
+          name: 'Scheme Government Orders and Department Guidelines',
+          subcategories: ['Central', 'State'],
+        ),
+        const ResourceCategory(id: 'pay-gos', name: 'Pay and Allowances Orders'),
+        const ResourceCategory(id: 'links', name: 'Useful Government Portals'),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authProvider.overrideWith(
+              () => _TestAuthNotifier(
+                MemberSession(
+                  token: 'test-token',
+                  role: 'member',
+                  isPaid: true,
+                  isGuest: false,
+                ),
+              ),
+            ),
+            memberProfileProvider.overrideWith(
+              (ref) async => _createMockProfile(isPaid: true, subscriptionActive: true),
+            ),
+            resourceCategoriesProvider.overrideWith((ref) async => mockCategories),
+          ],
+          child: const MaterialApp(
+            home: ResourcesScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // 1. Header branding preserved
+      expect(find.text('Resources Center'), findsOneWidget);
+      expect(find.text('Government orders, circulars & official applications'), findsOneWidget);
+      expect(find.text('Official Portal'), findsOneWidget);
+
+      // 2. Document count pill removed from landing page header
+      expect(find.textContaining('documents available'), findsNothing);
+
+      // 3. Section heading present
+      expect(find.text('Browse Categories'), findsOneWidget);
+
+      // 4. Vertically stacked full-width category cards rendered
+      expect(find.byType(CategoryCard), findsNWidgets(3));
+      expect(find.text('Scheme Government Orders and Department Guidelines'), findsOneWidget);
+      expect(find.text('Pay and Allowances Orders'), findsOneWidget);
+      expect(find.text('Useful Government Portals'), findsOneWidget);
+      expect(find.text('Central • State'), findsOneWidget);
+
+      // 5. Document list is NOT displayed on this initial landing page
+      expect(find.byType(DocumentCard), findsNothing);
+    });
+
+    testWidgets('tapping category card navigates to CategoryDocumentsScreen', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final mockCategories = [
+        const ResourceCategory(
+          id: 'scheme-gos',
+          name: 'Scheme G.Os',
+          subcategories: ['Central', 'State'],
+        ),
       ];
 
       final mockDocs = [
@@ -341,7 +394,6 @@ void main() {
               (ref) async => _createMockProfile(isPaid: true, subscriptionActive: true),
             ),
             resourceCategoriesProvider.overrideWith((ref) async => mockCategories),
-            selectedCategoryProvider.overrideWith(() => _TestSelectedCategoryNotifier('scheme-gos')),
             categoryDocumentsProvider.overrideWith((ref, arg) async => mockDocs),
           ],
           child: const MaterialApp(
@@ -352,17 +404,28 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Resources Center'), findsOneWidget);
-      expect(find.text('Government orders, circulars & official applications'), findsOneWidget);
-      expect(find.text('1 document available'), findsOneWidget);
+      // Tap Scheme G.Os category card
+      await tester.tap(find.text('Scheme G.Os'));
+      await tester.pumpAndSettle();
+
+      // CategoryDocumentsScreen is opened
+      expect(find.byType(CategoryDocumentsScreen), findsOneWidget);
       expect(find.text('Scheme G.Os'), findsOneWidget);
-      expect(find.text('Useful Links'), findsOneWidget);
       expect(find.text('Central'), findsOneWidget);
       expect(find.text('State'), findsNWidgets(2)); // Subcategory chip and DocumentCard badge
       expect(find.text('Agricultural Mechanization G.O.'), findsOneWidget);
-    });
 
-    testWidgets('renders ExternalLinksView when selectedCategory is links', (tester) async {
+      // Back button in CategoryDocumentsScreen returns to Category Directory
+      await tester.tap(find.byIcon(LucideIcons.arrowLeft));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CategoryDocumentsScreen), findsNothing);
+      expect(find.text('Browse Categories'), findsOneWidget);
+    });
+  });
+
+  group('CategoryDocumentsScreen Dedicated Tests', () {
+    testWidgets('renders ExternalLinksView when category is links', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 2.0;
       addTearDown(() {
@@ -370,29 +433,11 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      final mockCategories = [
-        const ResourceCategory(id: 'scheme-gos', name: 'Scheme G.Os'),
-        const ResourceCategory(id: 'links', name: 'Useful Links'),
-      ];
+      const linksCategory = ResourceCategory(id: 'links', name: 'Useful Links');
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authProvider.overrideWith(
-              () => _TestAuthNotifier(
-                MemberSession(
-                  token: 'test-token',
-                  role: 'member',
-                  isPaid: true,
-                  isGuest: false,
-                ),
-              ),
-            ),
-            memberProfileProvider.overrideWith(
-              (ref) async => _createMockProfile(isPaid: true, subscriptionActive: true),
-            ),
-            resourceCategoriesProvider.overrideWith((ref) async => mockCategories),
-            selectedCategoryProvider.overrideWith(() => _TestSelectedCategoryNotifier('links')),
             externalLinksProvider.overrideWith(
               (ref) async => [
                 const ExternalLink(
@@ -403,13 +448,14 @@ void main() {
             ),
           ],
           child: const MaterialApp(
-            home: ResourcesScreen(),
+            home: CategoryDocumentsScreen(category: linksCategory),
           ),
         ),
       );
 
       await tester.pumpAndSettle();
 
+      expect(find.text('Useful Links'), findsOneWidget);
       expect(find.byType(ExternalLinksView), findsOneWidget);
       expect(find.text('Agri Dept Portal'), findsOneWidget);
     });
@@ -422,14 +468,6 @@ class _TestAuthNotifier extends AuthNotifier {
 
   @override
   Future<MemberSession> build() async => _session;
-}
-
-class _TestSelectedCategoryNotifier extends SelectedCategoryNotifier {
-  final String _initial;
-  _TestSelectedCategoryNotifier(this._initial);
-
-  @override
-  String? build() => _initial;
 }
 
 MemberProfile _createMockProfile({
@@ -448,17 +486,17 @@ MemberProfile _createMockProfile({
     motherName: 'Mother',
     mobileNumber: '9876543210',
     emailId: 'test@nammataga.in',
-    designation: 'Assistant Engineer',
-    recruitmentBatch: '2020',
+    designation: 'Agricultural Officer',
+    recruitmentBatch: '2015',
     seniorityNumber: '10',
     workingDistrict: 'Chennai',
-    nativeDistrict: 'Chennai',
-    residentialAddress: 'Chennai',
-    permanentAddress: 'Chennai',
-    educationalQualification: 'B.E Agriculture',
-    tbfNumber: 'TBF123',
-    cpsGpfNumber: 'CPS123',
-    paymentStatus: isPaid ? 'paid' : 'unpaid',
+    nativeDistrict: 'Madurai',
+    residentialAddress: 'Residential Address',
+    permanentAddress: 'Permanent Address',
+    educationalQualification: 'B.Sc Agri',
+    tbfNumber: 'TBF-001',
+    cpsGpfNumber: 'CPS-001',
+    paymentStatus: isPaid ? 'PAID' : 'UNPAID',
     isPaid: isPaid,
     subscriptionActive: subscriptionActive,
   );

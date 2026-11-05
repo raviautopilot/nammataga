@@ -20,6 +20,8 @@ import '../../features/profile/presentation/personal_info_screen.dart';
 import '../../features/profile/presentation/profile_overview_screen.dart';
 import '../../features/profile/presentation/request_profile_edit_screen.dart';
 import '../../features/profile/presentation/subscription_plans_screen.dart';
+import '../../features/resources/domain/resource_category.dart';
+import '../../features/resources/presentation/category_documents_screen.dart';
 import '../../features/resources/presentation/pdf_viewer_screen.dart';
 import '../../features/resources/presentation/resources_access_restricted_screen.dart';
 import '../../features/resources/presentation/resources_screen.dart';
@@ -312,6 +314,30 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
             FadeTransition(opacity: animation, child: child),
       ),
       routes: [
+        GoRoute(
+          path: 'category',
+          name: 'resources-category',
+          pageBuilder: (context, state) {
+            ResourceCategory? category;
+            if (state.extra is ResourceCategory) {
+              category = state.extra as ResourceCategory;
+            } else if (state.extra is Map<String, dynamic>) {
+              category = ResourceCategory.fromJson(
+                  state.extra as Map<String, dynamic>);
+            } else {
+              final id = state.uri.queryParameters['id'] ?? '';
+              final name = state.uri.queryParameters['name'] ?? id;
+              category = ResourceCategory(id: id, name: name);
+            }
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: CategoryDocumentsScreen(category: category),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) =>
+                      FadeTransition(opacity: animation, child: child),
+            );
+          },
+        ),
         GoRoute(
           path: 'pdf-viewer',
           name: 'resources-pdf-viewer',

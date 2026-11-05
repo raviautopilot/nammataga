@@ -8,24 +8,23 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../profile/providers/profile_provider.dart';
+import '../domain/resource_category.dart';
 import '../providers/resources_provider.dart';
+import 'category_documents_screen.dart';
 import 'resources_access_restricted_screen.dart';
-import 'widgets/category_chips_bar.dart';
-import 'widgets/document_card.dart';
-import 'widgets/external_links_view.dart';
+import 'widgets/category_card.dart';
 import 'widgets/resources_shimmer.dart';
-import 'widgets/subcategory_chips_bar.dart';
 
-/// Main screen for NammaTAGA Resources Center.
+/// Resources Landing Page – Category Directory.
 ///
 /// Features:
-/// - Access Guard check for paid member privilege
-/// - Executive header card with emerald gradient and dynamic document count
-/// - App bar with title, back button, and manual refresh trigger
-/// - Category chips bar and subcategory filter bar
-/// - Interactive documents list with PDF preview, download actions, and empty states
-/// - External government links view for 'links' category
-/// - Pull-to-refresh integration
+/// - Strict Access Guard check for active paid membership privilege
+/// - Executive header card with emerald gradient and brand identity
+/// - "Browse Categories" section heading with professional enterprise typography
+/// - Vertically stacked, full-width category cards with contextual icons and right arrow
+/// - Complete category names without truncation (natural text wrapping)
+/// - Normal vertical scrolling with pull-to-refresh
+/// - Tapping a category navigates to [CategoryDocumentsScreen]
 class ResourcesScreen extends ConsumerStatefulWidget {
   const ResourcesScreen({super.key});
 
@@ -37,16 +36,6 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
   Future<void> _handleRefresh() async {
     HapticFeedback.lightImpact();
     ref.invalidate(resourceCategoriesProvider);
-    final catId = ref.read(selectedCategoryProvider);
-    if (catId != null) {
-      final subcat = ref.read(selectedSubcategoryProvider);
-      ref.invalidate(
-        categoryDocumentsProvider((categoryId: catId, subcategory: subcat)),
-      );
-      if (catId == 'links') {
-        ref.invalidate(externalLinksProvider);
-      }
-    }
   }
 
   void _handleBack() {
@@ -61,6 +50,24 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
       context.go('/home');
     } catch (_) {
       Navigator.of(context).maybePop();
+    }
+  }
+
+  void _navigateToCategory(ResourceCategory category) {
+    HapticFeedback.lightImpact();
+    ref.read(selectedCategoryProvider.notifier).selectCategory(category.id);
+
+    try {
+      context.push(
+        '/resources/category',
+        extra: category,
+      );
+    } catch (_) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CategoryDocumentsScreen(category: category),
+        ),
+      );
     }
   }
 
@@ -89,25 +96,27 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
       return const ResourcesAccessRestrictedScreen();
     }
 
-    // 2. Resource Categories & Current Selection
+    // 2. Resource Categories
     final categoriesAsync = ref.watch(resourceCategoriesProvider);
-    final selectedCatId = ref.watch(selectedCategoryProvider);
-    final selectedSubcat = ref.watch(selectedSubcategoryProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF7),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Executive Header Card with Emerald Gradient & App Bar
-          _buildExecutiveHeader(
-            selectedCatId: selectedCatId,
-            selectedSubcat: selectedSubcat,
-          ),
+          _buildExecutiveHeader(),
 
-          // Main Content Area with Categories & Document List
+          // Main Category Directory
           Expanded(
             child: categoriesAsync.when(
-              loading: () => const ResourcesShimmer(includeChips: true),
+              loading: () => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionHeading(),
+                  const Expanded(child: CategoryDirectoryShimmer()),
+                ],
+              ),
               error: (err, stack) => _buildErrorState(
                 'Unable to load resource categories: $err',
                 onRetry: () => ref.invalidate(resourceCategoriesProvider),
@@ -121,62 +130,31 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
                   );
                 }
 
-                // Identify currently active category object
-                final currentCat = categories.firstWhere(
-                  (c) => c.id == selectedCatId,
-                  orElse: () => categories.first,
-                );
-
-                final hasSubcategories = currentCat.subcategories != null &&
-                    currentCat.subcategories!.isNotEmpty;
-
-                return Column(
-                  children: [
-                    const SizedBox(height: 8),
-
-                    // Horizontally scrollable Category Chips Bar
-                    CategoryChipsBar(
-                      categories: categories,
-                      selectedCategoryId: selectedCatId ?? currentCat.id,
-                      onCategorySelected: (newCatId) {
-                        ref
-                            .read(selectedCategoryProvider.notifier)
-                            .selectCategory(newCatId);
-                      },
+                return RefreshIndicator(
+                  onRefresh: _handleRefresh,
+                  color: AppColors.primary,
+                  backgroundColor: Colors.white,
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
                     ),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    itemCount: categories.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return _buildSectionHeading();
+                      }
 
-                    // Horizontally scrollable Subcategory Chips Bar (if available)
-                    if (hasSubcategories) ...[
-                      const SizedBox(height: 6),
-                      SubcategoryChipsBar(
-                        subcategories: currentCat.subcategories!,
-                        selectedSubcategory: selectedSubcat,
-                        onSubcategorySelected: (newSubcat) {
-                          ref
-                              .read(selectedSubcategoryProvider.notifier)
-                              .selectSubcategory(newSubcat);
-                        },
-                      ),
-                    ],
-
-                    const SizedBox(height: 6),
-
-                    // Document List or External Links View
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: _handleRefresh,
-                        color: AppColors.primary,
-                        backgroundColor: Colors.white,
-                        child: (selectedCatId == 'links')
-                            ? const ExternalLinksView()
-                            : _buildDocumentsList(
-                                categoryId: selectedCatId ?? currentCat.id,
-                                categoryName: currentCat.name,
-                                subcategory: selectedSubcat,
-                              ),
-                      ),
-                    ),
-                  ],
+                      final category = categories[index - 1];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: CategoryCard(
+                          category: category,
+                          onTap: () => _navigateToCategory(category),
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             ),
@@ -186,22 +164,38 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
     );
   }
 
-  /// Builds the executive top header card with rich emerald gradient,
-  /// navigation controls, and document summary count.
-  Widget _buildExecutiveHeader({
-    required String? selectedCatId,
-    required String? selectedSubcat,
-  }) {
-    // Watch current documents to extract live document count
-    int? documentCount;
-    if (selectedCatId != null && selectedCatId != 'links') {
-      final docsAsync = ref.watch(categoryDocumentsProvider((
-        categoryId: selectedCatId,
-        subcategory: selectedSubcat,
-      )));
-      documentCount = docsAsync.asData?.value.length;
-    }
+  /// Section heading: "Browse Categories"
+  Widget _buildSectionHeading() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 18, 0, 14),
+      child: Row(
+        children: [
+          Container(
+            width: 3.5,
+            height: 18,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'Browse Categories',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  /// Builds the executive top header card with rich emerald gradient,
+  /// navigation controls, title, and subtitle (document-count badge removed).
+  Widget _buildExecutiveHeader() {
     return Container(
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.vertical(
@@ -412,100 +406,12 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
                       height: 1.3,
                     ),
                   ),
-
-                  // Dynamic Document Count Pill (if loaded)
-                  if (documentCount != null) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 3.5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.20),
-                          width: 0.9,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            LucideIcons.fileCheck2,
-                            size: 13,
-                            color: Color(0xFFB7E4C7),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '$documentCount ${documentCount == 1 ? 'document' : 'documents'} available',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  /// Builds the reactive document cards list for the active category.
-  Widget _buildDocumentsList({
-    required String categoryId,
-    required String categoryName,
-    required String? subcategory,
-  }) {
-    final docsAsync = ref.watch(categoryDocumentsProvider((
-      categoryId: categoryId,
-      subcategory: subcategory,
-    )));
-
-    return docsAsync.when(
-      loading: () => const ResourcesShimmer(itemCount: 6),
-      error: (err, stack) => _buildErrorState(
-        err.toString().replaceAll('Exception: ', ''),
-        onRetry: () => ref.invalidate(categoryDocumentsProvider((
-          categoryId: categoryId,
-          subcategory: subcategory,
-        ))),
-      ),
-      data: (documents) {
-        if (documents.isEmpty) {
-          return _buildEmptyState(
-            title: 'No Documents Found',
-            message: subcategory != null
-                ? 'No documents found for "$subcategory" in this category.'
-                : 'No documents have been uploaded for $categoryName yet.',
-          );
-        }
-
-        return ListView.separated(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          itemCount: documents.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final doc = documents[index];
-            return DocumentCard(
-              document: doc,
-              categoryName: categoryName,
-            );
-          },
-        );
-      },
     );
   }
 
@@ -581,48 +487,41 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
         child: Container(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
+            color: const Color(0xFFFEF2F2),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: const Color(0xFFFFCDD2),
-              width: 1.1,
+              color: const Color(0xFFFECACA),
+              width: 1.2,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF1B4332).withValues(alpha: 0.04),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 48,
+                height: 48,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFFFEBEE),
+                  color: Color(0xFFFEE2E2),
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
                   child: Icon(
-                    LucideIcons.alertCircle,
-                    size: 28,
-                    color: AppColors.destructive,
+                    LucideIcons.alertTriangle,
+                    size: 24,
+                    color: Color(0xFFDC2626),
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               const Text(
-                'Unable to Load Resources',
+                'Failed to load categories',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 16.5,
+                  color: Color(0xFF991B1B),
+                  fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -631,25 +530,22 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
                 message,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: AppColors.textSecondary,
+                  color: Color(0xFFB91C1C),
                   fontSize: 13,
                   height: 1.35,
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               BouncyButton(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  onRetry();
-                },
+                onTap: onRetry,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
+                    horizontal: 18,
+                    vertical: 9,
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
@@ -664,8 +560,8 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
                         'Retry',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],

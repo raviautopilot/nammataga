@@ -89,6 +89,66 @@ class CategoryChipsShimmer extends StatelessWidget {
   }
 }
 
+/// Shimmer placeholder for a single full-width category row.
+class CategoryCardShimmer extends StatelessWidget {
+  const CategoryCardShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFE5E7EB),
+          width: 1.0,
+        ),
+      ),
+      child: const Row(
+        children: [
+          ShimmerLoadingBox(width: 44, height: 44, borderRadius: 10),
+          SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ShimmerLoadingBox(width: 160, height: 16, borderRadius: 4),
+                SizedBox(height: 6),
+                ShimmerLoadingBox(width: 90, height: 12, borderRadius: 4),
+              ],
+            ),
+          ),
+          SizedBox(width: 8),
+          ShimmerLoadingBox(width: 16, height: 16, borderRadius: 8),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shimmer placeholder list for Category Directory landing page.
+class CategoryDirectoryShimmer extends StatelessWidget {
+  final int itemCount;
+
+  const CategoryDirectoryShimmer({
+    super.key,
+    this.itemCount = 7,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      itemCount: itemCount,
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      itemBuilder: (context, index) => const CategoryCardShimmer(),
+    );
+  }
+}
+
 /// Shimmer placeholder for a single document card.
 class DocumentCardShimmer extends StatelessWidget {
   const DocumentCardShimmer({super.key});
