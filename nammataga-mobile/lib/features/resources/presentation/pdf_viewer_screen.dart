@@ -41,6 +41,7 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
   late final PdfViewerController _pdfViewerController;
   final ValueNotifier<int> _currentPageNotifier = ValueNotifier<int>(1);
   final ValueNotifier<int> _pageCountNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<double> _currentZoomNotifier = ValueNotifier<double>(1.0);
   final ValueNotifier<bool> _isDocumentLoadedNotifier = ValueNotifier<bool>(false);
 
   bool _isDownloading = false;
@@ -57,6 +58,7 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
     _pdfViewerController.dispose();
     _currentPageNotifier.dispose();
     _pageCountNotifier.dispose();
+    _currentZoomNotifier.dispose();
     _isDocumentLoadedNotifier.dispose();
     super.dispose();
   }
@@ -563,14 +565,19 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
             canShowScrollHead: false,
             canShowScrollStatus: false,
             canShowPaginationDialog: false,
+            canShowPageLoadingIndicator: false,
             enableDoubleTapZooming: true,
             enableTextSelection: false,
             pageSpacing: 4.0,
-            maxZoomLevel: 5.0,
+            maxZoomLevel: 3.0,
             interactionMode: PdfInteractionMode.pan,
+            onZoomLevelChanged: (details) {
+              _currentZoomNotifier.value = details.newZoomLevel;
+            },
             onDocumentLoaded: (details) {
               _pageCountNotifier.value = details.document.pages.count;
               _currentPageNotifier.value = _pdfViewerController.pageNumber;
+              _currentZoomNotifier.value = _pdfViewerController.zoomLevel;
               _isDocumentLoadedNotifier.value = true;
             },
             onPageChanged: (details) {
@@ -590,14 +597,19 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
             canShowScrollHead: false,
             canShowScrollStatus: false,
             canShowPaginationDialog: false,
+            canShowPageLoadingIndicator: false,
             enableDoubleTapZooming: true,
             enableTextSelection: false,
             pageSpacing: 4.0,
-            maxZoomLevel: 5.0,
+            maxZoomLevel: 3.0,
             interactionMode: PdfInteractionMode.pan,
+            onZoomLevelChanged: (details) {
+              _currentZoomNotifier.value = details.newZoomLevel;
+            },
             onDocumentLoaded: (details) {
               _pageCountNotifier.value = details.document.pages.count;
               _currentPageNotifier.value = _pdfViewerController.pageNumber;
+              _currentZoomNotifier.value = _pdfViewerController.zoomLevel;
               _isDocumentLoadedNotifier.value = true;
             },
             onPageChanged: (details) {
@@ -666,6 +678,7 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
                     setState(() {
                       _errorMessage = null;
                       _isDocumentLoadedNotifier.value = false;
+                      _currentZoomNotifier.value = 1.0;
                     });
                   },
                   child: Container(
@@ -741,6 +754,49 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
         ),
       ),
     );
+  }
+
+  /// Zoom in by discrete responsive step.
+  void _handleZoomIn() {
+    HapticFeedback.lightImpact();
+    final current = _pdfViewerController.zoomLevel;
+    double target;
+    if (current < 1.45) {
+      target = 1.5;
+    } else if (current < 1.95) {
+      target = 2.0;
+    } else if (current < 2.45) {
+      target = 2.5;
+    } else {
+      target = 3.0;
+    }
+    _pdfViewerController.zoomLevel = target;
+    _currentZoomNotifier.value = target;
+  }
+
+  /// Zoom out by discrete responsive step.
+  void _handleZoomOut() {
+    HapticFeedback.lightImpact();
+    final current = _pdfViewerController.zoomLevel;
+    double target;
+    if (current > 2.55) {
+      target = 2.5;
+    } else if (current > 2.05) {
+      target = 2.0;
+    } else if (current > 1.55) {
+      target = 1.5;
+    } else {
+      target = 1.0;
+    }
+    _pdfViewerController.zoomLevel = target;
+    _currentZoomNotifier.value = target;
+  }
+
+  /// Resets zoom level to 100%.
+  void _resetZoom() {
+    HapticFeedback.lightImpact();
+    _pdfViewerController.zoomLevel = 1.0;
+    _currentZoomNotifier.value = 1.0;
   }
 
   /// Bottom navigation and zoom toolbar.
@@ -866,39 +922,67 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
           ),
 
           // Zoom Out
-          IconButton(
-            icon: const Icon(LucideIcons.zoomOut, size: 20),
-            color: AppColors.textPrimary,
-            tooltip: 'Zoom out',
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              final current = _pdfViewerController.zoomLevel;
-              _pdfViewerController.zoomLevel =
-                  (current - 0.25).clamp(1.0, 5.0);
+          ValueListenableBuilder<double>(
+            valueListenable: _currentZoomNotifier,
+            builder: (context, zoom, _) {
+              final canZoomOut = zoom > 1.05;
+              return IconButton(
+                icon: const Icon(LucideIcons.zoomOut, size: 20),
+                color: AppColors.textPrimary,
+                disabledColor: AppColors.textMuted.withValues(alpha: 0.3),
+                tooltip: 'Zoom out',
+                onPressed: canZoomOut ? _handleZoomOut : null,
+              );
+            },
+          ),
+
+          // Zoom percentage indicator
+          ValueListenableBuilder<double>(
+            valueListenable: _currentZoomNotifier,
+            builder: (context, zoom, _) {
+              final percent = (zoom * 100).round();
+              final isZoomed = zoom > 1.05;
+              return GestureDetector(
+                onTap: isZoomed ? _resetZoom : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isZoomed
+                        ? AppColors.primaryLight.withValues(alpha: 0.15)
+                        : AppColors.muted,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$percent%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: isZoomed
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              );
             },
           ),
 
           // Zoom In
-          IconButton(
-            icon: const Icon(LucideIcons.zoomIn, size: 20),
-            color: AppColors.textPrimary,
-            tooltip: 'Zoom in',
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              final current = _pdfViewerController.zoomLevel;
-              _pdfViewerController.zoomLevel =
-                  (current + 0.25).clamp(1.0, 5.0);
-            },
-          ),
-
-          // Reset Zoom
-          IconButton(
-            icon: const Icon(LucideIcons.rotateCcw, size: 18),
-            color: AppColors.textSecondary,
-            tooltip: 'Reset zoom',
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              _pdfViewerController.zoomLevel = 1.0;
+          ValueListenableBuilder<double>(
+            valueListenable: _currentZoomNotifier,
+            builder: (context, zoom, _) {
+              final canZoomIn = zoom < 2.95;
+              return IconButton(
+                icon: const Icon(LucideIcons.zoomIn, size: 20),
+                color: AppColors.textPrimary,
+                disabledColor: AppColors.textMuted.withValues(alpha: 0.3),
+                tooltip: 'Zoom in',
+                onPressed: canZoomIn ? _handleZoomIn : null,
+              );
             },
           ),
         ],

@@ -90,7 +90,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Celebratory header
-      expect(find.text('🎉 Booking Confirmed!'), findsOneWidget);
+      expect(find.text('Booking Confirmed!'), findsOneWidget);
       expect(find.textContaining('Karthik Raja'), findsOneWidget);
 
       // Official Booking Reference ID
