@@ -23,7 +23,7 @@ class SubcategoryChipsBar extends StatelessWidget {
     required this.subcategories,
     required this.selectedSubcategory,
     required this.onSubcategorySelected,
-    this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
   });
 
   @override
@@ -36,7 +36,7 @@ class SubcategoryChipsBar extends StatelessWidget {
     final items = <String?>[null, ...subcategories];
 
     return SizedBox(
-      height: 40,
+      height: 48,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
@@ -83,12 +83,12 @@ class _SubcategoryChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary
               : const Color(0xFFF1F8E9),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
                 ? AppColors.primary
@@ -98,15 +98,16 @@ class _SubcategoryChip extends StatelessWidget {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.22),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+                    color: AppColors.primary.withValues(alpha: 0.18),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
                   ),
                 ]
               : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             if (isSelected) ...[
               const Icon(
@@ -120,9 +121,10 @@ class _SubcategoryChip extends StatelessWidget {
               label,
               style: TextStyle(
                 color: isSelected ? Colors.white : AppColors.primaryDark,
-                fontSize: 12.5,
+                fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                 letterSpacing: 0.2,
+                height: 1.2,
               ),
             ),
           ],

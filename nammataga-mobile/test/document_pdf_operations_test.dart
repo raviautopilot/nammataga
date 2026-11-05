@@ -188,6 +188,9 @@ void main() {
       expect(find.byIcon(LucideIcons.download), findsOneWidget);
       expect(find.byIcon(LucideIcons.share2), findsOneWidget);
       expect(find.byIcon(LucideIcons.moreVertical), findsOneWidget);
+
+      // Drain Syncfusion's internal network debounce timer
+      await tester.pump(const Duration(seconds: 1));
     });
   });
 }

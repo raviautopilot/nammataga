@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -184,13 +185,40 @@ class DocumentDownloadService {
     }
   }
 
+  static const MethodChannel _downloadsChannel =
+      MethodChannel('com.ravi.taga/downloads');
+
   /// Copies an existing app-cached file to the device's public or accessible Downloads directory.
   Future<File> copyToDownloadsDirectory(File sourceFile, String fileName) async {
+    // 1. On Android, export directly to public Downloads folder via MediaStore
+    if (Platform.isAndroid) {
+      try {
+        final result = await _downloadsChannel.invokeMethod<String>(
+          'saveToPublicDownloads',
+          {
+            'sourcePath': sourceFile.path,
+            'fileName': fileName,
+            'mimeType': 'application/pdf',
+          },
+        );
+        if (result != null && result.isNotEmpty) {
+          final publicFile = File(result);
+          if (await publicFile.exists() && await publicFile.length() > 0) {
+            return publicFile;
+          }
+        }
+      } catch (_) {
+        // Fallback to POSIX file copying if method channel is unavailable
+      }
+    }
+
+    // 2. Standard filesystem copying fallback
     try {
       Directory? targetDir;
 
       if (Platform.isAndroid) {
-        final standardPublicDownload = Directory('/storage/emulated/0/Download');
+        final standardPublicDownload =
+            Directory('/storage/emulated/0/Download');
         if (await standardPublicDownload.exists()) {
           targetDir = standardPublicDownload;
         }

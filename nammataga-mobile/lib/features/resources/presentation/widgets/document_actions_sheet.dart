@@ -123,7 +123,7 @@ class _DocumentActionsSheetState extends ConsumerState<DocumentActionsSheet> {
 
     try {
       final fileName = _getFileName();
-      await DocumentDownloadService.instance.downloadDocument(
+      final savedFile = await DocumentDownloadService.instance.downloadDocument(
         widget.document.fullUrl,
         fileName,
         saveToPublicDownloads: true,
@@ -140,15 +140,23 @@ class _DocumentActionsSheetState extends ConsumerState<DocumentActionsSheet> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Downloaded "$fileName" to Downloads',
+                    'Saved "$fileName" to Downloads',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
+            action: SnackBarAction(
+              label: 'Open',
+              textColor: const Color(0xFFB7E4C7),
+              onPressed: () {
+                OpenFilex.open(savedFile.path);
+              },
+            ),
             backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
           ),
         );
       }

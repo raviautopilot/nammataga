@@ -92,7 +92,7 @@ class _CategoryDocumentsScreenState
 
           // Subcategory Filter Chips Bar (if available for this category)
           if (hasSubcategories) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             SubcategoryChipsBar(
               subcategories: widget.category.subcategories!,
               selectedSubcategory: _selectedSubcategory,
@@ -102,7 +102,7 @@ class _CategoryDocumentsScreenState
                 });
               },
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
           ] else
             const SizedBox(height: 8),
 
