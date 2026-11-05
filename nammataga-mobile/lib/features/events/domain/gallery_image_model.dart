@@ -60,7 +60,10 @@ class GalleryImageModel {
   String get fullImageUrl {
     if (imageUrl.isEmpty) return '';
 
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    if (imageUrl.startsWith('http://') ||
+        imageUrl.startsWith('https://') ||
+        imageUrl.startsWith('file://') ||
+        imageUrl.startsWith('assets/')) {
       return imageUrl;
     }
 

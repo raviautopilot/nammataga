@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -141,93 +142,7 @@ class GalleryTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 child: Hero(
                   tag: 'gallery_image_${image.id}',
-                  child: image.fullImageUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: image.fullImageUrl,
-                          width: double.infinity,
-                          fit: BoxFit.fitWidth, // Natural proportion, 100% visible
-                          memCacheWidth: targetPixelWidth,
-                          maxWidthDiskCache: 1400,
-                          filterQuality: FilterQuality.medium,
-                          placeholder: (context, url) => Container(
-                            height: 220,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F8E9),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Center(
-                              child: SizedBox(
-                                width: 26,
-                                height: 26,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ),
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            height: 200,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF6FAF6),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFFE2EBE5),
-                              ),
-                            ),
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    width: 44,
-                                    height: 44,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFE8F5E9),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      LucideIcons.image,
-                                      size: 22,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  const Text(
-                                    'TAGA Archival Photograph',
-                                    style: TextStyle(
-                                      color: AppColors.primaryDark,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  const Text(
-                                    'Tap to preview image',
-                                    style: TextStyle(
-                                      color: Color(0xFF6B7280),
-                                      fontSize: 11.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        )
-                      : Container(
-                          height: 200,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF6FAF6),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              LucideIcons.image,
-                              size: 38,
-                              color: Color(0xFF52796F),
-                            ),
-                          ),
-                        ),
+                  child: _buildImage(context, targetPixelWidth),
                 ),
               ),
             ),
@@ -310,6 +225,123 @@ class GalleryTile extends StatelessWidget {
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  Widget _buildImage(BuildContext context, int targetPixelWidth) {
+    if (image.fullImageUrl.isEmpty) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF6FAF6),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: Icon(
+            LucideIcons.image,
+            size: 38,
+            color: Color(0xFF52796F),
+          ),
+        ),
+      );
+    }
+
+    if (image.fullImageUrl.startsWith('file://')) {
+      final path = image.fullImageUrl.substring(7);
+      return Image.file(
+        File(path),
+        width: double.infinity,
+        fit: BoxFit.fitWidth,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (context, error, stackTrace) => _buildErrorWidget(),
+      );
+    }
+
+    if (image.fullImageUrl.startsWith('assets/')) {
+      return Image.asset(
+        image.fullImageUrl,
+        width: double.infinity,
+        fit: BoxFit.fitWidth,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (context, error, stackTrace) => _buildErrorWidget(),
+      );
+    }
+
+    return CachedNetworkImage(
+      imageUrl: image.fullImageUrl,
+      width: double.infinity,
+      fit: BoxFit.fitWidth,
+      memCacheWidth: targetPixelWidth,
+      maxWidthDiskCache: 1400,
+      filterQuality: FilterQuality.medium,
+      placeholder: (context, url) => Container(
+        height: 220,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F8E9),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: SizedBox(
+            width: 26,
+            height: 26,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      ),
+      errorWidget: (context, url, error) => _buildErrorWidget(),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6FAF6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFE2EBE5),
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE8F5E9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                LucideIcons.image,
+                size: 22,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'TAGA Archival Photograph',
+              style: TextStyle(
+                color: AppColors.primaryDark,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 3),
+            const Text(
+              'Tap to preview image',
+              style: TextStyle(
+                color: Color(0xFF6B7280),
+                fontSize: 11.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
