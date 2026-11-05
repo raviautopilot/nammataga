@@ -20,6 +20,9 @@ import '../../features/profile/presentation/personal_info_screen.dart';
 import '../../features/profile/presentation/profile_overview_screen.dart';
 import '../../features/profile/presentation/request_profile_edit_screen.dart';
 import '../../features/profile/presentation/subscription_plans_screen.dart';
+import '../../features/resources/presentation/pdf_viewer_screen.dart';
+import '../../features/resources/presentation/resources_access_restricted_screen.dart';
+import '../../features/resources/presentation/resources_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/tagatowers/domain/booking_model.dart';
 import '../../features/tagatowers/presentation/booking_bed_selection_screen.dart';
@@ -304,13 +307,49 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
       name: 'resources',
       pageBuilder: (context, state) => CustomTransitionPage(
         key: state.pageKey,
-        child: const _PlaceholderScreen(
-          title: 'Member Resources',
-          phase: 'Phase 08',
-        ),
+        child: const ResourcesScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
+      routes: [
+        GoRoute(
+          path: 'pdf-viewer',
+          name: 'resources-pdf-viewer',
+          pageBuilder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            final title = extra['title'] as String? ??
+                state.uri.queryParameters['title'] ??
+                'Document Viewer';
+            final url = extra['url'] as String? ??
+                state.uri.queryParameters['url'] ??
+                '';
+            final localPath = extra['localPath'] as String? ??
+                state.uri.queryParameters['localPath'];
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: PdfViewerScreen(
+                title: title,
+                url: url,
+                localPath: localPath,
+              ),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) =>
+                      FadeTransition(opacity: animation, child: child),
+            );
+          },
+        ),
+        GoRoute(
+          path: 'restricted',
+          name: 'resources-restricted',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            key: state.pageKey,
+            child: const ResourcesAccessRestrictedScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+      ],
     ),
     GoRoute(
       path: '/taga-towers',

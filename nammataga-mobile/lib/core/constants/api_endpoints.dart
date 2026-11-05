@@ -105,6 +105,24 @@ class ApiEndpoints {
 
   static String get externalLinks => '$baseUrl/resources/external-links';
 
+  /// Resolves relative document paths (e.g. /docs/...) to full absolute API URLs
+  static String resolveDocUrl(String docUrl) {
+    if (docUrl.startsWith('http://') || docUrl.startsWith('https://')) {
+      return docUrl;
+    }
+    final cleanBase = baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+    var cleanUrl = docUrl.startsWith('/') ? docUrl : '/$docUrl';
+    if (cleanUrl.startsWith('/data/docs/')) {
+      cleanUrl = cleanUrl.replaceFirst('/data/docs/', '/docs/');
+    }
+    var finalPath = cleanUrl;
+    if (cleanUrl.startsWith('/docs/')) {
+      finalPath = cleanUrl.replaceFirst('/docs/', '/api/docs/');
+    }
+    final encodedUrl = finalPath.split('/').map((s) => Uri.encodeComponent(s)).join('/');
+    return '$cleanBase$encodedUrl';
+  }
+
   // TAGA Towers
   static String get towersBannerImage => '$baseUrl/images/tagatower_final.png';
   static String get towersRooms => '$baseUrl/towers/rooms';
