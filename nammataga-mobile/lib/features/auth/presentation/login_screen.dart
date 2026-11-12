@@ -309,7 +309,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
                       // 3. OFFICIAL ASSOCIATION FOOTNOTE
                       const Text(
-                        'Tamil Nadu Agricultural Graduates Association (TAGA)\nOfficial Member Portal • Estd. 1929',
+                        'Tamil Nadu Government Agricultural Graduates Association (TAGA)\nOfficial Member Portal',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 11,
@@ -338,31 +338,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
         // Tamil Association Title
         const Text(
-          'தமிழ்நாடு அரசு வேளாண்மை பட்டதாரிகள் சங்கம்',
+          'தமிழ்நாடு அரசு வேளாண்மைப் பட்டதாரிகள் சங்கம்',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
             letterSpacing: 0.2,
+            fontFamily: 'NotoSansTamil',
+            fontFamilyFallback: ['NotoSansTamil', 'sans-serif'],
           ),
         ),
         const SizedBox(height: 3),
 
         // English Association Title
         const Text(
-          'TAMIL NADU GOVT. AGRI. GRADUATES ASSOCIATION',
+          'TAMIL NADU GOVERNMENT AGRICULTURAL GRADUATES ASSOCIATION',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 9.6,
             fontWeight: FontWeight.bold,
             color: AppColors.primary,
-            letterSpacing: 0.6,
+            letterSpacing: 0.5,
           ),
         ),
         const SizedBox(height: 8),
 
-        // Motto & Estd Pill
+        // Motto & Estd Pill with matching symmetrical leaf icons
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
           decoration: BoxDecoration(
@@ -376,16 +378,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               Icon(LucideIcons.leaf, size: 11.5, color: AppColors.primary),
               SizedBox(width: 6),
               Flexible(
-                child: Text(
-                  'பயிர் வளர்ப்போம் • உயிர் காப்போம்  (Estd. 1929)',
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: 'பயிர் வளர்ப்போம் '),
+                      TextSpan(
+                        text: '•',
+                        style: TextStyle(
+                          fontFamily: 'Roboto',
+                          fontFamilyFallback: ['sans-serif'],
+                          fontSize: 12,
+                        ),
+                      ),
+                      TextSpan(text: ' உயிர் காப்போம்  (Estd. 1929)'),
+                    ],
+                  ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
                     color: AppColors.primaryDark,
+                    fontFamily: 'NotoSansTamil',
+                    fontFamilyFallback: ['Roboto', 'sans-serif'],
                   ),
                 ),
               ),
+              SizedBox(width: 6),
+              Icon(LucideIcons.leaf, size: 11.5, color: AppColors.primary),
             ],
           ),
         ),

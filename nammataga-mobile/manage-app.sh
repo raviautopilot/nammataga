@@ -7,7 +7,7 @@
 # |_| \_|\__,_|_| |_| |_|_| |_| |_|\__,_||_/_/   \_\____/_/   \_\
 #
 # Comprehensive Mobile Management & Automation CLI
-# Target: Android & iOS | Package: com.ravi.taga | Directory: nammataga-mobile/
+# Target: Android & iOS | Package: com.htanivar.taga | Directory: nammataga-mobile/
 # ==============================================================================
 
 set -eo pipefail
@@ -17,7 +17,7 @@ PID_FILE="$APP_DIR/.web_server.pid"
 LOG_FILE="$APP_DIR/.web_server.log"
 ENV_FILE="$APP_DIR/.last_env"
 WEB_PORT=1702
-PACKAGE_NAME="com.ravi.taga"
+PACKAGE_NAME="com.htanivar.taga"
 
 # ------------------------------------------------------------------------------
 # Rich Color Palette (ANSI 256 / True Color)
@@ -59,7 +59,7 @@ print_banner() {
   ║  |_| \_|\__,_|_| |_| |_|_| |_| |_|\__,_||_/_/   \_\____/_/   \_\  ║
   ║                                                                  ║
   ║      OFFICIAL MOBILE APPLICATION ARCHITECT & BUILD MANAGER       ║
-  ║         Package: com.ravi.taga  •  Flutter Cross-Platform        ║
+  ║       Package: com.htanivar.taga  •  Flutter Cross-Platform      ║
   ╚══════════════════════════════════════════════════════════════════╝
 EOF
     echo -e "${CLR_RESET}"

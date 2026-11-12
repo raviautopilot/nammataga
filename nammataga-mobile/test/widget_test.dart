@@ -33,15 +33,17 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('TAGA TOWERS'), findsOneWidget);
-      expect(find.text('தாகா டவர்ஸ்'), findsOneWidget);
+      expect(find.text('டாகா டவர்'), findsOneWidget);
       expect(
-        find.text('தமிழ்நாடு அரசு வேளாண்மை பட்டதாரிகள் சங்கம்'),
+        find.text('தமிழ்நாடு அரசு வேளாண்மைப் பட்டதாரிகள் சங்கம்'),
         findsOneWidget,
       );
       expect(
-        find.text('TAMIL NADU GOVT. AGRI. GRADUATES ASSOCIATION'),
+        find.text('TAMIL NADU GOVERNMENT AGRICULTURAL GRADUATES ASSOCIATION'),
         findsOneWidget,
       );
+      expect(find.text('(Established 1929)'), findsOneWidget);
+      expect(find.text('பயிர் வளர்ப்போம் • உயிர் காப்போம்'), findsOneWidget);
     },
   );
 

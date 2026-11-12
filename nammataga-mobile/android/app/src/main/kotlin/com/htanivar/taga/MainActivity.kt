@@ -1,4 +1,4 @@
-package com.ravi.taga
+package com.htanivar.taga
 
 import android.content.ContentValues
 import android.os.Build
@@ -12,7 +12,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.ravi.taga/downloads"
+    private val CHANNEL = "com.htanivar.taga/downloads"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

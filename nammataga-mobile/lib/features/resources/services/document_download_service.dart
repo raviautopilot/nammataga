@@ -186,7 +186,7 @@ class DocumentDownloadService {
   }
 
   static const MethodChannel _downloadsChannel =
-      MethodChannel('com.ravi.taga/downloads');
+      MethodChannel('com.htanivar.taga/downloads');
 
   /// Copies an existing app-cached file to the device's public or accessible Downloads directory.
   Future<File> copyToDownloadsDirectory(File sourceFile, String fileName) async {

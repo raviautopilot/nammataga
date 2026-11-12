@@ -197,8 +197,8 @@ class _SplashScreenState extends State<SplashScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 6),
-          // Subtle, unboxed official seal crest
+          const SizedBox(height: 4),
+          // 1. TOP SECTION: Official Association Crest / Logo
           Container(
             width: 52,
             height: 52,
@@ -236,29 +236,73 @@ class _SplashScreenState extends State<SplashScreen>
           ),
           const SizedBox(height: 8),
 
-          // Tamil Title
+          // 2. ASSOCIATION IDENTITY: Official Tamil Association Name
           const Text(
-            'தமிழ்நாடு அரசு வேளாண்மை பட்டதாரிகள் சங்கம்',
+            'தமிழ்நாடு அரசு வேளாண்மைப் பட்டதாரிகள் சங்கம்',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.0,
               fontWeight: FontWeight.bold,
               color: Colors.white,
-              letterSpacing: 0.25,
+              letterSpacing: 0.2,
+              height: 1.3,
+              fontFamily: 'NotoSansTamil',
               fontFamilyFallback: ['NotoSansTamil', 'sans-serif'],
+            ),
+          ),
+          const SizedBox(height: 3),
+
+          // 3. Complete Official English Association Name
+          const Text(
+            'TAMIL NADU GOVERNMENT AGRICULTURAL GRADUATES ASSOCIATION',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 9.6,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFFD8F3DC),
+              letterSpacing: 0.5,
+              height: 1.25,
             ),
           ),
           const SizedBox(height: 2),
 
-          // English Title
+          // 4. Establishment Year
           const Text(
-            'TAMIL NADU GOVT. AGRI. GRADUATES ASSOCIATION',
+            '(Established 1929)',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 9.5,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               color: Color(0xFF95D5B2),
-              letterSpacing: 0.9,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 5),
+
+          // 5. Official Tamil Tagline
+          const Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: 'பயிர் வளர்ப்போம் '),
+                TextSpan(
+                  text: '•',
+                  style: TextStyle(
+                    fontFamily: 'Roboto',
+                    fontFamilyFallback: ['sans-serif'],
+                    fontSize: 12,
+                  ),
+                ),
+                TextSpan(text: ' உயிர் காப்போம்'),
+              ],
+            ),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF74C69D),
+              letterSpacing: 0.3,
+              fontFamily: 'NotoSansTamil',
+              fontFamilyFallback: ['Roboto', 'sans-serif'],
             ),
           ),
         ],
@@ -355,44 +399,31 @@ class _SplashScreenState extends State<SplashScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Landmark Name
+          // BOTTOM SECTION: English Landmark Building Name
           const Text(
             'TAGA TOWERS',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 16.5,
               fontWeight: FontWeight.bold,
               color: Colors.white,
-              letterSpacing: 2.0,
+              letterSpacing: 2.2,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
 
-          // Tamil Landmark Name
+          // Corrected Official Tamil Landmark Building Name
           const Text(
-            'தாகா டவர்ஸ்',
+            'டாகா டவர்',
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
               color: Color(0xFFB7E4C7),
-              letterSpacing: 0.5,
+              letterSpacing: 0.6,
+              fontFamily: 'NotoSansTamil',
               fontFamilyFallback: ['NotoSansTamil', 'sans-serif'],
             ),
           ),
-          const SizedBox(height: 6),
-
-          // Motto Pill
-          const Text(
-            'பயிர் வளர்ப்போம் • உயிர் காப்போம்  (Estd. 1929)',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF74C69D),
-              letterSpacing: 0.2,
-              fontFamilyFallback: ['NotoSansTamil', 'sans-serif'],
-            ),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           // Sleek hairline progress bar
           Container(
