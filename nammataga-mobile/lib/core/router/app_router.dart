@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/storage/secure_storage_service.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
@@ -9,6 +8,7 @@ import '../../features/grievance/presentation/grievance_intro_screen.dart';
 import '../../features/grievance/presentation/grievance_success_screen.dart';
 import '../../features/grievance/presentation/widgets/grievance_access_restricted_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/office_bearers/presentation/office_bearers_screen.dart';
 import '../../features/profile/presentation/account_settings_screen.dart';
 import '../../features/profile/presentation/address_details_screen.dart';
 import '../../features/profile/presentation/announcements_screen.dart';
@@ -102,16 +102,12 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
         },
       ),
     ),
-    // Stubs for forthcoming phases
     GoRoute(
       path: '/office-bearers',
       name: 'office-bearers',
       pageBuilder: (context, state) => CustomTransitionPage(
         key: state.pageKey,
-        child: const _PlaceholderScreen(
-          title: 'Office Bearers',
-          phase: 'Phase 04',
-        ),
+        child: const OfficeBearersScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
@@ -647,65 +643,3 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
 
 /// Global application router singleton
 final GoRouter appRouter = createRouter();
-
-class _PlaceholderScreen extends StatelessWidget {
-  final String title;
-  final String phase;
-
-  const _PlaceholderScreen({required this.title, required this.phase});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title), backgroundColor: Colors.white),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.secondary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  phase,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primaryDark,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'This screen is queued in the development roadmap.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 20),
-              OutlinedButton(
-                onPressed: () => context.pop(),
-                child: const Text('Back to Dashboard'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

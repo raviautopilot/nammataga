@@ -362,9 +362,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             letterSpacing: 0.5,
           ),
         ),
+        const SizedBox(height: 2),
+
+        // Establishment Year
+        const Text(
+          '(Established 1929)',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+            letterSpacing: 0.3,
+          ),
+        ),
         const SizedBox(height: 8),
 
-        // Motto & Estd Pill with matching symmetrical leaf icons
+        // Motto Pill with matching symmetrical leaf icons
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
           decoration: BoxDecoration(
@@ -390,7 +403,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           fontSize: 12,
                         ),
                       ),
-                      TextSpan(text: ' உயிர் காப்போம்  (Estd. 1929)'),
+                      TextSpan(text: ' உயிர் காப்போம்'),
                     ],
                   ),
                   textAlign: TextAlign.center,
