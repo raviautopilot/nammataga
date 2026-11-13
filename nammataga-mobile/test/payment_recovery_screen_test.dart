@@ -109,7 +109,7 @@ void main() {
 
       expect(find.text('Payment Verified Successfully'), findsOneWidget);
       expect(find.text('View Booking Confirmation'), findsOneWidget);
-      expect(find.text('Back to TAGA Towers Home'), findsOneWidget);
+      expect(find.text('Back to TAGA Tower Home'), findsOneWidget);
 
       // Warning advisory should not appear when already verified
       expect(find.text('Important Member Safety Advisory'), findsNothing);

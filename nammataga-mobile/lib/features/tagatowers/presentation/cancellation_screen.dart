@@ -20,7 +20,7 @@ import 'theme/tagatowers_design_tokens.dart';
 ///    If today >= checkInDate, displays warning "Cannot cancel booking on or after check-in date." and disables action.
 /// 3. Cancellation Terms & No-Refund Notice (CRITICAL):
 ///    - Prominent Alert card: "No Refund Will Be Provided"
-///    - "Please note that according to TAGA Towers booking policies, the advance payment of ₹XXX is strictly non-refundable upon cancellation. No refund will be credited."
+///    - "Please note that according to TAGA Tower booking policies, the advance payment of ₹XXX is strictly non-refundable upon cancellation. No refund will be credited."
 ///    - Terms checkbox: "I understand that cancelling this reservation is irreversible and that no refund will be provided."
 /// 4. Booking Summary Review:
 ///    - Booking Reference ID, Room Name, Stay Dates, Number of Beds, Advance Paid.
@@ -384,7 +384,7 @@ class _CancellationScreenState extends ConsumerState<CancellationScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'TAGA Towers Egmore',
+                      'TAGA Tower Egmore',
                       style: TextStyle(
                         color: TagaTowersDesignTokens.mintHighlight
                             .withValues(alpha: 0.9),
@@ -710,7 +710,7 @@ class _CancellationScreenState extends ConsumerState<CancellationScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Scheduled check-in: $formattedCheckIn at 12:00 AM. According to TAGA Towers regulations, cancellation requests must be made prior to the arrival date.',
+                  'Scheduled check-in: $formattedCheckIn at 12:00 AM. According to TAGA Tower regulations, cancellation requests must be made prior to the arrival date.',
                   style: const TextStyle(
                     fontSize: 12.5,
                     color: Color(0xFF7F1D1D),
@@ -782,7 +782,7 @@ class _CancellationScreenState extends ConsumerState<CancellationScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Please note that according to TAGA Towers booking policies, the advance payment of ₹${booking.advanceAmount} is strictly non-refundable upon cancellation. No refund will be credited.',
+            'Please note that according to TAGA Tower booking policies, the advance payment of ₹${booking.advanceAmount} is strictly non-refundable upon cancellation. No refund will be credited.',
             style: const TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w600,

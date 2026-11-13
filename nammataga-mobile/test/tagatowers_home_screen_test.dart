@@ -132,7 +132,7 @@ void main() {
 
         // 1. Hero Card exists
         expect(find.byType(TagaTowersHeroCard), findsOneWidget);
-        expect(find.text('TAGA Towers'), findsAtLeast(1));
+        expect(find.text('TAGA Tower'), findsAtLeast(1));
 
         // 2. Schedule Policy Card exists
         expect(find.text('BOOKING SCHEDULE & POLICIES'), findsOneWidget);

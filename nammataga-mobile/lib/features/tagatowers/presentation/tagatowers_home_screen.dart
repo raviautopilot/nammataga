@@ -15,7 +15,7 @@ import 'theme/tagatowers_design_tokens.dart';
 import 'widgets/date_range_picker_card.dart';
 import 'widgets/tagatowers_hero_card.dart';
 
-/// TAGA Towers Accommodation Home / Landing Screen (Agent 4)
+/// TAGA Tower Accommodation Home / Landing Screen (Agent 4)
 ///
 /// Strictly enforces the date-first booking workflow:
 /// 1. Subscription Guard: Restricts access to paid members only. Unpaid members
@@ -283,7 +283,7 @@ class _TagaTowersHomeScreenState extends ConsumerState<TagaTowersHomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'TAGA Towers',
+                          'TAGA Tower',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -520,7 +520,7 @@ class _TagaTowersHomeScreenState extends ConsumerState<TagaTowersHomeScreen> {
             icon: LucideIcons.moon,
             title: '12:00 AM to 12:00 AM Stay Cycle',
             description:
-                'For your comfort and convenience, TAGA Towers operates on a complete 24-hour cycle. Check-in commences at 12:00 AM Midnight, and check-out is at 12:00 AM Midnight the following day, offering you a full, uninterrupted stay experience.',
+                'For your comfort and convenience, TAGA Tower operates on a complete 24-hour cycle. Check-in commences at 12:00 AM Midnight, and check-out is at 12:00 AM Midnight the following day, offering you a full, uninterrupted stay experience.',
           ),
           const SizedBox(height: 8),
           _buildScheduleRow(

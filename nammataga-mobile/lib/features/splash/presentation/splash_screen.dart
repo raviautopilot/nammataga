@@ -6,7 +6,7 @@ import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_colors.dart';
 
 /// Premium cinematic splash screen celebrating the architectural landmark
-/// of TAGA Towers seamlessly integrated into an emerald atmosphere.
+/// of TAGA Tower seamlessly integrated into an emerald atmosphere.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -175,7 +175,7 @@ class _SplashScreenState extends State<SplashScreen>
                       // TOP: Association Crest & Prestigious Bilingual Header
                       _buildHeader(),
 
-                      // CENTER HERO: TAGA Towers seamlessly integrated into background
+                      // CENTER HERO: TAGA Tower seamlessly integrated into background
                       Expanded(child: _buildTagaTowersHero()),
 
                       // BOTTOM: Landmark Identity, Motto & Elegant Progress

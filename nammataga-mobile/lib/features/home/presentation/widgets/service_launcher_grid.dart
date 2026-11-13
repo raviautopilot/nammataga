@@ -5,6 +5,13 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
 
+/// Association Services section with 6 simple cards:
+/// 1. Office Bearers
+/// 2. Events & Media
+/// 3. Resources
+/// 4. Grievances
+/// 5. TAGA Tower
+/// 6. Member Profile
 class ServiceLauncherGrid extends ConsumerWidget {
   const ServiceLauncherGrid({super.key});
 
@@ -13,44 +20,32 @@ class ServiceLauncherGrid extends ConsumerWidget {
     final services = [
       _ServiceItem(
         title: 'Office Bearers',
-        subtitle: 'Leadership Directory',
         icon: LucideIcons.users,
-        isRestricted: false,
         route: '/office-bearers',
       ),
       _ServiceItem(
         title: 'Events & Media',
-        subtitle: 'Conferences & Gallery',
         icon: LucideIcons.calendarDays,
-        isRestricted: false,
         route: '/events',
       ),
       _ServiceItem(
         title: 'Resources',
-        subtitle: 'Documents & Bylaws',
         icon: LucideIcons.fileText,
-        isRestricted: true,
         route: '/resources',
       ),
       _ServiceItem(
         title: 'Grievances',
-        subtitle: 'Tickets & Petitions',
         icon: LucideIcons.messageSquareWarning,
-        isRestricted: true,
         route: '/grievance',
       ),
       _ServiceItem(
-        title: 'TAGA Towers',
-        subtitle: 'Room & Dorm Booking',
+        title: 'TAGA Tower',
         icon: LucideIcons.building2,
-        isRestricted: true,
         route: '/taga-towers',
       ),
       _ServiceItem(
         title: 'Member Profile',
-        subtitle: 'Subscription & ID',
         icon: LucideIcons.userCircle2,
-        isRestricted: true,
         route: '/profile',
       ),
     ];
@@ -59,23 +54,23 @@ class ServiceLauncherGrid extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            Text(
+          children: [
+            Container(
+              width: 3.5,
+              height: 16,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
               'Association Services',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
                 letterSpacing: -0.2,
-              ),
-            ),
-            Text(
-              'Quick Access',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
               ),
             ),
           ],
@@ -89,7 +84,7 @@ class ServiceLauncherGrid extends ConsumerWidget {
             crossAxisCount: 3,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
-            childAspectRatio: 0.92,
+            childAspectRatio: 0.98,
           ),
           itemBuilder: (context, index) {
             final item = services[index];
@@ -100,7 +95,7 @@ class ServiceLauncherGrid extends ConsumerWidget {
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
+                  horizontal: 6,
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
@@ -142,23 +137,13 @@ class ServiceLauncherGrid extends ConsumerWidget {
                     Text(
                       item.title,
                       textAlign: TextAlign.center,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.subtitle,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 9.5,
-                        color: AppColors.textMuted,
+                        height: 1.2,
                       ),
                     ),
                   ],
@@ -174,16 +159,12 @@ class ServiceLauncherGrid extends ConsumerWidget {
 
 class _ServiceItem {
   final String title;
-  final String subtitle;
   final IconData icon;
-  final bool isRestricted;
   final String route;
 
   const _ServiceItem({
     required this.title,
-    required this.subtitle,
     required this.icon,
-    required this.isRestricted,
     required this.route,
   });
 }

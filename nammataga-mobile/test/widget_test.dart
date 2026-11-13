@@ -172,14 +172,23 @@ void main() {
 
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('Namma TAGA'), findsWidgets);
+      expect(find.text('TAGA'), findsWidgets);
       expect(find.text('Member Portal'), findsOneWidget);
       expect(find.text('Guest Portal'), findsNothing);
       expect(find.text('Association Services'), findsOneWidget);
       expect(find.text('Office Bearers'), findsOneWidget);
-      expect(find.text('About Us'), findsOneWidget);
+      expect(find.text('TAGA Tower'), findsOneWidget);
+      expect(find.text('About Us'), findsNothing);
       expect(find.text('Our Objectives'), findsOneWidget);
       expect(find.text('Contact Us'), findsOneWidget);
+      expect(
+        find.text('Recognised G.O. No. 831, Dated 08.08.1929'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Registration Number: 246/2001'),
+        findsOneWidget,
+      );
     },
   );
 

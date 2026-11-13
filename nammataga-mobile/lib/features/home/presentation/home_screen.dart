@@ -7,14 +7,18 @@ import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/home_provider.dart';
-import 'widgets/about_us_section.dart';
-import 'widgets/animated_stats_ticker.dart';
 import 'widgets/contact_glass_hub.dart';
 import 'widgets/home_hero_card.dart';
-import 'widgets/mission_vision_section.dart';
 import 'widgets/objectives_timeline.dart';
 import 'widgets/service_launcher_grid.dart';
 
+/// Professional, compact Home Dashboard for logged-in TAGA members.
+/// Strictly ordered into 5 essential sections:
+/// 1. Top Header ("TAGA Member Portal")
+/// 2. Green Member Profile Card (TAGA, dynamic name, TAGA ID, association name, 4 G.O./Reg details)
+/// 3. Our Objectives (4 concise bold statements)
+/// 4. Association Services (6 simple cards without subtitles, "TAGA Tower")
+/// 5. Contact Us (Contact information, Call, Email, Portal, Map)
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -52,7 +56,7 @@ class HomeScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text(
-                  'Namma TAGA',
+                  'TAGA',
                   style: TextStyle(
                     fontFamily: 'Roboto',
                     fontSize: 16,
@@ -105,7 +109,6 @@ class HomeScreen extends ConsumerWidget {
         onRefresh: () async {
           HapticFeedback.lightImpact();
           ref.invalidate(aboutInfoProvider);
-          ref.invalidate(statsProvider);
           ref.invalidate(objectivesProvider);
           ref.invalidate(contactInfoProvider);
         },
@@ -117,31 +120,19 @@ class HomeScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
-              // 1. Dynamic Hero Header Card (strictly from /api/public/about)
+              // 1. Green Member Profile Card
               HomeHeroCard(),
               SizedBox(height: 16),
 
-              // 2. Real-time Animated Statistics Counters (strictly from /api/public/about/stats)
-              AnimatedStatsTicker(),
-              SizedBox(height: 18),
-
-              // 3. Quick Association Services Launcher (Member feature routing)
-              ServiceLauncherGrid(),
-              SizedBox(height: 18),
-
-              // 4. Official About Us Section (strictly from /api/public/about description)
-              AboutUsSection(),
-              SizedBox(height: 18),
-
-              // 5. Mission & Vision Dual Cards (strictly from /api/public/about mission & vision)
-              MissionVisionSection(),
-              SizedBox(height: 18),
-
-              // 6. Strategic Objectives & TAGA Towers Showcase (strictly from /api/public/about/objectives)
+              // 2. Our Objectives (Directly below green profile card)
               ObjectivesTimeline(),
               SizedBox(height: 18),
 
-              // 7. Contact Us Hub (strictly from /api/public/about/contact)
+              // 3. Association Services (Six simple cards)
+              ServiceLauncherGrid(),
+              SizedBox(height: 18),
+
+              // 4. Contact Us (Final section of the dashboard)
               ContactGlassHub(),
             ],
           ),
@@ -166,18 +157,14 @@ class HomeScreen extends ConsumerWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.destructive,
+              foregroundColor: Colors.white,
             ),
-            onPressed: () async {
+            onPressed: () {
               Navigator.of(ctx).pop();
-              await ref.read(authProvider.notifier).logout();
-              if (context.mounted) {
-                context.go('/login');
-              }
+              ref.read(authProvider.notifier).logout();
+              context.go('/login');
             },
-            child: const Text(
-              'Sign Out',
-              style: TextStyle(color: Colors.white),
-            ),
+            child: const Text('Sign Out'),
           ),
         ],
       ),

@@ -293,7 +293,7 @@ class MembershipDetailsScreen extends ConsumerWidget {
                     _buildBenefitItem(
                       'Direct grievance petitions to state leadership',
                     ),
-                    _buildBenefitItem('TAGA Towers room and dorm bookings'),
+                    _buildBenefitItem('TAGA Tower room and dorm bookings'),
                     _buildBenefitItem(
                       'Association bulletins & community updates',
                     ),

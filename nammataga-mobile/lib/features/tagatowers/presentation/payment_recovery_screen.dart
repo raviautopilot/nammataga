@@ -206,7 +206,7 @@ class _PaymentRecoveryScreenState extends ConsumerState<PaymentRecoveryScreen>
       _isChecking = true;
       _status = PaymentRecoveryStatus.verifying;
       _errorMessage = null;
-      _statusMessage = 'Connecting to TAGA Towers server & re-verifying...';
+      _statusMessage = 'Connecting to TAGA Tower server & re-verifying...';
     });
 
     final repo = ref.read(tagaTowersRepositoryProvider);
@@ -353,8 +353,8 @@ class _PaymentRecoveryScreenState extends ConsumerState<PaymentRecoveryScreen>
 
   /// Opens mail client with pre-filled payment dispute details
   Future<void> _sendEmailSupport() async {
-    final subject = 'TAGA Towers Room Booking Payment Issue - ${_razorpayPaymentId ?? _bookingId ?? 'Member Assistance'}';
-    final body = '''Dear TAGA Towers Caretaker / Admin,
+    final subject = 'TAGA Tower Room Booking Payment Issue - ${_razorpayPaymentId ?? _bookingId ?? 'Member Assistance'}';
+    final body = '''Dear TAGA Tower Caretaker / Admin,
 
 I experienced a network or verification issue during room booking advance payment.
 
@@ -363,7 +363,7 @@ Details:
 - Razorpay Order ID: ${_razorpayOrderId ?? 'N/A'}
 - Razorpay Payment ID: ${_razorpayPaymentId ?? 'N/A'}
 - Amount Paid: ₹${_amount > 0 ? _amount : 200}
-- Room: ${_roomName ?? 'TAGA Towers Room'}
+- Room: ${_roomName ?? 'TAGA Tower Room'}
 
 Kindly confirm my booking or verify the transaction.
 
@@ -400,7 +400,7 @@ Thank you.''';
     );
   }
 
-  /// Navigates safely back to TAGA Towers Home
+  /// Navigates safely back to TAGA Tower Home
   void _navigateToTowersHome() {
     context.go('/taga-towers');
   }
@@ -466,7 +466,7 @@ Thank you.''';
       centerTitle: false,
       leading: IconButton(
         icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
-        tooltip: 'Back to TAGA Towers',
+        tooltip: 'Back to TAGA Tower',
         onPressed: _navigateToTowersHome,
       ),
       title: const Column(
@@ -482,7 +482,7 @@ Thank you.''';
             ),
           ),
           Text(
-            'TAGA Towers Egmore',
+            'TAGA Tower Egmore',
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w500,
@@ -623,7 +623,7 @@ Thank you.''';
         borderColor = const Color(0xFF86EFAC);
         bannerTitle = 'Payment Verified Successfully';
         bannerDesc =
-            'Your booking advance payment has been validated! Your room reservation at TAGA Towers, Egmore is officially confirmed.';
+            'Your booking advance payment has been validated! Your room reservation at TAGA Tower, Egmore is officially confirmed.';
         break;
 
       case PaymentRecoveryStatus.issue:
@@ -1026,7 +1026,7 @@ Thank you.''';
               ),
               child: const Center(
                 child: Text(
-                  'Back to TAGA Towers Home',
+                  'Back to TAGA Tower Home',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 14,
@@ -1099,7 +1099,7 @@ Thank you.''';
         ),
         const SizedBox(height: 12),
 
-        // Back to TAGA Towers Home (Safe Exit)
+        // Back to TAGA Tower Home (Safe Exit)
         BouncyButton(
           onTap: _navigateToTowersHome,
           child: Container(
@@ -1123,7 +1123,7 @@ Thank you.''';
                 ),
                 SizedBox(width: 8),
                 Text(
-                  'Back to TAGA Towers Home',
+                  'Back to TAGA Tower Home',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 14,
@@ -1190,7 +1190,7 @@ Thank you.''';
           ),
           const SizedBox(height: 8),
           Text(
-            'Your booking reference remains preserved in the TAGA Towers system. Re-initiating payment may cause duplicate debits from your bank account.',
+            'Your booking reference remains preserved in the TAGA Tower system. Re-initiating payment may cause duplicate debits from your bank account.',
             style: TextStyle(
               fontSize: 11.5,
               height: 1.4,
@@ -1245,7 +1245,7 @@ Thank you.''';
           // Caretaker 1: Mr. Muthu
           _buildContactTile(
             name: 'Mr. Muthu',
-            role: 'Caretaker, TAGA Towers',
+            role: 'Caretaker, TAGA Tower',
             phoneDisplay: '96007 63744',
             phoneNumber: '+919600763744',
             icon: LucideIcons.userCheck,
@@ -1255,7 +1255,7 @@ Thank you.''';
           // Caretaker 2: Mr. Mariyappan
           _buildContactTile(
             name: 'Mr. Mariyappan',
-            role: 'Caretaker, TAGA Towers',
+            role: 'Caretaker, TAGA Tower',
             phoneDisplay: '96770 10300',
             phoneNumber: '+919677010300',
             icon: LucideIcons.userCheck,

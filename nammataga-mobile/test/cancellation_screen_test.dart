@@ -125,7 +125,7 @@ void main() {
 
       // Header
       expect(find.text('Cancel Reservation'), findsOneWidget);
-      expect(find.text('TAGA Towers Egmore'), findsOneWidget);
+      expect(find.text('TAGA Tower Egmore'), findsOneWidget);
 
       // Booking Reference ID
       expect(find.text('BK-VALID-1001'), findsOneWidget);

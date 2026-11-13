@@ -21,13 +21,13 @@ class _CaretakerInfo {
   const _CaretakerInfo({required this.name, required this.phone});
 }
 
-/// Official Caretaker contacts for TAGA Towers, Egmore, Chennai
+/// Official Caretaker contacts for TAGA Tower, Egmore, Chennai
 const List<_CaretakerInfo> _kCaretakers = [
   _CaretakerInfo(name: 'Mr. Muthu', phone: '96007 63744'),
   _CaretakerInfo(name: 'Mr. Mariyappan', phone: '96770 10300'),
 ];
 
-/// Post-booking confirmation screen for TAGA Towers accommodations.
+/// Post-booking confirmation screen for TAGA Tower accommodations.
 ///
 /// Strict Rule:
 /// - Display this screen ONLY after the backend confirms the booking
@@ -339,8 +339,8 @@ class _BookingConfirmationScreenState
         // Warm subtitle
         Text(
           widget.booking.bookerName.trim().isNotEmpty
-              ? 'Thank you, ${widget.booking.bookerName.trim()}! Your accommodation at TAGA Towers Chennai is confirmed and secured.'
-              : 'Your accommodation at TAGA Towers Chennai has been confirmed and secured.',
+              ? 'Thank you, ${widget.booking.bookerName.trim()}! Your accommodation at TAGA Tower Chennai is confirmed and secured.'
+              : 'Your accommodation at TAGA Tower Chennai has been confirmed and secured.',
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 14.5,
@@ -470,7 +470,7 @@ class _BookingConfirmationScreenState
           ),
           const SizedBox(height: 8),
           const Text(
-            'Keep this Booking Reference ID ready upon arrival at TAGA Towers check-in desk.',
+            'Keep this Booking Reference ID ready upon arrival at TAGA Tower check-in desk.',
             style: TextStyle(
               fontSize: 11.5,
               color: AppColors.textSecondary,
@@ -705,7 +705,7 @@ class _BookingConfirmationScreenState
                       ),
                       const SizedBox(height: 2),
                       const Text(
-                        'TAGA Towers operates on a strict 12:00 AM Midnight to 12:00 AM Midnight cycle.',
+                        'TAGA Tower operates on a strict 12:00 AM Midnight to 12:00 AM Midnight cycle.',
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -1165,7 +1165,7 @@ class _BookingConfirmationScreenState
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Remaining Balance: The remainder of the room tariff is payable at check-in or check-out directly at TAGA Towers reception.',
+                    'Remaining Balance: The remainder of the room tariff is payable at check-in or check-out directly at TAGA Tower reception.',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -1237,7 +1237,7 @@ class _BookingConfirmationScreenState
                     ),
                     SizedBox(width: 6),
                     Text(
-                      'TAGA Towers Location',
+                      'TAGA Tower Location',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,

@@ -122,7 +122,7 @@ class TagatowersAccessRestrictedScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 14),
                   const Text(
-                    'TAGA Towers Accommodation',
+                    'TAGA Tower Accommodation',
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
@@ -265,7 +265,7 @@ class TagatowersAccessRestrictedScreen extends StatelessWidget {
 
                         // Description
                         const Text(
-                          'TAGA Towers room booking is an exclusive facility reserved for active annual subscribers of Namma TAGA. Please ensure your membership subscription is active to reserve rooms and dormitories.',
+                          'TAGA Tower room booking is an exclusive facility reserved for active annual subscribers of  TAGA. Please ensure your membership subscription is active to reserve rooms and dormitories.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13.5,

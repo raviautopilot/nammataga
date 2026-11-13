@@ -6,6 +6,18 @@ import '../../../auth/providers/auth_provider.dart';
 import '../../../profile/providers/profile_provider.dart';
 import '../../providers/home_provider.dart';
 
+/// Compact, professional Green Member Profile Card for TAGA Member Portal.
+/// Displays:
+/// 1. TAGA branding & Established 1929
+/// 2. Subscriber Member badge
+/// 3. Dynamic Vanakkam, [Member Name]
+/// 4. Dynamic TAGA ID
+/// 5. Tamil Nadu Government Agricultural Graduates Association
+/// 6. Four official G.O. and registration details:
+///    - Recognised G.O. No. 831, Dated 08.08.1929
+///    - G.O. No. 48, Dated 06.01.1973
+///    - G.O. No. 94, Dated 02.07.2009
+///    - Registration Number: 246/2001
 class HomeHeroCard extends ConsumerWidget {
   const HomeHeroCard({super.key});
 
@@ -21,71 +33,28 @@ class HomeHeroCard extends ConsumerWidget {
             ? sessionAsync.value!.displayName
             : 'Member');
     final tagaId = profileAsync.value?.tagaId ?? '';
-    final isPaid = profileAsync.value?.isPaid ?? sessionAsync.value?.isPaid ?? false;
+    final isPaid =
+        profileAsync.value?.isPaid ?? sessionAsync.value?.isPaid ?? false;
 
-    return aboutAsync.when(
-      data: (about) => _buildHero(
-        context: context,
-        memberName: memberName,
-        tagaId: tagaId,
-        isPaid: isPaid,
-        establishedYear: about.establishedYear,
-        associationName: about.name,
-        tagline: about.tagline,
-        heroImageUrl: about.heroImageUrl,
-      ),
-      loading: () => _buildHeroSkeleton(memberName: memberName),
-      error: (error, stack) => _buildHero(
-        context: context,
-        memberName: memberName,
-        tagaId: tagaId,
-        isPaid: isPaid,
-        establishedYear: 0,
-        associationName: '',
-        tagline: '',
-        heroImageUrl: '',
-      ),
-    );
-  }
+    final establishedYear = aboutAsync.value?.establishedYear ?? 1929;
 
-  Widget _buildHero({
-    required BuildContext context,
-    required String memberName,
-    required String tagaId,
-    required bool isPaid,
-    required int establishedYear,
-    required String associationName,
-    required String tagline,
-    required String heroImageUrl,
-  }) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xFF092014),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.28),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
+            color: AppColors.primary.withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         child: Stack(
           children: [
-            // Background Image if provided by backend
-            if (heroImageUrl.isNotEmpty)
-              Positioned.fill(
-                child: Image.network(
-                  heroImageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const SizedBox.shrink(),
-                ),
-              ),
-
             // Cinematic emerald gradient overlay
             Positioned.fill(
               child: DecoratedBox(
@@ -94,23 +63,24 @@ class HomeHeroCard extends ConsumerWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      const Color(0xFF071B10).withValues(alpha: 0.94),
-                      const Color(0xFF0D2C1B).withValues(alpha: 0.92),
-                      const Color(0xFF1B4332).withValues(alpha: 0.88),
-                      const Color(0xFF2D6A4F).withValues(alpha: 0.82),
+                      const Color(0xFF071B10),
+                      const Color(0xFF0D2C1B),
+                      const Color(0xFF1B4332),
+                      const Color(0xFF2D6A4F),
                     ],
+                    stops: const [0.0, 0.35, 0.72, 1.0],
                   ),
                 ),
               ),
             ),
 
-            // Ambient background radiance ring
+            // Ambient background radiance glow
             Positioned(
               right: -30,
               top: -30,
               child: Container(
-                width: 160,
-                height: 160,
+                width: 150,
+                height: 150,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
@@ -124,36 +94,35 @@ class HomeHeroCard extends ConsumerWidget {
             ),
 
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Top row: Emblem, Established Badge (from backend), Status Pill
+                  // Top row: Organization branding & Subscriber Member badge
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         children: [
                           Container(
-                            width: 44,
-                            height: 44,
+                            width: 42,
+                            height: 42,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.white,
                               border: Border.all(
                                 color: const Color(0xFFD8F3DC),
-                                width: 2,
+                                width: 1.8,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(
-                                    0xFF52B788,
-                                  ).withValues(alpha: 0.35),
-                                  blurRadius: 10,
+                                  color: const Color(0xFF52B788)
+                                      .withValues(alpha: 0.35),
+                                  blurRadius: 8,
                                 ),
                               ],
                             ),
-                            padding: const EdgeInsets.all(2),
+                            padding: const EdgeInsets.all(1.5),
                             child: ClipOval(
                               child: Image.asset(
                                 AppAssets.logo,
@@ -170,45 +139,44 @@ class HomeHeroCard extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'Namma TAGA',
+                                'TAGA',
                                 style: TextStyle(
-                                  fontSize: 15,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
-                                  letterSpacing: 0.2,
+                                  letterSpacing: 0.4,
                                 ),
                               ),
-                              if (establishedYear > 0)
-                                Container(
-                                  margin: const EdgeInsets.only(top: 2),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 1.5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF2D6A4F),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: const Color(0xFF52B788),
-                                      width: 0.8,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'Established $establishedYear',
-                                    style: const TextStyle(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                      letterSpacing: 0.2,
-                                    ),
+                              Container(
+                                margin: const EdgeInsets.only(top: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 1.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2D6A4F),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: const Color(0xFF52B788),
+                                    width: 0.8,
                                   ),
                                 ),
+                                child: Text(
+                                  'Established ${establishedYear > 0 ? establishedYear : 1929}',
+                                  style: const TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ],
                       ),
 
-                      // Verified Member / Subscriber Status Pill
+                      // Subscriber Member Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
@@ -247,155 +215,114 @@ class HomeHeroCard extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
 
-                  // Greeting & Real Member Name from Backend Profile
+                  // Greeting & Dynamic Member Name
                   Text(
                     'Vanakkam, $memberName',
                     style: const TextStyle(
-                      fontSize: 20,
+                      fontSize: 19,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                       letterSpacing: -0.3,
                     ),
                   ),
 
-                  // TAGA ID when available
+                  // Dynamic TAGA ID
                   if (tagaId.isNotEmpty) ...[
                     const SizedBox(height: 3),
                     Text(
                       'TAGA ID: $tagaId',
                       style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
                         color: Color(0xFFB7E4C7),
-                        letterSpacing: 0.2,
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ],
 
-                  // Official Association Name from Backend API
-                  if (associationName.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      associationName,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFD8F3DC),
-                        letterSpacing: -0.1,
-                      ),
-                    ),
-                  ],
+                  const SizedBox(height: 8),
 
-                  // Dynamic Tagline from Backend API
-                  if (tagline.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      tagline,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.88),
-                        height: 1.45,
+                  // Full Association Name
+                  const Text(
+                    'Tamil Nadu Government Agricultural Graduates Association',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFD8F3DC),
+                      letterSpacing: -0.1,
+                      height: 1.3,
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Official Recognised G.O. & Registration Block
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.28),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.14),
+                        width: 1.0,
                       ),
                     ),
-                  ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Recognised G.O. No. 831, Dated 08.08.1929',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFE8F5EE),
+                            height: 1.4,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'G.O. No. 48, Dated 06.01.1973',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFE8F5EE),
+                            height: 1.4,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'G.O. No. 94, Dated 02.07.2009',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFE8F5EE),
+                            height: 1.4,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Registration Number: 246/2001',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFB7E4C7),
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeroSkeleton({required String memberName}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF092014),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0xFF133924),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 90,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF133924),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        width: 70,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF133924),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Container(
-                width: 80,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF133924),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Vanakkam, $memberName',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            width: double.infinity * 0.7,
-            height: 14,
-            decoration: BoxDecoration(
-              color: const Color(0xFF133924),
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            width: double.infinity * 0.9,
-            height: 12,
-            decoration: BoxDecoration(
-              color: const Color(0xFF133924),
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-        ],
       ),
     );
   }

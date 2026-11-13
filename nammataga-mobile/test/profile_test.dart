@@ -405,7 +405,7 @@ void main() {
         const MemberNotification(
           id: 'ann_1',
           title: 'Special General Body Meeting 2026',
-          message: 'All members are cordially invited to TAGA Towers auditorium.',
+          message: 'All members are cordially invited to TAGA Tower auditorium.',
           priority: 'urgent',
           isRead: false,
           createdAt: '2026-10-25',
@@ -433,7 +433,7 @@ void main() {
 
       expect(find.text('Announcements'), findsWidgets);
       expect(find.text('Special General Body Meeting 2026'), findsOneWidget);
-      expect(find.text('All members are cordially invited to TAGA Towers auditorium.'), findsOneWidget);
+      expect(find.text('All members are cordially invited to TAGA Tower auditorium.'), findsOneWidget);
       expect(find.text('URGENT'), findsOneWidget);
       expect(find.text('Annual Subscription Renewal Notice'), findsOneWidget);
       expect(find.text('NORMAL'), findsOneWidget);

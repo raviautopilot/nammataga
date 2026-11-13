@@ -4,7 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../theme/tagatowers_design_tokens.dart';
 
-/// An immersive, high-end hero card showcasing the TAGA Towers building banner,
+/// An immersive, high-end hero card showcasing the TAGA Tower building banner,
 /// an emerald gradient overlay, typography, and Chennai location pill.
 class TagaTowersHeroCard extends StatelessWidget {
   /// Custom image URL or asset if overriding the default [AppAssets.tagatower]
@@ -37,7 +37,7 @@ class TagaTowersHeroCard extends StatelessWidget {
     this.height,
     this.showTimingBadge = false,
     this.showLocationPill = true,
-    this.title = 'TAGA Towers',
+    this.title = 'TAGA Tower',
     this.subtitle =
         'Comfortable accommodation facility for TAGA members in Chennai',
     this.onTap,

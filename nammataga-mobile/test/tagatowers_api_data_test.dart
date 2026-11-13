@@ -175,7 +175,7 @@ class MockDioInterceptor extends Interceptor {
 }
 
 void main() {
-  group('ApiEndpoints TAGA Towers verification', () {
+  group('ApiEndpoints TAGA Tower verification', () {
     test('Endpoints URLs are well formed', () {
       expect(ApiEndpoints.towersRooms, contains('/towers/rooms'));
       expect(ApiEndpoints.towersAvailability('apex-1', '2026-11-01'), contains('/towers/availability?roomId=apex-1&date=2026-11-01'));
@@ -191,7 +191,7 @@ void main() {
     });
   });
 
-  group('TAGA Towers Domain Models', () {
+  group('TAGA Tower Domain Models', () {
     test('Room parsing, single bed allowance, and advance calculation', () {
       const room = Room(
         id: 'apex-1',

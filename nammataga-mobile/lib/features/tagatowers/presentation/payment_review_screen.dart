@@ -15,7 +15,7 @@ import '../providers/tagatowers_provider.dart';
 import 'theme/tagatowers_design_tokens.dart';
 import 'widgets/booking_step_progress_bar.dart';
 
-/// Screen representing Step 4 of the TAGA Towers booking flow:
+/// Screen representing Step 4 of the TAGA Tower booking flow:
 /// Pre-Payment Review & Razorpay Gateway Integration.
 ///
 /// Features:
@@ -153,7 +153,7 @@ class _PaymentReviewScreenState extends ConsumerState<PaymentReviewScreen> {
       final options = <String, dynamic>{
         'key': orderResponse.key,
         'amount': orderResponse.amount, // in paise
-        'name': 'TAGA Towers',
+        'name': 'TAGA Tower',
         'description': 'Room Booking Advance',
         'order_id': orderResponse.orderId,
         'prefill': {
@@ -412,7 +412,7 @@ class _PaymentReviewScreenState extends ConsumerState<PaymentReviewScreen> {
                     ),
                   ),
                   onPressed: () => context.go('/taga-towers'),
-                  child: const Text('Return to TAGA Towers'),
+                  child: const Text('Return to TAGA Tower'),
                 ),
               ],
             ),
@@ -741,7 +741,7 @@ class _PaymentReviewScreenState extends ConsumerState<PaymentReviewScreen> {
                         ),
                         SizedBox(width: 4),
                         Text(
-                          'TAGA Towers, Egmore, Chennai',
+                          'TAGA Tower, Egmore, Chennai',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
@@ -1116,7 +1116,7 @@ class _PaymentReviewScreenState extends ConsumerState<PaymentReviewScreen> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'TAGA Towers operates on held accommodation inventory. Advance payments are strictly non-refundable upon cancellation.\n\n'
+                  'TAGA Tower operates on held accommodation inventory. Advance payments are strictly non-refundable upon cancellation.\n\n'
                   'Cancellations are only permitted strictly prior to your check-in date to release beds for fellow members.',
                   style: TextStyle(
                     fontSize: 11.5,

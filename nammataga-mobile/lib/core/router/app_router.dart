@@ -429,7 +429,7 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
             booking ??= const BookingResponse(
               id: '',
               roomId: '',
-              roomName: 'TAGA Towers Room',
+              roomName: 'TAGA Tower Room',
               checkInDate: '',
               checkOutDate: '',
               bookerName: '',

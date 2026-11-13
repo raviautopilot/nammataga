@@ -149,7 +149,7 @@ void main() {
         'id': 'p2',
         'title': 'Annual General Meeting 2025',
         'date': '2025-03-15 16:50',
-        'location': 'TAGA Towers',
+        'location': 'TAGA Tower',
         'status': 'upcoming',
       });
 

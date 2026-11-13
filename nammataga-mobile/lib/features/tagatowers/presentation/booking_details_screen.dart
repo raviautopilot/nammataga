@@ -13,7 +13,7 @@ import '../domain/booking_model.dart';
 import '../providers/tagatowers_provider.dart';
 import 'theme/tagatowers_design_tokens.dart';
 
-/// Screen displaying the comprehensive inspection details for a TAGA Towers booking.
+/// Screen displaying the comprehensive inspection details for a TAGA Tower booking.
 ///
 /// Supports loading via direct [initialBooking] payload or lazy fetching using [bookingId].
 class BookingDetailsScreen extends ConsumerStatefulWidget {
@@ -1439,7 +1439,7 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'TAGA Towers / Velanmai Illam',
+                        'TAGA Tower / Velanmai Illam',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,

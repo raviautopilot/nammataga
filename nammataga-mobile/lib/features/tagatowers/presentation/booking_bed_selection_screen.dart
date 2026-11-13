@@ -16,7 +16,7 @@ import '../providers/booking_flow_provider.dart';
 import 'theme/tagatowers_design_tokens.dart';
 import 'widgets/booking_step_progress_bar.dart';
 
-/// Step 1 of the TAGA Towers Booking Flow:
+/// Step 1 of the TAGA Tower Booking Flow:
 /// Booking Type & Bed Selection Screen.
 ///
 /// Handles:
@@ -1535,7 +1535,7 @@ class _BookingBedSelectionScreenState
             ),
             const SizedBox(height: 3),
             const Text(
-              'TAGA Towers room sharing policy requires occupants of the same shared room to be of the same gender.',
+              'TAGA Tower room sharing policy requires occupants of the same shared room to be of the same gender.',
               style: TextStyle(
                 fontSize: 11.5,
                 color: AppColors.textSecondary,
@@ -1799,7 +1799,7 @@ class _BookingBedSelectionScreenState
               SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Remaining balance is payable after stay upon checkout at TAGA Towers reception.',
+                  'Remaining balance is payable after stay upon checkout at TAGA Tower reception.',
                   style: TextStyle(
                     fontSize: 11.5,
                     color: AppColors.textSecondary,

@@ -9,7 +9,7 @@ import 'package:nammataga_mobile/features/tagatowers/presentation/widgets/tagato
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('TAGA Towers Design Tokens', () {
+  group('TAGA Tower Design Tokens', () {
     test('Advance rate helper returns correct bed rates', () {
       expect(TagaTowersDesignTokens.dormitoryAdvance, 100);
       expect(TagaTowersDesignTokens.standardAdvance, 200);
@@ -99,7 +99,7 @@ void main() {
         ),
       );
 
-      expect(find.text('TAGA Towers'), findsOneWidget);
+      expect(find.text('TAGA Tower'), findsOneWidget);
       expect(find.text('Comfortable accommodation facility for TAGA members in Chennai'), findsOneWidget);
       expect(find.text('Egmore, Chennai'), findsOneWidget);
     });
@@ -126,7 +126,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('TAGA Towers'));
+      await tester.tap(find.text('TAGA Tower'));
       await tester.pump();
 
       expect(tapped, isTrue);
@@ -219,7 +219,7 @@ void main() {
         ),
       );
 
-      expect(find.text('TAGA Towers Accommodation'), findsOneWidget);
+      expect(find.text('TAGA Tower Accommodation'), findsOneWidget);
       expect(find.text('Paid Members Only'), findsOneWidget);
       expect(find.text('Subscriber Access Only'), findsOneWidget);
       expect(find.textContaining('reserved for active annual subscribers'), findsOneWidget);

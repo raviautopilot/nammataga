@@ -12,7 +12,7 @@ import '../domain/booking_model.dart';
 import '../providers/tagatowers_provider.dart';
 import 'theme/tagatowers_design_tokens.dart';
 
-/// My Bookings Screen for TAGA Towers Accommodation module.
+/// My Bookings Screen for TAGA Tower Accommodation module.
 ///
 /// Provides two distinct tabs:
 /// 1. "Active & Upcoming" - Displays current stays and upcoming reservations.
@@ -334,7 +334,7 @@ class _ActiveUpcomingTab extends ConsumerWidget {
                 child: _EmptyBookingsView(
                   title: 'No Active or Upcoming Bookings',
                   message:
-                      'You do not have any room stays scheduled at TAGA Towers right now. Reserve in advance for your upcoming trip to Egmore, Chennai.',
+                      'You do not have any room stays scheduled at TAGA Tower right now. Reserve in advance for your upcoming trip to Egmore, Chennai.',
                   buttonLabel: 'Book a Room',
                   onButtonPressed: onBookRoom,
                   icon: LucideIcons.calendarX,
