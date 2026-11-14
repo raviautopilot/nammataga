@@ -371,7 +371,7 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                             SizedBox(height: 10),
                             Text(
-                              'TAGA TOWERS',
+                              'TAGA TOWER',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
@@ -401,7 +401,7 @@ class _SplashScreenState extends State<SplashScreen>
         children: [
           // BOTTOM SECTION: English Landmark Building Name
           const Text(
-            'TAGA TOWERS',
+            'TAGA TOWER',
             style: TextStyle(
               fontSize: 16.5,
               fontWeight: FontWeight.bold,

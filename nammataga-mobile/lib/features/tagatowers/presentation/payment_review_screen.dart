@@ -241,33 +241,15 @@ class _PaymentReviewScreenState extends ConsumerState<PaymentReviewScreen> {
     } catch (e) {
       debugPrint('[PaymentReviewScreen] Backend payment verification error: $e');
 
-      // Backend verification failed or timed out:
-      // Save payment credentials in flow state for recovery
-      ref.read(bookingFlowNotifierProvider.notifier).setPaymentInterrupted(
-            bookingId: booking.id,
-            orderId: orderId,
-            paymentId: paymentId,
-            signature: signature,
-          );
-
       if (!mounted) return;
 
-      // Navigate immediately to the dedicated payment recovery screen
-      context.go(
-        '/taga-towers/payment-recovery',
-        extra: {
-          'booking': booking,
-          'paymentId': paymentId,
-          'orderId': orderId,
-          'signature': signature,
-          'error': e.toString(),
-        },
-      );
+      // Navigate to My Bookings directly (payment recovery screen disabled)
+      context.go('/taga-towers/my-bookings');
     }
   }
 
   /// Handles user closing or cancelling the Razorpay modal.
-  /// Preserves the draft booking hold state so user can retry or recover if bank debited.
+  /// Preserves the draft booking hold state so user can retry or check in my bookings.
   Future<void> _onPaymentDismissed(BookingResponse booking) async {
     if (!mounted) return;
 
@@ -276,36 +258,21 @@ class _PaymentReviewScreenState extends ConsumerState<PaymentReviewScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
+      const SnackBar(
+        content: Row(
           children: [
             Icon(LucideIcons.info, color: Colors.white, size: 16),
             SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Payment window closed. If money was debited, tap Verify below.',
+                'Payment window closed.',
                 style: TextStyle(fontSize: 12.5),
               ),
             ),
           ],
         ),
-        action: SnackBarAction(
-          label: 'Verify',
-          textColor: const Color(0xFFFCD34D),
-          onPressed: () {
-            context.push(
-              '/taga-towers/payment-recovery',
-              extra: {
-                'booking': booking,
-                'bookingId': booking.id,
-                'amount': booking.advanceAmount,
-                'roomName': booking.roomName,
-              },
-            );
-          },
-        ),
-        backgroundColor: const Color(0xFF1E293B),
-        duration: const Duration(seconds: 6),
+        backgroundColor: Color(0xFF1E293B),
+        duration: Duration(seconds: 4),
       ),
     );
   }

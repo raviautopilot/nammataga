@@ -117,20 +117,8 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
     }
   }
 
-  void _navigateToRecovery(BookingResponse booking) {
-    HapticFeedback.mediumImpact();
-    context.push(
-      '/taga-towers/payment-recovery',
-      extra: {
-        'booking': booking,
-        'bookingId': booking.id,
-        'orderId': booking.razorpayOrderId,
-        'paymentId': booking.razorpayPaymentId,
-        'amount': booking.advanceAmount,
-        'roomName': booking.roomName,
-      },
-    );
-  }
+  // Navigation to payment recovery screen is disabled per user request
+  // void _navigateToRecovery(BookingResponse booking) { ... }
 
   Future<void> _navigateToCancellation(BookingResponse booking) async {
     HapticFeedback.mediumImpact();
@@ -1381,48 +1369,8 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
             const SizedBox(height: 8),
           ],
 
-          // Action Button if Payment is Pending
-          if (isPending) ...[
-            BouncyButton(
-              onTap: () => _navigateToRecovery(booking),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFB45309),
-                      Color(0xFFD97706),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x26B45309),
-                      blurRadius: 8,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(LucideIcons.refreshCw, size: 16, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text(
-                      'Verify / Complete Payment',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
+          // Action Button if Payment is Pending (Disabled per user request)
+          // if (isPending) ...[ ... ],
 
           // Remaining Balance Info Box
           Container(
@@ -1476,10 +1424,10 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
         ],
       ),
       padding: const EdgeInsets.all(16),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(LucideIcons.clockAlert, size: 20, color: Color(0xFFB45309)),
               SizedBox(width: 8),
@@ -1495,41 +1443,13 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'If you completed payment in your UPI/Bank app or experienced an interruption, tap below to re-verify status with the server.',
+          SizedBox(height: 8),
+          Text(
+            'Your booking advance payment confirmation is in progress. If you completed payment, our team will verify it with the bank records.',
             style: TextStyle(
               fontSize: 12.5,
               height: 1.4,
               color: Color(0xFF78350F),
-            ),
-          ),
-          const SizedBox(height: 12),
-          BouncyButton(
-            onTap: () => _navigateToRecovery(booking),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFB45309),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(LucideIcons.shieldCheck, size: 15, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text(
-                    'Re-verify / Recover Payment',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: 6),
-                  Icon(LucideIcons.arrowRight, size: 14, color: Colors.white),
-                ],
-              ),
             ),
           ),
         ],

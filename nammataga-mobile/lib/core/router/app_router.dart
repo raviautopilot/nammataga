@@ -34,7 +34,7 @@ import '../../features/tagatowers/presentation/booking_review_screen.dart';
 import '../../features/tagatowers/presentation/cancellation_screen.dart';
 import '../../features/tagatowers/presentation/guest_details_screen.dart';
 import '../../features/tagatowers/presentation/my_bookings_screen.dart';
-import '../../features/tagatowers/presentation/payment_recovery_screen.dart';
+// import '../../features/tagatowers/presentation/payment_recovery_screen.dart'; // Disabled
 import '../../features/tagatowers/presentation/payment_review_screen.dart';
 import '../../features/tagatowers/presentation/room_availability_screen.dart';
 import '../../features/tagatowers/presentation/tagatowers_home_screen.dart';
@@ -501,56 +501,11 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
             );
           },
         ),
+        // payment-recovery route disabled per user request; redirects directly to my-bookings
         GoRoute(
           path: 'payment-recovery',
           name: 'taga-towers-payment-recovery',
-          pageBuilder: (context, state) {
-            final extra = state.extra;
-            String? bookingId;
-            String? orderId;
-            String? paymentId;
-            String? signature;
-            int? amount;
-            String? roomName;
-
-            if (extra is Map<String, dynamic>) {
-              if (extra['booking'] is BookingResponse) {
-                final b = extra['booking'] as BookingResponse;
-                bookingId = b.id;
-                amount = b.advanceAmount;
-                roomName = b.roomName;
-              } else if (extra['booking'] is Map) {
-                final bMap = extra['booking'] as Map;
-                bookingId = bMap['id']?.toString();
-                amount = bMap['advanceAmount'] is int ? bMap['advanceAmount'] as int : null;
-                roomName = bMap['roomName']?.toString();
-              }
-              bookingId ??= extra['bookingId']?.toString();
-              orderId = extra['orderId']?.toString() ?? extra['razorpayOrderId']?.toString();
-              paymentId = extra['paymentId']?.toString() ?? extra['razorpayPaymentId']?.toString();
-              signature = extra['signature']?.toString() ?? extra['razorpaySignature']?.toString();
-              amount ??= extra['amount'] is int ? extra['amount'] as int : null;
-              roomName ??= extra['roomName']?.toString();
-            }
-
-            bookingId ??= state.uri.queryParameters['bookingId'];
-            orderId ??= state.uri.queryParameters['orderId'];
-            paymentId ??= state.uri.queryParameters['paymentId'];
-
-            return CustomTransitionPage(
-              key: state.pageKey,
-              child: PaymentRecoveryScreen(
-                bookingId: bookingId,
-                razorpayOrderId: orderId,
-                razorpayPaymentId: paymentId,
-                razorpaySignature: signature,
-                amount: amount,
-                roomName: roomName,
-              ),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-                  FadeTransition(opacity: animation, child: child),
-            );
-          },
+          redirect: (context, state) => '/taga-towers/my-bookings',
         ),
         GoRoute(
           path: 'booking/bed-selection',

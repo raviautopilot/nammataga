@@ -1681,43 +1681,8 @@ class _BookingConfirmationScreenState
               ),
             ],
             const SizedBox(height: 24),
-            if (_activeBooking.id.isNotEmpty && !_isLoadingDetails) ...[
-              BouncyButton(
-                onTap: _loadBookingDetails,
-                child: Container(
-                  height: 44,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: BoxDecoration(
-                    color: TagaTowersDesignTokens.softMint,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: TagaTowersDesignTokens.mintHighlight,
-                      width: 1.2,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(
-                        LucideIcons.refreshCw,
-                        size: 15,
-                        color: TagaTowersDesignTokens.deepEmerald,
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Re-check Status',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: TagaTowersDesignTokens.deepEmerald,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
+            // Re-check / Re-validate button disabled per user request
+            // if (_activeBooking.id.isNotEmpty && !_isLoadingDetails) ...[ ... ],
             BouncyButton(
               onTap: _onViewInMyBookings,
               child: Container(
