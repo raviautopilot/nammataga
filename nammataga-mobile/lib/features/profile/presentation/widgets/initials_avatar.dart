@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 
-/// Circular initials avatar strictly conforming to the reference image design.
-/// Features a cream surface, dual border effect with gold/mint accents,
-/// and bold dark forest green initials. Never displays stock photos or camera uploads.
+/// Initials badge/monogram avatar with a modern squircle (rounded rectangular)
+/// shape to replace the circular avatar format as requested.
 class InitialsAvatar extends StatelessWidget {
   final String initials;
   final double size;
   final double fontSize;
+  final double borderRadius;
 
   const InitialsAvatar({
     super.key,
     required this.initials,
-    this.size = 84,
-    this.fontSize = 28,
+    this.size = 80,
+    this.fontSize = 26,
+    this.borderRadius = 22,
   });
 
   @override
@@ -21,11 +22,11 @@ class InitialsAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
+        borderRadius: BorderRadius.circular(borderRadius),
         color: const Color(0xFFFAFAF5),
         border: Border.all(
           color: const Color(0xFFD8F3DC),
-          width: 3.5,
+          width: 3,
         ),
         boxShadow: [
           BoxShadow(
@@ -34,7 +35,7 @@ class InitialsAvatar extends StatelessWidget {
             offset: const Offset(0, 6),
           ),
           BoxShadow(
-            color: const Color(0xFF52B788).withValues(alpha: 0.2),
+            color: const Color(0xFF52B788).withValues(alpha: 0.22),
             blurRadius: 20,
             spreadRadius: 2,
           ),

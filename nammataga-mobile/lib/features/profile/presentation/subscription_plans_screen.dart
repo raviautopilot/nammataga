@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/payment/razorpay_checkout_manager.dart';
@@ -24,7 +25,7 @@ class _SubscriptionPlansScreenState
   bool _isProcessingPayment = false;
   String? _processingPlanId;
 
-  // Custom amount controllers per plan ID
+  // Custom amount controllers per plan ID (starts empty)
   final Map<String, TextEditingController> _customAmountControllers = {};
 
   @override
@@ -38,9 +39,28 @@ class _SubscriptionPlansScreenState
 
   TextEditingController _getController(String planId) {
     if (!_customAmountControllers.containsKey(planId)) {
-      _customAmountControllers[planId] = TextEditingController(text: '1000');
+      _customAmountControllers[planId] = TextEditingController();
     }
     return _customAmountControllers[planId]!;
+  }
+
+  /// Website-aligned Grace Period calculation:
+  /// April 1 to May 31 of each year is the 2-month renewal grace period.
+  bool _isInGracePeriod() {
+    final now = DateTime.now();
+    final graceStart = DateTime(now.year, 4, 1);
+    final graceEnd = DateTime(now.year, 5, 31, 23, 59, 59);
+    return !now.isBefore(graceStart) && !now.isAfter(graceEnd);
+  }
+
+  String _formatISODate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '-';
+    try {
+      final date = DateTime.parse(dateStr);
+      return DateFormat('dd MMM yyyy').format(date);
+    } catch (_) {
+      return dateStr;
+    }
   }
 
   Future<void> _handlePayment({
@@ -91,7 +111,7 @@ class _SubscriptionPlansScreenState
         'key': order.key,
         'amount': order.amount,
         'currency': order.currency,
-        'name': 'Namma TAGA',
+        'name': 'TAGA',
         'description': plan.name,
         'order_id': order.orderId,
         'prefill': {
@@ -221,7 +241,7 @@ class _SubscriptionPlansScreenState
         content: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: minAxisSize,
             children: [
               Container(
                 width: 64,
@@ -304,6 +324,8 @@ class _SubscriptionPlansScreenState
     );
   }
 
+  static const minAxisSize = MainAxisSize.min;
+
   @override
   Widget build(BuildContext context) {
     final plansAsync = ref.watch(subscriptionPlansProvider);
@@ -320,7 +342,7 @@ class _SubscriptionPlansScreenState
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Current Membership Status Card
+          // 1. Current Membership Status Card (Exact website matching)
           _buildStatusBanner(profile),
           const SizedBox(height: 18),
 
@@ -355,14 +377,27 @@ class _SubscriptionPlansScreenState
               }
 
               return Column(
-                children: filtered.map((plan) {
-                  final isPaid = paidSubs.contains(plan.id);
-                  return _buildPlanCard(
-                    plan: plan,
-                    isPaid: isPaid,
-                    profile: profile,
-                  );
-                }).toList(),
+                children: [
+                  ...filtered.map((plan) {
+                    final isAnnual = plan.id == 'annual-subscription';
+                    final inGrace = _isInGracePeriod();
+                    final isMemberPaid =
+                        profile != null && (profile.isPaid || profile.subscriptionActive);
+                    final isPaid = paidSubs.contains(plan.id) ||
+                        (isAnnual && isMemberPaid && !inGrace);
+
+                    return _buildPlanCard(
+                      plan: plan,
+                      isPaid: isPaid,
+                      inGrace: inGrace,
+                      isMemberPaid: isMemberPaid,
+                      profile: profile,
+                    );
+                  }),
+                  const SizedBox(height: 12),
+                  // Professional Payment Gateway Security & Advisory Card (Website Aligned)
+                  _buildPaymentInformationCard(),
+                ],
               );
             },
             loading: () => const Center(
@@ -390,9 +425,48 @@ class _SubscriptionPlansScreenState
     );
   }
 
+  /// Website-aligned Membership Status Card with Grace Period / Active / Unpaid state
   Widget _buildStatusBanner(dynamic profile) {
     final isSubscribed =
         profile != null && (profile.isPaid || profile.subscriptionActive);
+    final inGrace = _isInGracePeriod();
+
+    String badgeLabel;
+    Color badgeBg;
+    Color badgeBorder;
+    Color badgeTextColor;
+    String statusTitle;
+    String statusDesc;
+    IconData statusIcon;
+
+    if (isSubscribed && inGrace) {
+      // Annual member in grace period (April 1 - May 31)
+      badgeLabel = 'Renewal Grace Period';
+      badgeBg = const Color(0xFFFFF7ED); // Orange-50
+      badgeBorder = const Color(0xFFFDBA74); // Orange-300
+      badgeTextColor = const Color(0xFFC2410C); // Orange-700
+      statusTitle = 'Renewal Grace Period Active';
+      statusDesc = 'Grace period active until May 31. Please renew your annual dues to continue member privileges.';
+      statusIcon = LucideIcons.clock;
+    } else if (isSubscribed) {
+      // Active Paid Member
+      badgeLabel = 'Active Member';
+      badgeBg = const Color(0xFFE8F5EE);
+      badgeBorder = const Color(0xFF86EFAC);
+      badgeTextColor = AppColors.primary;
+      statusTitle = 'Active Subscription';
+      statusDesc = 'Annual dues paid. Valid through March 31, 2027.';
+      statusIcon = LucideIcons.shieldCheck;
+    } else {
+      // Non-active / Unpaid General Member
+      badgeLabel = 'Unpaid';
+      badgeBg = const Color(0xFFFEF3C7);
+      badgeBorder = const Color(0xFFFCD34D);
+      badgeTextColor = const Color(0xFFB45309);
+      statusTitle = 'General Member';
+      statusDesc = 'Pay your annual subscription to activate all subscriber benefits & room booking privileges.';
+      statusIcon = LucideIcons.crown;
+    }
 
     return Container(
       width: double.infinity,
@@ -401,9 +475,7 @@ class _SubscriptionPlansScreenState
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isSubscribed
-              ? const Color(0xFF52B788).withValues(alpha: 0.4)
-              : const Color(0xFFFDE68A),
+          color: badgeBorder,
           width: 1.2,
         ),
         boxShadow: const [
@@ -415,21 +487,18 @@ class _SubscriptionPlansScreenState
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: isSubscribed
-                  ? const Color(0xFFE8F5EE)
-                  : const Color(0xFFFEF3C7),
+              color: badgeBg,
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isSubscribed ? LucideIcons.shieldCheck : LucideIcons.crown,
-              color: isSubscribed
-                  ? AppColors.primary
-                  : const Color(0xFFD97706),
+              statusIcon,
+              color: badgeTextColor,
               size: 22,
             ),
           ),
@@ -442,9 +511,7 @@ class _SubscriptionPlansScreenState
                   children: [
                     Flexible(
                       child: Text(
-                        isSubscribed
-                            ? 'Active Subscription'
-                            : 'General Member',
+                        statusTitle,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -453,39 +520,35 @@ class _SubscriptionPlansScreenState
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 2,
+                        horizontal: 8,
+                        vertical: 2.5,
                       ),
                       decoration: BoxDecoration(
-                        color: isSubscribed
-                            ? const Color(0xFFE8F5EE)
-                            : const Color(0xFFFEF3C7),
+                        color: badgeBg,
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: badgeBorder, width: 1),
                       ),
                       child: Text(
-                        isSubscribed ? 'Active' : 'Unpaid',
+                        badgeLabel,
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.bold,
-                          color: isSubscribed
-                              ? AppColors.primary
-                              : const Color(0xFFB45309),
+                          color: badgeTextColor,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 5),
                 Text(
-                  isSubscribed
-                      ? 'Annual dues paid. Valid through March 31, 2027.'
-                      : 'Pay your annual subscription to activate all subscriber benefits.',
+                  statusDesc,
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
+                    height: 1.35,
                   ),
                 ),
               ],
@@ -508,39 +571,39 @@ class _SubscriptionPlansScreenState
       physics: const BouncingScrollPhysics(),
       child: Row(
         children: categories.map((cat) {
-        final isSelected = _selectedCategory == cat['id'];
-        return Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: () {
-              setState(() => _selectedCategory = cat['id']!);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primaryDark : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.primaryDark
-                      : const Color(0xFFD8E3DC),
+          final isSelected = _selectedCategory == cat['id'];
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () {
+                setState(() => _selectedCategory = cat['id']!);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primaryDark : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.primaryDark
+                        : const Color(0xFFD8E3DC),
+                  ),
                 ),
-              ),
-              child: Text(
-                cat['label']!,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? Colors.white : AppColors.textPrimary,
+                child: Text(
+                  cat['label']!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? Colors.white : AppColors.textPrimary,
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-      }).toList(),
-    ),
-  );
+          );
+        }).toList(),
+      ),
+    );
   }
 
   List<SubscriptionPlan> _filterPlans(List<SubscriptionPlan> plans) {
@@ -553,31 +616,41 @@ class _SubscriptionPlansScreenState
     return plans;
   }
 
+  /// Website-aligned Plan Card
   Widget _buildPlanCard({
     required SubscriptionPlan plan,
     required bool isPaid,
+    required bool inGrace,
+    required bool isMemberPaid,
     required dynamic profile,
   }) {
     final isProcessing =
         _isProcessingPayment && _processingPlanId == plan.id;
+    final isAnnual = plan.id == 'annual-subscription';
+    final isGraceRenewal = isAnnual && inGrace && isMemberPaid && !isPaid;
     final isCustom = plan.allowCustomAmount || plan.amount == null;
 
     final memberEmail = profile?.emailId ?? '';
     final memberName = profile?.name ?? '';
     final memberTagaId = profile?.tagaId ?? '';
 
+    // Only oneTime items that are paid, OR annual subscription when paid (not in grace)
+    // Need-based voluntary funds are never permanently marked as 'Paid'
+    final isEffectivelyPaid = (!plan.needBased && isPaid && !isGraceRenewal);
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isPaid
-              ? const Color(0xFF52B788)
-              : const Color(0xFFE2EBE5),
-          width: isPaid ? 1.4 : 1.1,
+          color: isAnnual
+              ? const Color(0xFF86EFAC)
+              : isEffectivelyPaid
+                  ? const Color(0xFF52B788)
+                  : const Color(0xFFE2EBE5),
+          width: isAnnual ? 1.5 : (isEffectivelyPaid ? 1.3 : 1.1),
         ),
         boxShadow: const [
           BoxShadow(
@@ -587,299 +660,495 @@ class _SubscriptionPlansScreenState
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header: Name & Frequency / Status
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  plan.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ),
-              if (isPaid)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5EE),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF52B788)),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        LucideIcons.check,
-                        size: 11,
-                        color: AppColors.primary,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'Paid',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    plan.frequency,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF4B5563),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-
-          // Description
-          Text(
-            plan.description,
-            style: const TextStyle(
-              fontSize: 12.5,
-              color: AppColors.textSecondary,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // Amount Row / Custom Amount Input
-          if (!isCustom) ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  plan.displayAmount,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primaryDark,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  plan.frequency == 'Annual' ? '/ year' : 'one-time fee',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ] else ...[
-            // Quick preset chips
-            const Text(
-              'Select or Enter Contribution Amount:',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF4B5563),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [500, 1000, 2500, 5000].map((preset) {
-                return InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () {
-                    _getController(plan.id).text = preset.toString();
-                    setState(() {});
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getController(plan.id).text == preset.toString()
-                          ? const Color(0xFFE8F5EE)
-                          : const Color(0xFFF9FAF7),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: _getController(plan.id).text == preset.toString()
-                            ? AppColors.primary
-                            : const Color(0xFFD8E3DC),
-                      ),
-                    ),
-                    child: Text(
-                      '₹$preset',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                        color: _getController(plan.id).text == preset.toString()
-                            ? AppColors.primary
-                            : AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _getController(plan.id),
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                prefixText: '₹ ',
-                prefixStyle: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryDark,
-                ),
-                hintText: 'Enter custom amount',
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-
-          // Pay Button
-          if (isPaid && !isCustom) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFBBF7D0)),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    LucideIcons.circleCheck,
-                    size: 16,
-                    color: AppColors.primary,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Subscribed & Current for 2026-27',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryDark,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ] else ...[
-            BouncyButton(
-              onTap: isProcessing
-                  ? null
-                  : () {
-                      final amount = isCustom
-                          ? int.tryParse(_getController(plan.id).text.trim()) ?? 0
-                          : (plan.amount ?? 0);
-
-                      _handlePayment(
-                        plan: plan,
-                        amountInRupees: amount,
-                        memberEmail: memberEmail,
-                        memberName: memberName,
-                        memberTagaId: memberTagaId,
-                      );
-                    },
-              child: Container(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top highlight banner for annual subscription (matching website)
+            if (isAnnual)
+              Container(
                 width: double.infinity,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: isProcessing
-                      ? const Color(0xFF9CA3AF)
-                      : AppColors.primaryDark,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryDark.withValues(alpha: 0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                color: isGraceRenewal ? const Color(0xFFC2410C) : const Color(0xFF1B4332),
+                child: Row(
+                  children: [
+                    Icon(
+                      isGraceRenewal ? LucideIcons.alertTriangle : LucideIcons.checkCheck,
+                      color: Colors.white,
+                      size: 13,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isGraceRenewal
+                          ? 'Renewal Period • Grace until May 31'
+                          : 'Required Annual Membership Dues',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                   ],
                 ),
-                child: Center(
-                  child: isProcessing
-                      ? const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
+              ),
+
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header: Name & Status / Frequency
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          plan.name,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (isEffectivelyPaid)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5EE),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFF52B788)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                LucideIcons.check,
+                                size: 12,
+                                color: AppColors.primary,
                               ),
-                            ),
-                            SizedBox(width: 10),
-                            Text(
-                              'Opening Razorpay...',
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                              SizedBox(width: 4),
+                              Text(
+                                'Paid',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              LucideIcons.lock,
-                              size: 14,
-                              color: Color(0xFFFDE68A),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              isCustom
-                                  ? 'Contribute via Razorpay'
-                                  : 'Pay ${plan.displayAmount} with Razorpay',
-                              style: const TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 0.1,
+                      else if (isGraceRenewal)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF7ED),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFFDBA74)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                LucideIcons.clock,
+                                size: 12,
+                                color: Color(0xFFC2410C),
                               ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Renew Due',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFC2410C),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Description
+                  Text(
+                    plan.description,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondary,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Website-aligned 3-column metadata row (Amount, Frequency, Next Due)
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Amount column
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Amount',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isCustom ? 'Flexible' : plan.displayAmount,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Frequency column (Website-style exact frequency: Annual / One-time / Flexible)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Frequency',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                plan.frequency,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Next Due Date column (Shown for Annual Subscription)
+                        if (isAnnual && plan.nextDueDate != null)
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Next Due',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _formatISODate(plan.nextDueDate),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // If custom amount allowed: clean dynamic input field (preset 500, 1000 chips removed)
+                  if (isCustom) ...[
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Contribution Amount (₹)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF334155),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _getController(plan.id),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryDark,
+                      ),
+                      decoration: InputDecoration(
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          child: Text(
+                            '₹',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                        ),
+                        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                        hintText: 'Enter amount (e.g. 1000)',
+                        hintStyle: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.normal,
+                          color: Colors.grey.shade400,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: AppColors.primaryDark,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
+
+                  // Action Button
+                  if (isEffectivelyPaid) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            LucideIcons.circleCheck,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Paid & Active',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    BouncyButton(
+                      onTap: isProcessing
+                          ? null
+                          : () {
+                              final amount = isCustom
+                                  ? int.tryParse(_getController(plan.id).text.trim()) ?? 0
+                                  : (plan.amount ?? 0);
+
+                              _handlePayment(
+                                plan: plan,
+                                amountInRupees: amount,
+                                memberEmail: memberEmail,
+                                memberName: memberName,
+                                memberTagaId: memberTagaId,
+                              );
+                            },
+                      child: Container(
+                        width: double.infinity,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: isProcessing
+                              ? const Color(0xFF9CA3AF)
+                              : isGraceRenewal
+                                  ? const Color(0xFFC2410C)
+                                  : AppColors.primaryDark,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (isGraceRenewal
+                                      ? const Color(0xFFC2410C)
+                                      : AppColors.primaryDark)
+                                  .withValues(alpha: 0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
-                ),
+                        child: Center(
+                          child: isProcessing
+                              ? const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      'Connecting Secure Payment...',
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      isGraceRenewal
+                                          ? LucideIcons.refreshCw
+                                          : LucideIcons.shieldCheck,
+                                      size: 15,
+                                      color: const Color(0xFFFDE68A),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      isGraceRenewal
+                                          ? 'Renew Subscription'
+                                          : isCustom
+                                              ? 'Proceed to Contribute'
+                                              : 'Pay ${plan.displayAmount}',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        letterSpacing: 0.1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
+                    if (isGraceRenewal)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 6),
+                        child: Center(
+                          child: Text(
+                            'Grace period active until May 31',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: Color(0xFFC2410C),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Website-aligned Payment Information Card (Matches taga-web/src/components/Membership.tsx)
+  Widget _buildPaymentInformationCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF), // Blue-50
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFBFDBFE)), // Blue-200
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            LucideIcons.info,
+            size: 20,
+            color: Color(0xFF2563EB), // Blue-600
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Payment & Membership Guidelines',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E3A8A), // Blue-900
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  '• All transactions are encrypted and processed securely via Razorpay.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF), height: 1.4),
+                ),
+                Text(
+                  '• Annual subscription period: April 1 - March 31.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF), height: 1.4),
+                ),
+                Text(
+                  '• Grace period: 2 months (until May 31) for annual renewal.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF), height: 1.4),
+                ),
+                Text(
+                  '• Official payment receipt and email confirmation delivered upon successful verification.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF), height: 1.4),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

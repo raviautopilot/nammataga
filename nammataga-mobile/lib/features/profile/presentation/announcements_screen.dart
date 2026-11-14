@@ -93,7 +93,7 @@ class AnnouncementsScreen extends ConsumerWidget {
     WidgetRef ref,
     MemberNotification announcement,
   ) {
-    final isUrgent = announcement.priority.toLowerCase() == 'urgent';
+    final isUrgent = announcement.priority.toLowerCase().contains('urgent');
     final isHigh = announcement.priority.toLowerCase() == 'high';
 
     final badgeColor = isUrgent

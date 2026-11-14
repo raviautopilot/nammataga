@@ -150,14 +150,14 @@ class _BookingReviewScreenState extends ConsumerState<BookingReviewScreen> {
 
       final bookingRes = await repo.createBooking(req, bookerId);
 
-      // 4. Update pendingBookingId in state
-      ref.read(bookingFlowNotifierProvider.notifier).setPendingBookingId(bookingRes.id);
+      // 4. Update pendingBooking and pendingBookingId in state
+      ref.read(bookingFlowNotifierProvider.notifier).setPendingBooking(bookingRes);
 
       if (!mounted) return;
       HapticFeedback.mediumImpact();
 
       // 5. Navigate to Payment Review Screen
-      context.push('/taga-towers/booking/payment-review');
+      context.push('/taga-towers/booking/payment-review', extra: bookingRes);
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString().replaceAll('Exception:', '').trim();

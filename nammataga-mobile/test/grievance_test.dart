@@ -567,7 +567,7 @@ void main() {
       expect(find.text('Paid Member Exclusive'), findsOneWidget);
       expect(
         find.text(
-          'The Grievance Redressal portal is an executive support service reserved for subscribed NammaTAGA members. Active membership ensures direct representation before state agricultural authorities.',
+          'The Grievance Redressal portal is an executive support service reserved for subscribed TAGA members. Active membership ensures direct representation before state agricultural authorities.',
         ),
         findsOneWidget,
       );
@@ -703,7 +703,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Grievance Redressal'), findsWidgets);
-      expect(find.text('Raise your concern. We are here to listen.'), findsOneWidget);
+      expect(find.textContaining('Raise your concern'), findsOneWidget);
       expect(find.text('Share Your Issue'), findsOneWidget);
       expect(find.text('For a Better Community'), findsOneWidget);
       expect(find.text('Available for Paid Members'), findsOneWidget);

@@ -195,8 +195,8 @@ class BookingResponse {
   bool get isConfirmed => paymentStatus.toLowerCase() == 'confirmed';
   bool get isPending => paymentStatus.toLowerCase() == 'pending';
   bool get isCancelled =>
-      paymentStatus.toLowerCase() == 'cancelled' ||
-      bookingStatus.toLowerCase() == 'cancelled';
+      paymentStatus.trim().toLowerCase() == 'cancelled' ||
+      bookingStatus.trim().toLowerCase() == 'cancelled';
   bool get isUpcoming => bookingStatus.toLowerCase() == 'upcoming';
   bool get isActive => bookingStatus.toLowerCase() == 'active';
   bool get isCompleted => bookingStatus.toLowerCase() == 'completed';
@@ -205,8 +205,11 @@ class BookingResponse {
   /// Cancellation is only permitted strictly before the check-in date
   /// and only if the booking is not already cancelled.
   bool get isCancellable {
-
-    if (paymentStatus == 'cancelled' || bookingStatus == 'cancelled') return false;
+    if (isCancelled ||
+        paymentStatus.trim().toLowerCase() == 'cancelled' ||
+        bookingStatus.trim().toLowerCase() == 'cancelled') {
+      return false;
+    }
     try {
       final checkIn = DateTime.parse(checkInDate);
       final today = DateTime.now();

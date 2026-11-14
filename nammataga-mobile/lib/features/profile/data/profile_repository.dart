@@ -100,9 +100,14 @@ class ProfileRepository {
   }
 
   /// Fetches notifications for authenticated member from `GET /api/member/notifications`
-  Future<List<MemberNotification>> getNotifications() async {
+  Future<List<MemberNotification>> getNotifications({String? memberId}) async {
     try {
-      final response = await _dio.get(ApiEndpoints.notifications);
+      final response = await _dio.get(
+        ApiEndpoints.notifications,
+        queryParameters: memberId != null && memberId.isNotEmpty
+            ? {'member_id': memberId}
+            : null,
+      );
       if (response.data is List) {
         return (response.data as List)
             .map((e) => MemberNotification.fromJson(e as Map<String, dynamic>))
@@ -124,11 +129,20 @@ class ProfileRepository {
   }
 
   /// Fetches unread notifications count from `GET /api/member/notifications/unread/count`
-  Future<int> getUnreadCount() async {
+  Future<int> getUnreadCount({String? memberId}) async {
     try {
-      final response = await _dio.get(ApiEndpoints.unreadNotificationsCount);
-      if (response.data is Map && response.data['count'] != null) {
-        return int.tryParse(response.data['count'].toString()) ?? 0;
+      final response = await _dio.get(
+        ApiEndpoints.unreadNotificationsCount,
+        queryParameters: memberId != null && memberId.isNotEmpty
+            ? {'member_id': memberId}
+            : null,
+      );
+      if (response.data is Map) {
+        final countVal =
+            response.data['unread_count'] ?? response.data['count'];
+        if (countVal != null) {
+          return int.tryParse(countVal.toString()) ?? 0;
+        }
       }
     } catch (_) {}
     return 0;

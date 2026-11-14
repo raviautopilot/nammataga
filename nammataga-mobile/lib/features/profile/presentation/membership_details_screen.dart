@@ -13,9 +13,27 @@ import 'widgets/profile_subpage_scaffold.dart';
 class MembershipDetailsScreen extends ConsumerWidget {
   const MembershipDetailsScreen({super.key});
 
+  String _formatValidDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '31 Mar 2027';
+    try {
+      final parts = dateStr.split('-');
+      if (parts.length == 3) {
+        final year = int.parse(parts[0]);
+        final month = int.parse(parts[1]);
+        final day = int.parse(parts[2]);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        final mStr = months[month - 1];
+        return '$day $mStr $year';
+      }
+    } catch (_) {}
+    return dateStr;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(memberProfileProvider);
+    final subStatusAsync = ref.watch(memberSubscriptionStatusProvider);
+    final subStatus = subStatusAsync.value;
 
     return ProfileSubpageScaffold(
       title: 'Membership Details',
@@ -23,7 +41,15 @@ class MembershipDetailsScreen extends ConsumerWidget {
       showEditNotice: false,
       body: profileAsync.when(
         data: (profile) {
-          final isSubscribed = profile.isPaid || profile.subscriptionActive;
+          final isSubscribed = profile.isPaid ||
+              profile.subscriptionActive ||
+              (subStatus != null && subStatus['is_paid'] == true);
+
+          final rawValidUntil = subStatus?['valid_until']?.toString() ??
+              subStatus?['next_due_date']?.toString();
+          final validTillFormatted = isSubscribed
+              ? _formatValidDate(rawValidUntil)
+              : '—';
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,15 +185,23 @@ class MembershipDetailsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 14),
 
-                    // Status rows
+
+
+                    // Status rows matching backend and subscription page
                     _buildStatusRow(
                       label: 'Membership Type',
                       value: isSubscribed ? 'Subscriber' : 'General Member',
                     ),
                     const SizedBox(height: 12),
                     _buildStatusRow(
+                      label: 'Valid Till',
+                      value: validTillFormatted,
+                      isPositive: isSubscribed,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildStatusRow(
                       label: 'Payment Status',
-                      value: profile.paymentStatus,
+                      value: isSubscribed ? 'Paid' : profile.paymentStatus,
                       isPositive: isSubscribed,
                     ),
                     const SizedBox(height: 18),
@@ -286,16 +320,16 @@ class MembershipDetailsScreen extends ConsumerWidget {
                       color: Color(0xFFEFF4F0),
                     ),
                     const SizedBox(height: 14),
-                    _buildBenefitItem('Access to exclusive resources & bylaws'),
+                    _buildBenefitItem('Access to various exclusive resources'),
                     _buildBenefitItem(
-                      'Priority event and conference registrations',
+                      'Prior intimation to all TAGA events',
                     ),
                     _buildBenefitItem(
                       'Direct grievance petitions to state leadership',
                     ),
                     _buildBenefitItem('TAGA Tower room and dorm bookings'),
                     _buildBenefitItem(
-                      'Association bulletins & community updates',
+                      'All relevant updates of the association',
                     ),
                   ],
                 ),

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"taga-api/config"
 	"taga-api/model"
@@ -280,11 +281,17 @@ func CreateEditRequest(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param member_id query string true "Member ID"
+// @Param member_id query string false "Member ID"
 // @Success 200 {array} model.MemberNotification
 // @Router /api/member/notifications [get]
 func GetMemberNotifications(c *gin.Context) {
 	memberID := c.Query("member_id")
+	if memberID == "" {
+		memberID = c.GetString("member_id")
+	}
+	if memberID == "" {
+		memberID = c.GetString("member_email")
+	}
 	if memberID == "" {
 		respondError(c, http.StatusBadRequest, "member_id is required")
 		return
@@ -324,11 +331,17 @@ func MarkNotificationRead(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param member_id query string true "Member ID"
+// @Param member_id query string false "Member ID"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/member/notifications/unread/count [get]
 func GetUnreadCount(c *gin.Context) {
 	memberID := c.Query("member_id")
+	if memberID == "" {
+		memberID = c.GetString("member_id")
+	}
+	if memberID == "" {
+		memberID = c.GetString("member_email")
+	}
 	if memberID == "" {
 		respondError(c, http.StatusBadRequest, "member_id is required")
 		return
@@ -345,47 +358,100 @@ func GetUnreadCount(c *gin.Context) {
 
 func readMemberNotificationsFromFile(memberID string) ([]model.MemberNotification, error) {
 	filePath := getMemberNotificationsFilePath()
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []model.MemberNotification{}, nil
-		}
-		return nil, err
-	}
-
 	var notifications []model.MemberNotification
-	if err := json.Unmarshal(data, &notifications); err != nil {
-		return nil, err
+	data, err := os.ReadFile(filePath)
+	if err == nil && len(data) > 0 {
+		_ = json.Unmarshal(data, &notifications)
 	}
 
 	var memberNotifications []model.MemberNotification
+	seenNotificationIDs := make(map[string]bool)
+	readMap := make(map[string]bool)
+
 	for _, n := range notifications {
-		if n.MemberID == memberID {
+		if n.IsRead {
+			if n.NotificationID != "" {
+				readMap[n.NotificationID] = true
+			}
+			if n.ID != "" {
+				readMap[n.ID] = true
+			}
+		}
+
+		if n.MemberID == memberID ||
+			(n.MemberEmail != "" && strings.EqualFold(n.MemberEmail, memberID)) ||
+			(n.TagaID != "" && n.TagaID == memberID) {
 			memberNotifications = append(memberNotifications, n)
+			if n.NotificationID != "" {
+				seenNotificationIDs[n.NotificationID] = true
+			}
+			if n.ID != "" {
+				seenNotificationIDs[n.ID] = true
+			}
 		}
 	}
+
+	// Also load broadcast announcements from data/announcements/announcements.json (where send_to == "all")
+	announcementsPath := getAnnouncementsFilePath()
+	annData, aErr := os.ReadFile(announcementsPath)
+	if aErr == nil && len(annData) > 0 {
+		var broadcastAnnouncements []model.Notification
+		if err := json.Unmarshal(annData, &broadcastAnnouncements); err == nil {
+			for _, a := range broadcastAnnouncements {
+				if strings.EqualFold(a.SendTo, "all") || a.SendTo == "" {
+					if !seenNotificationIDs[a.ID] {
+						isRead := readMap[a.ID]
+						memberNotifications = append(memberNotifications, model.MemberNotification{
+							ID:             a.ID,
+							NotificationID: a.ID,
+							MemberID:       memberID,
+							Title:          a.Title,
+							Message:        a.Message,
+							Priority:       a.Priority,
+							IsRead:         isRead,
+							CreatedAt:      a.SentAt,
+						})
+						seenNotificationIDs[a.ID] = true
+					}
+				}
+			}
+		}
+	}
+
+	// Sort newest first
+	sort.Slice(memberNotifications, func(i, j int) bool {
+		return memberNotifications[i].CreatedAt.After(memberNotifications[j].CreatedAt)
+	})
+
 	return memberNotifications, nil
 }
 
 func markNotificationAsReadInFile(notificationID string) error {
 	filePath := getMemberNotificationsFilePath()
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return err
-	}
-
 	var notifications []model.MemberNotification
-	if err := json.Unmarshal(data, &notifications); err != nil {
-		return err
+	data, err := os.ReadFile(filePath)
+	if err == nil && len(data) > 0 {
+		_ = json.Unmarshal(data, &notifications)
 	}
 
 	now := time.Now()
+	found := false
 	for i := range notifications {
-		if notifications[i].ID == notificationID {
+		if notifications[i].ID == notificationID || notifications[i].NotificationID == notificationID {
 			notifications[i].IsRead = true
 			notifications[i].ReadAt = &now
+			found = true
 			break
 		}
+	}
+
+	if !found {
+		notifications = append(notifications, model.MemberNotification{
+			ID:             notificationID,
+			NotificationID: notificationID,
+			IsRead:         true,
+			ReadAt:         &now,
+		})
 	}
 
 	updatedData, err := json.MarshalIndent(notifications, "", "  ")

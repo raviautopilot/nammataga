@@ -45,6 +45,13 @@ class MemberSession {
     return '';
   }
 
+  String get memberId {
+    if (user != null) {
+      return (user!['id'] ?? user!['member_id'] ?? '').toString();
+    }
+    return '';
+  }
+
   MemberSession copyWith({
     String? token,
     String? role,

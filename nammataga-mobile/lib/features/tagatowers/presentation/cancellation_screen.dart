@@ -297,6 +297,12 @@ class _CancellationScreenState extends ConsumerState<CancellationScreen> {
 
   void _navigateSafelyBack() {
     HapticFeedback.lightImpact();
+    if (_isCancelledSuccess) {
+      ref.invalidate(userBookingsProvider);
+      ref.invalidate(pastBookingsProvider);
+      context.go('/taga-towers/my-bookings?tab=1');
+      return;
+    }
     if (context.canPop()) {
       context.pop();
     } else {
@@ -306,15 +312,25 @@ class _CancellationScreenState extends ConsumerState<CancellationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FAF7),
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(68),
-        child: _buildHeader(context),
-      ),
-      body: SafeArea(
-        top: false,
-        child: _buildBody(context),
+    return PopScope(
+      canPop: !_isCancelledSuccess,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _isCancelledSuccess) {
+          ref.invalidate(userBookingsProvider);
+          ref.invalidate(pastBookingsProvider);
+          context.go('/taga-towers/my-bookings?tab=1');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF9FAF7),
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(68),
+          child: _buildHeader(context),
+        ),
+        body: SafeArea(
+          top: false,
+          child: _buildBody(context),
+        ),
       ),
     );
   }
@@ -373,9 +389,11 @@ class _CancellationScreenState extends ConsumerState<CancellationScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Cancel Reservation',
-                      style: TextStyle(
+                    Text(
+                      _isCancelledSuccess
+                          ? 'Reservation Cancelled'
+                          : 'Cancel Reservation',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -792,7 +810,7 @@ class _CancellationScreenState extends ConsumerState<CancellationScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'The reserved room and bed slots will be made available immediately to other association members.',
+            'The reserved room and bed slots will be made available immediately to other needy taga members.',
             style: TextStyle(
               fontSize: 12,
               color: Color(0xFF92400E),
@@ -1440,11 +1458,9 @@ class _CancellationScreenState extends ConsumerState<CancellationScreen> {
               BouncyButton(
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/taga-towers');
-                  }
+                  ref.invalidate(userBookingsProvider);
+                  ref.invalidate(pastBookingsProvider);
+                  context.go('/taga-towers/my-bookings?tab=1');
                 },
                 child: Container(
                   width: double.infinity,

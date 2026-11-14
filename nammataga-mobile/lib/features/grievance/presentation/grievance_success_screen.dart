@@ -12,7 +12,7 @@ import '../providers/grievance_provider.dart';
 /// Confirmation screen displayed ONLY after successful grievance submission.
 ///
 /// Provides a reassuring, celebratory confirmation acknowledging receipt by the
-/// NammaTAGA state executive committee, and a prominent call-to-action returning
+/// TAGA state executive committee, and a prominent call-to-action returning
 /// the member to the home screen.
 class GrievanceSuccessScreen extends ConsumerWidget {
   const GrievanceSuccessScreen({super.key});
@@ -76,7 +76,7 @@ class GrievanceSuccessScreen extends ConsumerWidget {
 
                           // 3. Subtitle / Message
                           const Text(
-                            'Thank you for reaching out to NammaTAGA. Your grievance petition has been delivered to the association state executive committee. Our team will review the details and follow up through your preferred response channel.',
+                            'Thank you for reaching out to TAGA. Your grievance petition has been delivered to the association state Office Bearers. Our team will review the details and follow up through your preferred response channel.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14.5,
@@ -338,9 +338,9 @@ class GrievanceSuccessScreen extends ConsumerWidget {
 
           // Reassurance bullet items
           _buildSummaryPoint(
-            title: 'Executive Committee Notified',
+            title: 'State Office Bearers Notified',
             description:
-                'Your petition has been logged directly with the association executive board.',
+                'Your petition has been logged directly with the State Office Bearers.',
           ),
           const SizedBox(height: 10),
           _buildSummaryPoint(

@@ -47,6 +47,14 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
     ref.invalidate(bookingByIdProvider(widget.bookingId));
     ref.invalidate(userBookingsProvider);
     ref.invalidate(pastBookingsProvider);
+    try {
+      final updated = await ref.read(bookingByIdProvider(widget.bookingId).future);
+      if (mounted && updated != null) {
+        setState(() {
+          _localBooking = updated;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _copyToClipboard(String text, String label) async {
@@ -109,12 +117,32 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
     }
   }
 
-  void _navigateToCancellation(BookingResponse booking) {
+  void _navigateToRecovery(BookingResponse booking) {
     HapticFeedback.mediumImpact();
     context.push(
+      '/taga-towers/payment-recovery',
+      extra: {
+        'booking': booking,
+        'bookingId': booking.id,
+        'orderId': booking.razorpayOrderId,
+        'paymentId': booking.razorpayPaymentId,
+        'amount': booking.advanceAmount,
+        'roomName': booking.roomName,
+      },
+    );
+  }
+
+  Future<void> _navigateToCancellation(BookingResponse booking) async {
+    HapticFeedback.mediumImpact();
+    await context.push(
       '/taga-towers/booking/cancel/${booking.id}',
       extra: booking,
     );
+    if (!mounted) return;
+    ref.invalidate(userBookingsProvider);
+    ref.invalidate(pastBookingsProvider);
+    ref.invalidate(bookingByIdProvider(widget.bookingId));
+    await _refreshBooking();
   }
 
   DateTime? _parseDate(String dateStr) {
@@ -143,20 +171,27 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_localBooking != null) {
-      return _buildScaffold(_localBooking!);
-    }
-
     final bookingAsync = ref.watch(bookingByIdProvider(widget.bookingId));
 
     return bookingAsync.when(
-      loading: () => _buildLoadingScaffold(),
-      error: (error, _) => _buildErrorScaffold(error.toString()),
+      loading: () {
+        if (_localBooking != null) {
+          return _buildScaffold(_localBooking!);
+        }
+        return _buildLoadingScaffold();
+      },
+      error: (error, _) {
+        if (_localBooking != null) {
+          return _buildScaffold(_localBooking!);
+        }
+        return _buildErrorScaffold(error.toString());
+      },
       data: (booking) {
-        if (booking == null) {
+        final currentBooking = booking ?? _localBooking;
+        if (currentBooking == null) {
           return _buildNotFoundScaffold();
         }
-        return _buildScaffold(booking);
+        return _buildScaffold(currentBooking);
       },
     );
   }
@@ -178,27 +213,51 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
         ),
         leading: IconButton(
           icon: const Icon(LucideIcons.arrowLeft, color: TagaTowersDesignTokens.deepEmerald),
-          onPressed: () => Navigator.maybePop(context),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/taga-towers/my-bookings');
+            }
+          },
         ),
       ),
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(TagaTowersDesignTokens.primaryGreen),
-              strokeWidth: 3,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Retrieving booking details...',
-              style: TextStyle(
-                color: Colors.grey.shade700,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(TagaTowersDesignTokens.primaryGreen),
+                strokeWidth: 3,
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                'Retrieving booking details...',
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextButton.icon(
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/taga-towers/my-bookings');
+                  }
+                },
+                icon: const Icon(LucideIcons.arrowLeft, size: 16),
+                label: const Text('Back to My Bookings'),
+                style: TextButton.styleFrom(
+                  foregroundColor: TagaTowersDesignTokens.deepEmerald,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -333,8 +392,11 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
     final checkOut = _parseDate(booking.checkOutDate);
     final totalStayDays = _calculateStayDays(checkIn, checkOut);
     final isGuestBooking = booking.bookingFor.toLowerCase() == 'guest';
-    final isCancelled = booking.isCancelled;
-    final canCancel = booking.isCancellable;
+    final isCancelled = booking.isCancelled ||
+        booking.bookingStatus.trim().toLowerCase() == 'cancelled' ||
+        booking.paymentStatus.trim().toLowerCase() == 'cancelled';
+    final isPending = booking.isPending;
+    final canCancel = !isCancelled && booking.isCancellable;
     final pastCheckIn = _isPastOrOnCheckIn(booking);
 
     return Scaffold(
@@ -392,6 +454,12 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
               // 5. Guest Details Roster (if Guest Booking)
               if (isGuestBooking) ...[
                 _buildGuestDetailsRosterCard(booking),
+                const SizedBox(height: 14),
+              ],
+
+              // Pending Verification Banner if Payment is Pending
+              if (isPending) ...[
+                _buildPendingPaymentAlertCard(booking),
                 const SizedBox(height: 14),
               ],
 
@@ -528,8 +596,10 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
 
   /// Status badge displaying Upcoming, Active, Completed, or Cancelled
   Widget _buildStatusBadge(BookingResponse booking) {
-    final status = booking.bookingStatus.toLowerCase();
-    final isCancelled = booking.isCancelled;
+    final status = booking.bookingStatus.trim().toLowerCase();
+    final isCancelled = booking.isCancelled ||
+        status == 'cancelled' ||
+        booking.paymentStatus.trim().toLowerCase() == 'cancelled';
 
     Color bg;
     Color border;
@@ -1311,6 +1381,49 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
             const SizedBox(height: 8),
           ],
 
+          // Action Button if Payment is Pending
+          if (isPending) ...[
+            BouncyButton(
+              onTap: () => _navigateToRecovery(booking),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFFB45309),
+                      Color(0xFFD97706),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x26B45309),
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(LucideIcons.refreshCw, size: 16, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      'Verify / Complete Payment',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
           // Remaining Balance Info Box
           Container(
             padding: const EdgeInsets.all(12),
@@ -1341,6 +1454,82 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPendingPaymentAlertCard(BookingResponse booking) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFDE68A), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(LucideIcons.clockAlert, size: 20, color: Color(0xFFB45309)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Payment Pending Confirmation',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF92400E),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'If you completed payment in your UPI/Bank app or experienced an interruption, tap below to re-verify status with the server.',
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.4,
+              color: Color(0xFF78350F),
+            ),
+          ),
+          const SizedBox(height: 12),
+          BouncyButton(
+            onTap: () => _navigateToRecovery(booking),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFB45309),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(LucideIcons.shieldCheck, size: 15, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text(
+                    'Re-verify / Recover Payment',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 6),
+                  Icon(LucideIcons.arrowRight, size: 14, color: Colors.white),
+                ],
+              ),
             ),
           ),
         ],
@@ -1651,7 +1840,12 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
     required bool canCancel,
     required bool pastCheckIn,
   }) {
-    if (isCancelled) {
+    final bool actuallyCancelled = isCancelled ||
+        booking.isCancelled ||
+        booking.bookingStatus.trim().toLowerCase() == 'cancelled' ||
+        booking.paymentStatus.trim().toLowerCase() == 'cancelled';
+
+    if (actuallyCancelled) {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -1691,7 +1885,7 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
       );
     }
 
-    if (canCancel) {
+    if (canCancel && !actuallyCancelled) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

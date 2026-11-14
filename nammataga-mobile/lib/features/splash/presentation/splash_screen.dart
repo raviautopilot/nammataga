@@ -91,7 +91,7 @@ class _SplashScreenState extends State<SplashScreen>
     _statusTimer = Timer(const Duration(milliseconds: 1400), () {
       if (mounted) {
         setState(() {
-          _statusText = 'Welcome to Namma TAGA';
+          _statusText = 'Welcome to TAGA';
         });
       }
     });

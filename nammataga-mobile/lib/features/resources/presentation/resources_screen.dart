@@ -199,13 +199,13 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(28),
+          bottom: Radius.circular(30),
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF04190E).withValues(alpha: 0.35),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
+            color: const Color(0xFF04190E).withValues(alpha: 0.38),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -220,10 +220,10 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFF04170D),
-                    Color(0xFF0A2B1B),
-                    Color(0xFF14452F),
-                    Color(0xFF1D5A3D),
+                    Color(0xFF04170D), // Deep rich forest obsidian
+                    Color(0xFF0A2B1B), // Signature TAGA deep emerald
+                    Color(0xFF14452F), // Forest green
+                    Color(0xFF1D5A3D), // Vibrant highlight green
                   ],
                   stops: [0.0, 0.35, 0.72, 1.0],
                 ),
@@ -231,12 +231,12 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
             ),
           ),
 
-          // Ambient Top-Right Radial Glow
+          // Ambient Top-Right Radial Glow (matching Grievance)
           Positioned(
             top: -45,
             right: -35,
-            width: 200,
-            height: 200,
+            width: 220,
+            height: 220,
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
@@ -250,10 +250,10 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
             ),
           ),
 
-          // Ambient Bottom-Left Glow
+          // Ambient Bottom-Left Glow (matching Grievance)
           Positioned(
-            bottom: -40,
-            left: -30,
+            bottom: -35,
+            left: -25,
             width: 170,
             height: 170,
             child: Container(
@@ -261,7 +261,7 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFF2D6A4F).withValues(alpha: 0.30),
+                    const Color(0xFF2D6A4F).withValues(alpha: 0.32),
                     Colors.transparent,
                   ],
                 ),
@@ -276,21 +276,21 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
             child: IgnorePointer(
               child: Icon(
                 LucideIcons.fileText,
-                size: 130,
-                color: Colors.white.withValues(alpha: 0.04),
+                size: 135,
+                color: Colors.white.withValues(alpha: 0.045),
               ),
             ),
           ),
 
-          // Foreground Content
+          // Foreground Content (matching Grievance dimensions and spacing)
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 26),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Navigation Bar Row (Back Button, Center Badge, Refresh Button)
+                  // Navigation Bar Row (Back Button, Official Badge, Refresh Button)
                   Row(
                     children: [
                       // Back Button
@@ -322,17 +322,14 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
                       // Pill Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
+                          horizontal: 12,
+                          vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color:
-                              const Color(0xFF2D6A4F).withValues(alpha: 0.85),
+                          color: Colors.white.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: const Color(0xFF52B788)
-                                .withValues(alpha: 0.40),
-                            width: 1.0,
+                            color: Colors.white.withValues(alpha: 0.20),
                           ),
                         ),
                         child: const Row(
@@ -343,14 +340,14 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
                               size: 12,
                               color: Color(0xFFB7E4C7),
                             ),
-                            SizedBox(width: 5),
+                            SizedBox(width: 6),
                             Text(
                               'Official Portal',
                               style: TextStyle(
-                                color: Color(0xFFD8F3DC),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.4,
+                                color: Colors.white,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
                               ),
                             ),
                           ],
@@ -384,26 +381,38 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 22),
 
-                  // Title & Subtitle
+                  // Category tag matching Grievance banner structure
+                  Text(
+                    'KNOWLEDGE & RECORDS ARCHIVE',
+                    style: TextStyle(
+                      color: const Color(0xFF95D5B2).withValues(alpha: 0.9),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // Title & Subtitle matching Grievance typography & sizing
                   const Text(
                     'Resources Center',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: 26,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.4,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
+                  const SizedBox(height: 6),
+                  Text(
                     'Government orders, circulars & official applications',
                     style: TextStyle(
-                      color: Color(0xFFD8F3DC),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      height: 1.3,
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 14,
+                      height: 1.35,
                     ),
                   ),
                 ],

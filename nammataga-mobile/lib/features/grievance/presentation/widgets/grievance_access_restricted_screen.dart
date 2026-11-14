@@ -219,7 +219,7 @@ class GrievanceAccessRestrictedScreen extends StatelessWidget {
 
                     // Description
                     const Text(
-                      'The Grievance Redressal portal is an executive support service reserved for subscribed NammaTAGA members. Active membership ensures direct representation before state agricultural authorities.',
+                      'The Grievance Redressal portal is an executive support service reserved for subscribed TAGA members. Active membership ensures direct representation before state agricultural authorities.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13.5,

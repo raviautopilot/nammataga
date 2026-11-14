@@ -431,7 +431,7 @@ class _GrievanceFormScreenState extends ConsumerState<GrievanceFormScreen> {
                   const SizedBox(height: 18),
 
                   Text(
-                    'NAMMATAGA CIVIC CARE',
+                    'TAGA CIVIC CARE',
                     style: TextStyle(
                       color: const Color(0xFF95D5B2).withValues(alpha: 0.9),
                       fontSize: 10.5,
@@ -1060,7 +1060,7 @@ class _GrievanceFormScreenState extends ConsumerState<GrievanceFormScreen> {
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Your grievance petition is treated with utmost discretion and forwarded directly to the TAGA State Executive Committee for inquiry.',
+              'Your grievance petition is treated with utmost discretion and forwarded directly to the State TAGA Office Bearers for inquiry.',
               style: TextStyle(
                 fontSize: 12,
                 color: Color(0xFF1B4332),

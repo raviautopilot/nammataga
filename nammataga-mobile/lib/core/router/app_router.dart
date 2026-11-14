@@ -418,12 +418,57 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
 
             if (extra is BookingResponse) {
               booking = extra;
+            } else if (extra is String && extra.trim().isNotEmpty) {
+              booking = BookingResponse(
+                id: extra.trim(),
+                roomId: '',
+                roomName: 'TAGA Tower Room',
+                checkInDate: '',
+                checkOutDate: '',
+                bookerName: '',
+                bookerId: '',
+                bookingFor: 'self',
+                bedCount: 1,
+                paymentStatus: 'confirmed',
+                advanceAmount: 0,
+                bookingStatus: 'confirmed',
+              );
             } else if (extra is Map<String, dynamic>) {
               if (extra['booking'] is BookingResponse) {
                 booking = extra['booking'] as BookingResponse;
+              } else if (extra['booking'] is Map<String, dynamic>) {
+                booking = BookingResponse.fromJson(extra['booking'] as Map<String, dynamic>);
+              } else if (extra.containsKey('id') || extra.containsKey('roomId') || extra.containsKey('room_id') || extra.containsKey('booking_id')) {
+                booking = BookingResponse.fromJson(extra);
               }
-              paymentId = extra['paymentId']?.toString();
-              orderId = extra['orderId']?.toString();
+              paymentId = extra['paymentId']?.toString() ??
+                  extra['payment_id']?.toString() ??
+                  extra['razorpay_payment_id']?.toString();
+              orderId = extra['orderId']?.toString() ??
+                  extra['order_id']?.toString() ??
+                  extra['razorpay_order_id']?.toString();
+            }
+
+            final queryBookingId = state.uri.queryParameters['id'] ??
+                state.uri.queryParameters['bookingId'] ??
+                state.uri.queryParameters['booking_id'];
+            if ((booking == null || booking.id.isEmpty) &&
+                queryBookingId != null &&
+                queryBookingId.trim().isNotEmpty) {
+              booking = BookingResponse(
+                id: queryBookingId.trim(),
+                roomId: '',
+                roomName: 'TAGA Tower Room',
+                checkInDate: '',
+                checkOutDate: '',
+                bookerName: '',
+                bookerId: '',
+                bookingFor: 'self',
+                bedCount: 1,
+                paymentStatus: 'confirmed',
+                advanceAmount: 0,
+                bookingStatus: 'confirmed',
+              );
             }
 
             booking ??= const BookingResponse(
@@ -545,8 +590,14 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
             BookingResponse? booking;
             if (extra is BookingResponse) {
               booking = extra;
-            } else if (extra is Map<String, dynamic> && extra['booking'] is BookingResponse) {
-              booking = extra['booking'] as BookingResponse;
+            } else if (extra is Map<String, dynamic>) {
+              if (extra['booking'] is BookingResponse) {
+                booking = extra['booking'] as BookingResponse;
+              } else if (extra['booking'] is Map<String, dynamic>) {
+                booking = BookingResponse.fromJson(extra['booking'] as Map<String, dynamic>);
+              } else if (extra.containsKey('id') || extra.containsKey('roomId') || extra.containsKey('room_id')) {
+                booking = BookingResponse.fromJson(extra);
+              }
             }
             return CustomTransitionPage(
               key: state.pageKey,
@@ -565,8 +616,14 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
             BookingResponse? initialBooking;
             if (extra is BookingResponse) {
               initialBooking = extra;
-            } else if (extra is Map<String, dynamic> && extra['booking'] is BookingResponse) {
-              initialBooking = extra['booking'] as BookingResponse;
+            } else if (extra is Map<String, dynamic>) {
+              if (extra['booking'] is BookingResponse) {
+                initialBooking = extra['booking'] as BookingResponse;
+              } else if (extra['booking'] is Map<String, dynamic>) {
+                initialBooking = BookingResponse.fromJson(extra['booking'] as Map<String, dynamic>);
+              } else if (extra.containsKey('id') || extra.containsKey('roomId') || extra.containsKey('room_id')) {
+                initialBooking = BookingResponse.fromJson(extra);
+              }
             }
             return CustomTransitionPage(
               key: state.pageKey,

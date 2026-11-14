@@ -147,10 +147,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('My Profile'), findsOneWidget);
       expect(find.text('R. Sivakumar'), findsOneWidget);
       expect(find.text('TAGA ID: TAGA-2024-0842'), findsOneWidget);
       expect(find.text('Subscriber Member'), findsOneWidget);
+      expect(find.text('Official Announcements'), findsOneWidget);
       expect(find.text('Subscription Plans & Dues'), findsOneWidget);
       expect(find.text('Membership Status & Benefits'), findsOneWidget);
       expect(find.text('Personal Information'), findsOneWidget);
@@ -309,7 +309,7 @@ void main() {
       expect(find.text('Submit Edit Request'), findsOneWidget);
     });
 
-    testWidgets('AccountSettingsScreen renders security options, announcements and logout', (tester) async {
+    testWidgets('AccountSettingsScreen renders security options and logout without announcements', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -332,7 +332,7 @@ void main() {
 
       expect(find.text('Account & Settings'), findsOneWidget);
       expect(find.text('Change Password'), findsOneWidget);
-      expect(find.text('Announcements'), findsOneWidget);
+      expect(find.text('Announcements'), findsNothing);
       expect(find.text('Logout'), findsOneWidget);
     });
 

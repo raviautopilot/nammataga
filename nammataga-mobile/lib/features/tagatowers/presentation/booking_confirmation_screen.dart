@@ -9,8 +9,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../domain/booking_model.dart';
-import '../providers/booking_flow_provider.dart';
+import '../providers/tagatowers_provider.dart';
 import 'theme/tagatowers_design_tokens.dart';
 
 /// Caretaker contact model
@@ -72,12 +73,74 @@ class BookingConfirmationScreen extends ConsumerStatefulWidget {
 class _BookingConfirmationScreenState
     extends ConsumerState<BookingConfirmationScreen> {
   final Set<String> _copiedKeys = {};
+  late BookingResponse _activeBooking;
+  bool _isLoadingDetails = false;
 
-  bool get _isConfirmed =>
-      widget.booking.paymentStatus.trim().toLowerCase() == 'confirmed';
+  @override
+  void initState() {
+    super.initState();
+    _activeBooking = widget.booking;
+    if (_activeBooking.id.isNotEmpty && _activeBooking.checkInDate.isEmpty) {
+      _loadBookingDetails();
+    }
+  }
+
+  @override
+  void didUpdateWidget(BookingConfirmationScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.booking != widget.booking) {
+      setState(() {
+        _activeBooking = widget.booking;
+      });
+    }
+  }
+
+  Future<void> _loadBookingDetails() async {
+    setState(() => _isLoadingDetails = true);
+    try {
+      final session = ref.read(authProvider).value;
+      final userMap = session?.user;
+      final bookerId = (userMap?['taga_id'] ??
+              userMap?['tagaId'] ??
+              userMap?['sno']?.toString() ??
+              userMap?['id']?.toString() ??
+              '')
+          .toString();
+      if (bookerId.isNotEmpty) {
+        final repo = ref.read(tagaTowersRepositoryProvider);
+        final bookings = await repo.getUserBookings(bookerId);
+        final match = bookings.where((b) => b.id == _activeBooking.id).firstOrNull;
+        if (match != null && mounted) {
+          setState(() {
+            _activeBooking = match.copyWith(
+              paymentStatus: match.paymentStatus.isNotEmpty ? match.paymentStatus : 'confirmed',
+              bookingStatus: match.bookingStatus.isNotEmpty ? match.bookingStatus : 'upcoming',
+            );
+          });
+        }
+      }
+    } catch (_) {
+      // Keep existing active booking if fetch fails
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingDetails = false);
+      }
+    }
+  }
+
+  bool get _isConfirmed {
+    final status = _activeBooking.paymentStatus.trim().toLowerCase();
+    final bStatus = _activeBooking.bookingStatus.trim().toLowerCase();
+    return status == 'confirmed' ||
+        status == 'paid' ||
+        status == 'completed' ||
+        status == 'success' ||
+        status == 'captured' ||
+        bStatus == 'confirmed';
+  }
 
   String get _effectivePaymentId {
-    final fromBooking = widget.booking.razorpayPaymentId?.trim();
+    final fromBooking = _activeBooking.razorpayPaymentId?.trim();
     if (fromBooking != null && fromBooking.isNotEmpty) return fromBooking;
     final fromParam = widget.razorpayPaymentId?.trim();
     if (fromParam != null && fromParam.isNotEmpty) return fromParam;
@@ -85,7 +148,7 @@ class _BookingConfirmationScreenState
   }
 
   String get _effectiveOrderId {
-    final fromBooking = widget.booking.razorpayOrderId?.trim();
+    final fromBooking = _activeBooking.razorpayOrderId?.trim();
     if (fromBooking != null && fromBooking.isNotEmpty) return fromBooking;
     final fromParam = widget.razorpayOrderId?.trim();
     if (fromParam != null && fromParam.isNotEmpty) return fromParam;
@@ -94,18 +157,22 @@ class _BookingConfirmationScreenState
 
   DateTime? _parseDate(String dateStr) {
     if (dateStr.isEmpty) return null;
-    return DateTime.tryParse(dateStr);
+    try {
+      return DateTime.tryParse(dateStr);
+    } catch (_) {
+      return null;
+    }
   }
 
   String _formatDisplayDate(String dateStr) {
     final parsed = _parseDate(dateStr);
-    if (parsed == null) return dateStr;
+    if (parsed == null) return dateStr.isNotEmpty ? dateStr : 'To Be Scheduled';
     return DateFormat('EEE, dd MMM yyyy').format(parsed);
   }
 
   int _calculateStayDays() {
-    final checkIn = _parseDate(widget.booking.checkInDate);
-    final checkOut = _parseDate(widget.booking.checkOutDate);
+    final checkIn = _parseDate(_activeBooking.checkInDate);
+    final checkOut = _parseDate(_activeBooking.checkOutDate);
     if (checkIn != null && checkOut != null) {
       final days = checkOut.difference(checkIn).inDays;
       return days > 0 ? days : 1;
@@ -246,9 +313,9 @@ class _BookingConfirmationScreenState
                       const SizedBox(height: 16),
 
                       // 4. Guest List Summary Card (if guest booking)
-                      if (widget.booking.bookingFor.trim().toLowerCase() ==
+                      if (_activeBooking.bookingFor.trim().toLowerCase() ==
                               'guest' &&
-                          widget.booking.guestDetails.isNotEmpty) ...[
+                          _activeBooking.guestDetails.isNotEmpty) ...[
                         _buildGuestListCard(),
                         const SizedBox(height: 16),
                       ],
@@ -338,8 +405,8 @@ class _BookingConfirmationScreenState
 
         // Warm subtitle
         Text(
-          widget.booking.bookerName.trim().isNotEmpty
-              ? 'Thank you, ${widget.booking.bookerName.trim()}! Your accommodation at TAGA Tower Chennai is confirmed and secured.'
+          _activeBooking.bookerName.trim().isNotEmpty
+              ? 'Thank you, ${_activeBooking.bookerName.trim()}! Your accommodation at TAGA Tower Chennai is confirmed and secured.'
               : 'Your accommodation at TAGA Tower Chennai has been confirmed and secured.',
           textAlign: TextAlign.center,
           style: const TextStyle(
@@ -362,7 +429,9 @@ class _BookingConfirmationScreenState
 
   Widget _buildBookingReferenceCard() {
     final isCopied = _copiedKeys.contains('booking_id');
-    final bookingId = widget.booking.id;
+    final bookingId = _activeBooking.id.isNotEmpty
+        ? _activeBooking.id
+        : 'TAGA-CONFIRMED';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -489,11 +558,11 @@ class _BookingConfirmationScreenState
   Widget _buildStayDetailsCard() {
     final stayDays = _calculateStayDays();
     final totalHours = stayDays * 24;
-    final isGuest = widget.booking.bookingFor.trim().toLowerCase() == 'guest';
+    final isGuest = _activeBooking.bookingFor.trim().toLowerCase() == 'guest';
     final roomDisplayName =
-        TagaTowersDesignTokens.getRoomDisplayName(widget.booking.roomId);
-    final roomName = widget.booking.roomName.trim().isNotEmpty
-        ? widget.booking.roomName.trim()
+        TagaTowersDesignTokens.getRoomDisplayName(_activeBooking.roomId);
+    final roomName = _activeBooking.roomName.trim().isNotEmpty
+        ? _activeBooking.roomName.trim()
         : roomDisplayName;
 
     return Container(
@@ -617,14 +686,14 @@ class _BookingConfirmationScreenState
                         ),
                         _buildMiniBadge(
                           label:
-                              '${widget.booking.bedCount} Bed${widget.booking.bedCount > 1 ? 's' : ''} Booked',
+                              '${_activeBooking.bedCount} Bed${_activeBooking.bedCount > 1 ? 's' : ''} Booked',
                           color: AppColors.textPrimary,
                           background: const Color(0xFFF1F5F9),
                         ),
-                        if (widget.booking.gender != null &&
-                            widget.booking.gender!.isNotEmpty)
+                        if (_activeBooking.gender != null &&
+                            _activeBooking.gender!.isNotEmpty)
                           _buildMiniBadge(
-                            label: widget.booking.gender!.toUpperCase(),
+                            label: _activeBooking.gender!.toUpperCase(),
                             color: AppColors.textPrimary,
                             background: const Color(0xFFF1F5F9),
                           ),
@@ -646,7 +715,7 @@ class _BookingConfirmationScreenState
               Expanded(
                 child: _buildDateBox(
                   label: 'CHECK-IN',
-                  dateStr: _formatDisplayDate(widget.booking.checkInDate),
+                  dateStr: _formatDisplayDate(_activeBooking.checkInDate),
                   timeStr: '12:00 AM (Midnight)',
                   icon: LucideIcons.logIn,
                 ),
@@ -663,7 +732,7 @@ class _BookingConfirmationScreenState
               Expanded(
                 child: _buildDateBox(
                   label: 'CHECK-OUT',
-                  dateStr: _formatDisplayDate(widget.booking.checkOutDate),
+                  dateStr: _formatDisplayDate(_activeBooking.checkOutDate),
                   timeStr: '12:00 AM (Midnight)',
                   icon: LucideIcons.logOut,
                 ),
@@ -810,7 +879,7 @@ class _BookingConfirmationScreenState
   // ═══════════════════════════════════════════════════════════════════════════
 
   Widget _buildGuestListCard() {
-    final guests = widget.booking.guestDetails;
+    final guests = _activeBooking.guestDetails;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1001,7 +1070,7 @@ class _BookingConfirmationScreenState
                 ),
               ),
               Text(
-                '₹${widget.booking.advanceAmount}',
+                '₹${_activeBooking.advanceAmount}',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
@@ -1442,7 +1511,7 @@ class _BookingConfirmationScreenState
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'The advance payment of ₹${widget.booking.advanceAmount} is strictly non-refundable. Cancellations can only be initiated strictly prior to your scheduled check-in date. No refund will be issued upon cancellation or no-show.',
+                  'The advance payment of ₹${_activeBooking.advanceAmount} is strictly non-refundable. Cancellations can only be initiated strictly prior to your scheduled check-in date. No refund will be issued upon cancellation or no-show.',
                   style: TextStyle(
                     fontSize: 12,
                     color: TagaTowersDesignTokens.warningAmberDark
@@ -1586,7 +1655,7 @@ class _BookingConfirmationScreenState
             ),
             const SizedBox(height: 10),
             Text(
-              'This confirmation screen is only displayed once the booking has been confirmed by the backend. Current payment status: "${widget.booking.paymentStatus}".',
+              'This confirmation screen is only displayed once the booking has been confirmed by the backend. Current payment status: "${_activeBooking.paymentStatus}".',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 14,
@@ -1594,7 +1663,61 @@ class _BookingConfirmationScreenState
                 height: 1.45,
               ),
             ),
-            const SizedBox(height: 28),
+            if (_isLoadingDetails) ...[
+              const SizedBox(height: 20),
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  TagaTowersDesignTokens.primaryGreen,
+                ),
+                strokeWidth: 2.5,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Checking status with server...',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            if (_activeBooking.id.isNotEmpty && !_isLoadingDetails) ...[
+              BouncyButton(
+                onTap: _loadBookingDetails,
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: TagaTowersDesignTokens.softMint,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: TagaTowersDesignTokens.mintHighlight,
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(
+                        LucideIcons.refreshCw,
+                        size: 15,
+                        color: TagaTowersDesignTokens.deepEmerald,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Re-check Status',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: TagaTowersDesignTokens.deepEmerald,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             BouncyButton(
               onTap: _onViewInMyBookings,
               child: Container(

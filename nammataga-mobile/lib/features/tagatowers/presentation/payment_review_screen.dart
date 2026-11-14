@@ -222,6 +222,10 @@ class _PaymentReviewScreenState extends ConsumerState<PaymentReviewScreen> {
 
       if (!mounted) return;
 
+      setState(() {
+        _isProcessing = false;
+      });
+
       // Clear wizard flow state
       ref.read(bookingFlowNotifierProvider.notifier).reset();
 
@@ -263,30 +267,45 @@ class _PaymentReviewScreenState extends ConsumerState<PaymentReviewScreen> {
   }
 
   /// Handles user closing or cancelling the Razorpay modal.
-  /// Releases the 10-minute bed hold immediately via DELETE /api/towers/bookings/:id.
+  /// Preserves the draft booking hold state so user can retry or recover if bank debited.
   Future<void> _onPaymentDismissed(BookingResponse booking) async {
-    final repo = ref.read(tagaTowersRepositoryProvider);
-
-    try {
-      await repo.cancelBooking(booking.id);
-    } catch (e) {
-      debugPrint('[PaymentReviewScreen] Error releasing pending booking on dismiss: $e');
-    }
-
     if (!mounted) return;
 
     setState(() {
       _isProcessing = false;
-      _isBookingCancelled = true;
     });
 
-    ref.read(bookingFlowNotifierProvider.notifier).setPendingBooking(null);
-
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Payment cancelled. Booking removed.'),
-        backgroundColor: AppColors.textSecondary,
-        duration: Duration(seconds: 3),
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(LucideIcons.info, color: Colors.white, size: 16),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Payment window closed. If money was debited, tap Verify below.',
+                style: TextStyle(fontSize: 12.5),
+              ),
+            ),
+          ],
+        ),
+        action: SnackBarAction(
+          label: 'Verify',
+          textColor: const Color(0xFFFCD34D),
+          onPressed: () {
+            context.push(
+              '/taga-towers/payment-recovery',
+              extra: {
+                'booking': booking,
+                'bookingId': booking.id,
+                'amount': booking.advanceAmount,
+                'roomName': booking.roomName,
+              },
+            );
+          },
+        ),
+        backgroundColor: const Color(0xFF1E293B),
+        duration: const Duration(seconds: 6),
       ),
     );
   }
@@ -347,6 +366,7 @@ class _PaymentReviewScreenState extends ConsumerState<PaymentReviewScreen> {
     );
 
     if (shouldCancel == true) {
+      _isBookingCancelled = true;
       try {
         await ref.read(tagaTowersRepositoryProvider).cancelBooking(booking.id);
       } catch (e) {

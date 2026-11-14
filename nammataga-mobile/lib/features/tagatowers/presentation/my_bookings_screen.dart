@@ -611,10 +611,25 @@ class _BookingCard extends ConsumerWidget {
     );
   }
 
+  void _onRecoverPayment(BuildContext context) {
+    HapticFeedback.mediumImpact();
+    context.push(
+      '/taga-towers/payment-recovery',
+      extra: {
+        'booking': booking,
+        'bookingId': booking.id,
+        'orderId': booking.razorpayOrderId,
+        'paymentId': booking.razorpayPaymentId,
+        'amount': booking.advanceAmount,
+        'roomName': booking.roomName,
+      },
+    );
+  }
+
   void _onViewDetails(BuildContext context) {
     HapticFeedback.lightImpact();
-    // Navigates to the designated booking details route
-    context.push('/taga-towers/booking/details/${booking.id}');
+    // Navigates to the designated booking details route with local booking cached
+    context.push('/taga-towers/booking/details/${booking.id}', extra: booking);
   }
 
   void _onCancelBooking(BuildContext context, WidgetRef ref) {
@@ -945,6 +960,50 @@ class _BookingCard extends ConsumerWidget {
                         backgroundColor: const Color(0xFFFEF2F2),
                       ),
                       onPressed: () => _onCancelBooking(context, ref),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+
+                // If payment is pending, show Verify Payment primary button
+                if (booking.isPending) ...[
+                  Expanded(
+                    child: BouncyButton(
+                      onTap: () => _onRecoverPayment(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFFB45309),
+                              Color(0xFFD97706),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x26B45309),
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(LucideIcons.refreshCw, size: 15, color: Colors.white),
+                            SizedBox(width: 6),
+                            Text(
+                              'Verify Payment',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),

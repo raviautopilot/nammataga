@@ -62,14 +62,6 @@ class AccountSettingsScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1, indent: 58, color: Color(0xFFEFF4F0)),
                 _buildSettingRow(
-                  icon: LucideIcons.megaphone,
-                  title: 'Announcements',
-                  onTap: () {
-                    context.push('/profile/announcements');
-                  },
-                ),
-                const Divider(height: 1, indent: 58, color: Color(0xFFEFF4F0)),
-                _buildSettingRow(
                   icon: LucideIcons.headphones,
                   title: 'Help & Support',
                   onTap: () => _showHelpSheet(context),
@@ -77,7 +69,7 @@ class AccountSettingsScreen extends ConsumerWidget {
                 const Divider(height: 1, indent: 58, color: Color(0xFFEFF4F0)),
                 _buildSettingRow(
                   icon: LucideIcons.info,
-                  title: 'About NammaTAGA',
+                  title: 'About TAGA',
                   onTap: () => _showAboutSheet(context),
                 ),
                 const Divider(height: 1, indent: 58, color: Color(0xFFEFF4F0)),
@@ -125,7 +117,7 @@ class AccountSettingsScreen extends ConsumerWidget {
           Column(
             children: const [
               Text(
-                'NammaTAGA Mobile • Version 1.0.0 (Build 100)',
+                'TAGA Mobile • Version 1.0.0 (Build 100)',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -134,7 +126,7 @@ class AccountSettingsScreen extends ConsumerWidget {
               ),
               SizedBox(height: 4),
               Text(
-                'Tamil Nadu Agricultural Graduate Association (Estd. 1929)',
+                'Tamil Nadu Government Agricultural Graduate Association (Estd. 1929)',
                 style: TextStyle(
                   fontSize: 11,
                   color: Color(0xFF94A3B8),
@@ -308,7 +300,7 @@ class AccountSettingsScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
             Text(
-              'About NammaTAGA',
+              'About TAGA',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -317,7 +309,7 @@ class AccountSettingsScreen extends ConsumerWidget {
             ),
             SizedBox(height: 10),
             Text(
-              'Tamil Nadu Government Agricultural Graduates Association (TAGA) is the apex professional body representing agricultural science graduates of the state agriculture department since 1929.\n\nNammaTAGA Mobile Member Portal v1.0.0 (Build 100)',
+              'Tamil Nadu Government Agricultural Graduates Association (TAGA) is the apex professional body representing agricultural science graduates of the state agriculture department since 1929.\n\nTAGA Mobile Member Portal v1.0.0 (Build 100)',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -353,7 +345,7 @@ class AccountSettingsScreen extends ConsumerWidget {
             ),
             SizedBox(height: 10),
             Text(
-              'NammaTAGA protects member data with encryption and strict role-based access. Your government service records and contact credentials are used solely for verified association affairs and state communications.',
+              'TAGA protects member data with encryption and strict role-based access. Your government service records and contact credentials are used solely for verified association affairs and state communications.',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -389,7 +381,7 @@ class AccountSettingsScreen extends ConsumerWidget {
             ),
             SizedBox(height: 10),
             Text(
-              'Use of the NammaTAGA mobile portal is governed by association bylaws. Subscribed members agree to uphold the ethics and collective interests of agricultural officers in Tamil Nadu.',
+              'Use of the TAGA mobile portal is governed by association bylaws. Subscribed members agree to uphold the ethics and collective interests of agricultural officers in Tamil Nadu.',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -408,7 +400,7 @@ class AccountSettingsScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Confirm Logout'),
         content: const Text(
-          'Are you sure you want to log out of your NammaTAGA account?',
+          'Are you sure you want to log out of your TAGA account?',
         ),
         actions: [
           TextButton(

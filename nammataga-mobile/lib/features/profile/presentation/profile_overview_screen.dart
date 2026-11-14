@@ -7,17 +7,19 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
 import '../domain/member_profile.dart';
 import '../providers/profile_provider.dart';
-import 'widgets/initials_avatar.dart';
 
 /// Screen 1: Profile Overview
-/// Implements the cinematic deep emerald header with watermark, circular initials avatar,
-/// membership summary card, and structured navigation list matching the reference image.
+/// Implements the executive deep emerald header banner,
+/// membership summary card, and structured navigation list matching the reference design.
 class ProfileOverviewScreen extends ConsumerWidget {
   const ProfileOverviewScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(memberProfileProvider);
+    final subStatusAsync = ref.watch(memberSubscriptionStatusProvider);
+    final unreadCountAsync = ref.watch(unreadAnnouncementsCountProvider);
+    final unreadCount = unreadCountAsync.value ?? 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAF7),
@@ -26,8 +28,9 @@ class ProfileOverviewScreen extends ConsumerWidget {
         onRefresh: () async {
           HapticFeedback.lightImpact();
           ref.invalidate(memberProfileProvider);
-          ref.invalidate(memberNotificationsProvider);
-          ref.invalidate(unreadNotificationsCountProvider);
+          ref.invalidate(memberSubscriptionStatusProvider);
+          ref.invalidate(memberAnnouncementsProvider);
+          ref.invalidate(unreadAnnouncementsCountProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(
@@ -35,9 +38,12 @@ class ProfileOverviewScreen extends ConsumerWidget {
           ),
           child: Column(
             children: [
-              // 1. Cinematic Deep Emerald Header matching reference
+              // 1. Cinematic Deep Emerald Header matching reference & other screen banners
               profileAsync.when(
-                data: (profile) => _buildHeader(context, profile),
+                data: (profile) => _buildHeader(
+                  context,
+                  profile,
+                ),
                 loading: () => _buildHeaderLoading(context),
                 error: (e, s) => _buildHeaderFallback(context),
               ),
@@ -49,14 +55,18 @@ class ProfileOverviewScreen extends ConsumerWidget {
                   children: [
                     // Membership Summary Card
                     profileAsync.when(
-                      data: (profile) => _buildMembershipCard(context, profile),
+                      data: (profile) => _buildMembershipCard(
+                        context,
+                        profile,
+                        subStatus: subStatusAsync.value,
+                      ),
                       loading: () => _buildMembershipCardSkeleton(),
                       error: (e, s) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: 16),
 
-                    // Profile Navigation List Card
-                    _buildNavigationList(context),
+                    // Profile Navigation List Card with Official Announcements
+                    _buildNavigationList(context, unreadCount: unreadCount),
                   ],
                 ),
               ),
@@ -67,53 +77,107 @@ class ProfileOverviewScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, MemberProfile profile) {
+  Widget _buildHeader(
+    BuildContext context,
+    MemberProfile profile,
+  ) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF061A0F),
-            Color(0xFF0D2C1B),
-            Color(0xFF1B4332),
-            Color(0xFF265942),
-          ],
-        ),
         borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(32),
+          bottom: Radius.circular(30),
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF061A0F).withValues(alpha: 0.3),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+            color: const Color(0xFF04190E).withValues(alpha: 0.38),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            // Watermark silhouette in top right
-            Positioned(
-              right: -16,
-              top: -12,
-              child: Icon(
-                LucideIcons.userRound,
-                size: 140,
-                color: Colors.white.withValues(alpha: 0.05),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          // Multi-stop Emerald Brand Gradient matching Events, Resources, Grievance
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF04170D), // Deep rich forest obsidian
+                    Color(0xFF0A2B1B), // Signature TAGA deep emerald
+                    Color(0xFF14452F), // Forest green
+                    Color(0xFF1D5A3D), // Vibrant highlight green
+                  ],
+                  stops: [0.0, 0.35, 0.72, 1.0],
+                ),
               ),
             ),
+          ),
 
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 26),
+          // Ambient Top-Right Radial Glow (exact dimensions matching Grievance)
+          Positioned(
+            top: -45,
+            right: -35,
+            width: 220,
+            height: 220,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF52B788).withValues(alpha: 0.28),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Ambient Bottom-Left Glow (exact dimensions matching Grievance)
+          Positioned(
+            bottom: -35,
+            left: -25,
+            width: 170,
+            height: 170,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF2D6A4F).withValues(alpha: 0.32),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Subtle Watermark Leaf / User Motif
+          Positioned(
+            right: -10,
+            bottom: -15,
+            child: IgnorePointer(
+              child: Icon(
+                LucideIcons.userRound,
+                size: 135,
+                color: Colors.white.withValues(alpha: 0.045),
+              ),
+            ),
+          ),
+
+          // Foreground Content (matching Grievance dimensions and spacing)
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 26),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Top Row: Back button, Screen Title, Settings Gear
+                  // Top Row: Back button, Executive Pill Badge, Settings Gear
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       BouncyButton(
                         onTap: () {
@@ -124,160 +188,216 @@ class ProfileOverviewScreen extends ConsumerWidget {
                             context.go('/home');
                           }
                         },
+                        scaleDownFactor: 0.90,
                         child: Container(
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.14),
                             shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.12),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              width: 1,
+                              color: Colors.white.withValues(alpha: 0.25),
+                              width: 1.1,
                             ),
                           ),
-                          child: const Icon(
-                            LucideIcons.arrowLeft,
-                            color: Colors.white,
-                            size: 19,
+                          child: const Center(
+                            child: Icon(
+                              LucideIcons.arrowLeft,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                           ),
                         ),
                       ),
-                      const Text(
-                        'My Profile',
-                        style: TextStyle(
-                          fontSize: 18.5,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: -0.3,
+                      const SizedBox(width: 12),
+
+                      // Pill Badge matching Grievance screen branding pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.20),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              LucideIcons.crown,
+                              size: 12,
+                              color: Color(0xFFFDE68A),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              profile.membershipBadgeTitle,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+
+                      const Spacer(),
+
+                      // Settings Gear
                       BouncyButton(
                         onTap: () {
                           HapticFeedback.lightImpact();
                           context.push('/profile/settings');
                         },
+                        scaleDownFactor: 0.90,
                         child: Container(
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.14),
                             shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.12),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              width: 1,
+                              color: Colors.white.withValues(alpha: 0.25),
+                              width: 1.1,
                             ),
                           ),
-                          child: const Icon(
-                            LucideIcons.settings,
-                            color: Colors.white,
-                            size: 19,
+                          child: const Center(
+                            child: Icon(
+                              LucideIcons.settings,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
 
-                  // Circular Initials Avatar (Strictly initials - NO photo upload)
-                  InitialsAvatar(
-                    initials: profile.avatarInitials,
-                    size: 84,
-                    fontSize: 28,
+                  const SizedBox(height: 22),
+
+                  // Category tag matching Grievance banner structure
+                  Text(
+                    'ASSOCIATION MEMBER PROFILE',
+                    style: TextStyle(
+                      color: const Color(0xFF95D5B2).withValues(alpha: 0.9),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
                   ),
-                  const SizedBox(height: 14),
 
-                  // Member Name
+                  const SizedBox(height: 6),
+
+                  // Member Name (Title) matching Grievance typography & sizing
                   Text(
                     profile.fullNameWithInitial,
-                    textAlign: TextAlign.center,
                     style: const TextStyle(
-                      fontSize: 21,
-                      fontWeight: FontWeight.bold,
                       color: Colors.white,
-                      letterSpacing: -0.3,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.4,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
 
-                  // TAGA ID
-                  if (profile.tagaId.isNotEmpty)
-                    Text(
-                      'TAGA ID: ${profile.tagaId}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFB7E4C7),
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-
-                  // Subscriber Crown Badge Pill
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 5.5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF3C7),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFFFDE68A),
-                        width: 1.1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          LucideIcons.crown,
-                          size: 13.5,
-                          color: Color(0xFFD97706),
-                        ),
-                        const SizedBox(width: 6),
+                  // TAGA ID & Subtitle matching Grievance typography & height
+                  Row(
+                    children: [
+                      if (profile.tagaId.isNotEmpty) ...[
                         Text(
-                          profile.membershipBadgeTitle,
+                          'TAGA ID: ${profile.tagaId}',
                           style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF92400E),
+                            fontSize: 13.5,
+                            color: Color(0xFFB7E4C7),
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 3.5,
+                          height: 3.5,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFF74C69D),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                       ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Association Slogan / Motto matching reference
-                  const Text(
-                    'Together for a Stronger Community',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFFD8F3DC),
-                      letterSpacing: 0.2,
-                    ),
+                      Expanded(
+                        child: Text(
+                          _buildSubtitleText(profile),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.85),
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildMembershipCard(BuildContext context, MemberProfile profile) {
-    final isSubscribed = profile.isPaid || profile.subscriptionActive;
+  String _buildSubtitleText(MemberProfile profile) {
+    final parts = <String>[];
+    if (profile.designation.isNotEmpty) {
+      parts.add(profile.designation);
+    }
+    if (profile.recruitmentBatch.isNotEmpty) {
+      parts.add('Batch ${profile.recruitmentBatch}');
+    }
+    if (parts.isEmpty && profile.workingDistrict.isNotEmpty) {
+      parts.add(profile.workingDistrict);
+    }
+    if (parts.isEmpty) {
+      return 'Together for a Stronger Community';
+    }
+    return parts.join(' • ');
+  }
+
+  String _formatValidDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '31 Mar 2027';
+    try {
+      final parts = dateStr.split('-');
+      if (parts.length == 3) {
+        final year = int.parse(parts[0]);
+        final month = int.parse(parts[1]);
+        final day = int.parse(parts[2]);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        final mStr = months[month - 1]; return '$day $mStr $year';
+      }
+    } catch (_) {}
+    return dateStr;
+  }
+
+  Widget _buildMembershipCard(
+    BuildContext context,
+    MemberProfile profile, {
+    Map<String, dynamic>? subStatus,
+  }) {
+    final isSubscribed = profile.isPaid ||
+        profile.subscriptionActive ||
+        (subStatus != null && subStatus['is_paid'] == true);
+
+    final rawValidUntil = subStatus?['valid_until']?.toString() ??
+        subStatus?['next_due_date']?.toString();
+    final validTillFormatted = isSubscribed
+        ? _formatValidDate(rawValidUntil)
+        : '—';
 
     return Container(
       width: double.infinity,
@@ -385,7 +505,7 @@ class ProfileOverviewScreen extends ConsumerWidget {
           const Divider(height: 1, thickness: 1, color: Color(0xFFEFF4F0)),
           const SizedBox(height: 14),
 
-          // Key Value Rows matching reference
+          // Key Value Rows matching backend and subscription page data
           _buildSummaryRow(
             label: 'Membership Type',
             value: isSubscribed ? 'Subscriber' : 'General Member',
@@ -393,12 +513,12 @@ class ProfileOverviewScreen extends ConsumerWidget {
           const SizedBox(height: 10),
           _buildSummaryRow(
             label: 'Valid Till',
-            value: isSubscribed ? '31 Dec 2026' : '—',
+            value: validTillFormatted,
           ),
           const SizedBox(height: 10),
           _buildSummaryRow(
             label: 'Payment Status',
-            value: profile.paymentStatus,
+            value: isSubscribed ? 'Paid' : profile.paymentStatus,
             hasCheckmark: isSubscribed,
           ),
           const SizedBox(height: 16),
@@ -503,7 +623,7 @@ class ProfileOverviewScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildNavigationList(BuildContext context) {
+  Widget _buildNavigationList(BuildContext context, {int unreadCount = 0}) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -520,6 +640,14 @@ class ProfileOverviewScreen extends ConsumerWidget {
       ),
       child: Column(
         children: [
+          _buildNavItem(
+            context,
+            icon: LucideIcons.megaphone,
+            title: 'Official Announcements',
+            route: '/profile/announcements',
+            badgeCount: unreadCount,
+          ),
+          const Divider(height: 1, indent: 58, color: Color(0xFFEFF4F0)),
           _buildNavItem(
             context,
             icon: LucideIcons.user,
@@ -585,6 +713,7 @@ class ProfileOverviewScreen extends ConsumerWidget {
     required IconData icon,
     required String title,
     required String route,
+    int? badgeCount,
   }) {
     return BouncyButton(
       onTap: () {
@@ -620,6 +749,24 @@ class ProfileOverviewScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            if (badgeCount != null && badgeCount > 0) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$badgeCount new',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
             const Icon(
               LucideIcons.chevronRight,
               size: 18,
@@ -634,18 +781,20 @@ class ProfileOverviewScreen extends ConsumerWidget {
   Widget _buildHeaderLoading(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 260,
+      height: 220,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF061A0F),
-            Color(0xFF0D2C1B),
-            Color(0xFF1B4332),
+            Color(0xFF04170D),
+            Color(0xFF0A2B1B),
+            Color(0xFF14452F),
+            Color(0xFF1D5A3D),
           ],
+          stops: [0.0, 0.35, 0.72, 1.0],
         ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
       ),
       child: const Center(
         child: CircularProgressIndicator(color: Colors.white),
@@ -656,10 +805,10 @@ class ProfileOverviewScreen extends ConsumerWidget {
   Widget _buildHeaderFallback(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 26),
       decoration: const BoxDecoration(
         color: Color(0xFF0D2C1B),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
       ),
       child: const SafeArea(
         child: Center(

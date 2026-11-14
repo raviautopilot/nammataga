@@ -88,7 +88,7 @@ class GrievanceIntroScreen extends ConsumerWidget {
                       icon: LucideIcons.send,
                       title: 'Share Your Issue',
                       description:
-                          'Direct channel to association office bearers and committee for rapid review.',
+                          'Direct channel to association State office bearers  for rapid review.',
                       iconBg: const Color(0xFFE8F5E9),
                       iconColor: const Color(0xFF2D6A4F),
                     )
@@ -132,7 +132,7 @@ class GrievanceIntroScreen extends ConsumerWidget {
                       icon: LucideIcons.crown,
                       title: 'Available for Paid Members',
                       description:
-                          'Dedicated redressal priority and tracking for subscribed NammaTAGA members.',
+                          'Dedicated redressal priority and tracking for subscribed TAGA members.',
                       iconBg: const Color(0xFFFEF3C7),
                       iconColor: const Color(0xFFB45309),
                       trailing: isPaid
@@ -333,7 +333,7 @@ class GrievanceIntroScreen extends ConsumerWidget {
                             ),
                             const SizedBox(width: 6),
                             const Text(
-                              'NammaTAGA Redressal',
+                              'TAGA Redressal',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 11.5,
@@ -385,7 +385,7 @@ class GrievanceIntroScreen extends ConsumerWidget {
 
                   // Subtitle: "Raise your concern. We are here to listen."
                   Text(
-                    'Raise your concern. We are here to listen.',
+                    'Raise your concern, We are here to listen and resolve.',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.85),
                       fontSize: 14,
