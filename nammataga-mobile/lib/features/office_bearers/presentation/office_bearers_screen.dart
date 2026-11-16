@@ -389,7 +389,7 @@ class _OfficeBearersScreenState extends ConsumerState<OfficeBearersScreen> {
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
             physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
+              parent: ClampingScrollPhysics(),
             ),
             itemCount: members.length + 1,
             itemBuilder: (context, index) {
@@ -461,7 +461,7 @@ class _OfficeBearersScreenState extends ConsumerState<OfficeBearersScreen> {
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
+              parent: ClampingScrollPhysics(),
             ),
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
             child: Column(

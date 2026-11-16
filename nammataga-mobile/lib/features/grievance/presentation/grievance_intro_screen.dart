@@ -38,7 +38,7 @@ class GrievanceIntroScreen extends ConsumerWidget {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
+            parent: ClampingScrollPhysics(),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

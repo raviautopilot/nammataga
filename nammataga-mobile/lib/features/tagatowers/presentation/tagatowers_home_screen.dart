@@ -357,7 +357,7 @@ class _TagaTowersHomeScreenState extends ConsumerState<TagaTowersHomeScreen> {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
+            parent: ClampingScrollPhysics(),
           ),
           child: Center(
             child: ConstrainedBox(

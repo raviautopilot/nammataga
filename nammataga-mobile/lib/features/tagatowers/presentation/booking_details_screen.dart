@@ -418,7 +418,7 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
         color: TagaTowersDesignTokens.primaryGreen,
         backgroundColor: Colors.white,
         child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

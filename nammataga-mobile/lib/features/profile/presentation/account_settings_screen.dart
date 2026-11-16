@@ -8,6 +8,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
 import '../../auth/presentation/widgets/change_password_sheet.dart';
 import '../../auth/providers/auth_provider.dart';
+import 'widgets/about_taga_modal.dart';
 import 'widgets/profile_subpage_scaffold.dart';
 
 /// Screen 10: Account & Settings
@@ -70,19 +71,19 @@ class AccountSettingsScreen extends ConsumerWidget {
                 _buildSettingRow(
                   icon: LucideIcons.info,
                   title: 'About TAGA',
-                  onTap: () => _showAboutSheet(context),
+                  onTap: () => showAboutTagaModal(context),
                 ),
                 const Divider(height: 1, indent: 58, color: Color(0xFFEFF4F0)),
                 _buildSettingRow(
                   icon: LucideIcons.shieldCheck,
                   title: 'Privacy Policy',
-                  onTap: () => _showPrivacySheet(context),
+                  onTap: () => context.push('/profile/privacy'),
                 ),
                 const Divider(height: 1, indent: 58, color: Color(0xFFEFF4F0)),
                 _buildSettingRow(
                   icon: LucideIcons.fileText,
                   title: 'Terms & Conditions',
-                  onTap: () => _showTermsSheet(context),
+                  onTap: () => context.push('/profile/terms'),
                 ),
               ],
             ),
@@ -279,114 +280,6 @@ class AccountSettingsScreen extends ConsumerWidget {
               title: const Text('Official Portal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
               subtitle: const Text('www.nammataga.com'),
               onTap: () => _launch('https://www.nammataga.com'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showAboutSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
-              'About TAGA',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            SizedBox(height: 10),
-            Text(
-              'Tamil Nadu Government Agricultural Graduates Association (TAGA) is the apex professional body representing agricultural science graduates of the state agriculture department since 1929.\n\nTAGA Mobile Member Portal v1.0.0 (Build 100)',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showPrivacySheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
-              'Privacy Policy',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            SizedBox(height: 10),
-            Text(
-              'TAGA protects member data with encryption and strict role-based access. Your government service records and contact credentials are used solely for verified association affairs and state communications.',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showTermsSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
-              'Terms & Conditions',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            SizedBox(height: 10),
-            Text(
-              'Use of the TAGA mobile portal is governed by association bylaws. Subscribed members agree to uphold the ethics and collective interests of agricultural officers in Tamil Nadu.',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
             ),
           ],
         ),

@@ -119,85 +119,102 @@ class _RoomAvailabilityScreenState
 
   void _openDatePickerSheet(
     BuildContext context,
-    DateTime currentIn,
-    DateTime currentOut,
+    DateTime initialIn,
+    DateTime initialOut,
   ) {
     HapticFeedback.lightImpact();
+    var tempIn = initialIn;
+    var tempOut = initialOut;
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (modalContext) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(modalContext).viewInsets.bottom,
-          ),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(modalContext).viewInsets.bottom,
+              ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-                const SizedBox(height: 16),
-                DateRangePickerCard(
-                  checkInDate: currentIn,
-                  checkOutDate: currentOut,
-                  onCheckInChanged: (newIn) {
-                    ref
-                        .read(bookingFlowNotifierProvider.notifier)
-                        .setDates(newIn, currentOut);
-                  },
-                  onCheckOutChanged: (newOut) {
-                    ref
-                        .read(bookingFlowNotifierProvider.notifier)
-                        .setDates(currentIn, newOut);
-                  },
-                ),
-                const SizedBox(height: 16),
-                BouncyButton(
-                  onTap: () => Navigator.of(modalContext).pop(),
-                  child: Container(
-                    width: double.infinity,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: AppColors.brandGradient,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: TagaTowersDesignTokens.softShadow,
                     ),
-                    alignment: Alignment.center,
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(LucideIcons.check, color: Colors.white, size: 18),
-                        SizedBox(width: 8),
-                        Text(
-                          'Apply Dates & Refresh',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                    const SizedBox(height: 16),
+                    DateRangePickerCard(
+                      checkInDate: tempIn,
+                      checkOutDate: tempOut,
+                      onCheckInChanged: (newIn) {
+                        setModalState(() {
+                          tempIn = newIn;
+                          // Ensure tempOut is at least 1 day after newIn
+                          final minCheckout = newIn.add(const Duration(days: 1));
+                          if (tempOut.isBefore(minCheckout) || tempOut.isAtSameMomentAs(newIn)) {
+                            tempOut = minCheckout;
+                          }
+                        });
+                      },
+                      onCheckOutChanged: (newOut) {
+                        setModalState(() {
+                          tempOut = newOut;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    BouncyButton(
+                      onTap: () {
+                        ref
+                            .read(bookingFlowNotifierProvider.notifier)
+                            .setDates(tempIn, tempOut);
+                        Navigator.of(modalContext).pop();
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: AppColors.brandGradient,
                           ),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: TagaTowersDesignTokens.softShadow,
                         ),
-                      ],
+                        alignment: Alignment.center,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(LucideIcons.check, color: Colors.white, size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              'Apply Dates & Refresh',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -389,7 +406,7 @@ class _RoomAvailabilityScreenState
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
+            parent: ClampingScrollPhysics(),
           ),
           slivers: [
             // ── Section 1: Interactive Stay Dates Header Bar ──────────────────

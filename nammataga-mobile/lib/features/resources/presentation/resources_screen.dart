@@ -136,7 +136,7 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
                   backgroundColor: Colors.white,
                   child: ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(
-                      parent: BouncingScrollPhysics(),
+                      parent: ClampingScrollPhysics(),
                     ),
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                     itemCount: categories.length + 1,
@@ -432,7 +432,7 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
     return Center(
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
+          parent: ClampingScrollPhysics(),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
         child: Column(
@@ -494,7 +494,7 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
     return Center(
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
+          parent: ClampingScrollPhysics(),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
         child: Container(

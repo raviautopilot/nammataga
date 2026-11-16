@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/app_exit_scope.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/home_provider.dart';
 import 'widgets/contact_glass_hub.dart';
@@ -24,9 +25,10 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
+    return AppExitScope(
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -114,7 +116,7 @@ class HomeScreen extends ConsumerWidget {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
+            parent: ClampingScrollPhysics(),
           ),
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           child: Column(
@@ -137,6 +139,7 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

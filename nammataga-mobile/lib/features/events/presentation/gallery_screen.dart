@@ -28,7 +28,7 @@ class GalleryScreen extends ConsumerWidget {
       },
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
+          parent: ClampingScrollPhysics(),
         ),
         slivers: [
           // Year Filter Bar

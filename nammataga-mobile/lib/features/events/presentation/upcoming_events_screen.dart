@@ -26,7 +26,7 @@ class UpcomingEventsScreen extends ConsumerWidget {
         loading: () => const UpcomingEventsShimmer(),
         error: (error, _) => ListView(
           physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
+            parent: ClampingScrollPhysics(),
           ),
           padding: const EdgeInsets.all(24),
           children: [
@@ -116,7 +116,7 @@ class UpcomingEventsScreen extends ConsumerWidget {
           if (events.isEmpty) {
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics(),
+                parent: ClampingScrollPhysics(),
               ),
               padding: const EdgeInsets.all(24),
               children: [
@@ -232,7 +232,7 @@ class UpcomingEventsScreen extends ConsumerWidget {
 
           return CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
+              parent: ClampingScrollPhysics(),
             ),
             slivers: [
               // Header Summary Count

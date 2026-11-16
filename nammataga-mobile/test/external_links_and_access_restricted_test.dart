@@ -224,7 +224,7 @@ void main() {
 
       // Benefits list
       expect(
-        find.text('Access to official Tamil Nadu Agricultural Engineering GOs'),
+        find.text('Tamilnadu Agriculture department and establishment related GOs'),
         findsOneWidget,
       );
       expect(

@@ -9,6 +9,8 @@ import '../../providers/home_provider.dart';
 class ContactGlassHub extends ConsumerWidget {
   const ContactGlassHub({super.key});
 
+  static const String _mapLocationUrl = 'https://share.google/uYKmchpjGIp9ZHHbS';
+
   Future<void> _launch(String urlString) async {
     final uri = Uri.parse(urlString);
     try {
@@ -294,21 +296,25 @@ class ContactGlassHub extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF7FAF8),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: const Color(0xFFE5EFE9),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () => _launch(_mapLocationUrl),
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF7FAF8),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: const Color(0xFFE5EFE9),
+                                  ),
                                 ),
-                              ),
-                              child: Text(
-                                contact.headquartersAddress,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                  height: 1.4,
+                                child: Text(
+                                  contact.headquartersAddress,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                    height: 1.4,
+                                  ),
                                 ),
                               ),
                             ),
@@ -353,9 +359,7 @@ class ContactGlassHub extends ConsumerWidget {
                         child: _buildActionPill(
                           label: 'Map',
                           icon: LucideIcons.mapPin,
-                          onTap: () => _launch(
-                            'https://maps.google.com/?q=${Uri.encodeComponent(contact.headquartersAddress)}',
-                          ),
+                          onTap: () => _launch(_mapLocationUrl),
                         ),
                       ),
                     ],

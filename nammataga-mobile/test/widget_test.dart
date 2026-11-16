@@ -32,7 +32,7 @@ void main() {
       // Initial frame
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('TAGA TOWERS'), findsOneWidget);
+      expect(find.text('TAGA TOWER'), findsOneWidget);
       expect(find.text('டாகா டவர்'), findsOneWidget);
       expect(
         find.text('தமிழ்நாடு அரசு வேளாண்மைப் பட்டதாரிகள் சங்கம்'),
@@ -79,7 +79,7 @@ void main() {
 
       // Initially on Splash
       await tester.pump(const Duration(milliseconds: 100));
-      expect(find.text('TAGA TOWERS'), findsOneWidget);
+      expect(find.text('TAGA TOWER'), findsOneWidget);
 
       // Fast-forward past the 2800ms splash duration
       await tester.pump(const Duration(milliseconds: 2900));

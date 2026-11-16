@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/storage/secure_storage_service.dart';
+import '../../../core/widgets/app_exit_scope.dart';
 import '../../../core/widgets/bouncy_button.dart';
 import '../providers/auth_provider.dart';
 import 'widgets/ambient_background.dart';
@@ -275,9 +276,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: AmbientBackground(
+    return AppExitScope(
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: AmbientBackground(
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -325,6 +327,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
           ),
         ),
+      ),
       ),
     );
   }

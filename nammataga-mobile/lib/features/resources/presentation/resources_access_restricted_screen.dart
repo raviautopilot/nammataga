@@ -30,7 +30,7 @@ class ResourcesAccessRestrictedScreen extends StatelessWidget {
 
   /// Key benefits exclusive to paid subscribers.
   static const List<String> benefitsList = [
-    'Access to official Tamil Nadu Agricultural Engineering GOs',
+    'Tamilnadu Agriculture department and establishment related GOs',
     'Scheme guidelines, department orders, and job charts',
     'Direct download of official leave and application formats',
   ];

@@ -17,9 +17,11 @@ import '../../features/profile/presentation/employment_details_screen.dart';
 import '../../features/profile/presentation/membership_details_screen.dart';
 import '../../features/profile/presentation/official_details_screen.dart';
 import '../../features/profile/presentation/personal_info_screen.dart';
+import '../../features/profile/presentation/privacy_policy_screen.dart';
 import '../../features/profile/presentation/profile_overview_screen.dart';
 import '../../features/profile/presentation/request_profile_edit_screen.dart';
 import '../../features/profile/presentation/subscription_plans_screen.dart';
+import '../../features/profile/presentation/terms_and_conditions_screen.dart';
 import '../../features/resources/domain/resource_category.dart';
 import '../../features/resources/presentation/category_documents_screen.dart';
 import '../../features/resources/presentation/pdf_viewer_screen.dart';
@@ -248,6 +250,28 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
           pageBuilder: (context, state) => CustomTransitionPage(
             key: state.pageKey,
             child: const AnnouncementsScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+        GoRoute(
+          path: 'terms',
+          name: 'profile-terms',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            key: state.pageKey,
+            child: const TermsAndConditionsScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+        GoRoute(
+          path: 'privacy',
+          name: 'profile-privacy',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            key: state.pageKey,
+            child: const PrivacyPolicyScreen(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) =>
                     FadeTransition(opacity: animation, child: child),

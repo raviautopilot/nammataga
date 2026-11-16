@@ -91,9 +91,21 @@ class DateRangePickerCard extends StatelessWidget {
           }
           return null;
         }),
-        todayForegroundColor: const WidgetStatePropertyAll<Color>(
-          TagaTowersDesignTokens.primaryGreen,
-        ),
+        todayForegroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          if (states.contains(WidgetState.disabled)) {
+            return const Color(0xFFB0BEC5);
+          }
+          return TagaTowersDesignTokens.primaryGreen;
+        }),
+        todayBackgroundColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return TagaTowersDesignTokens.primaryGreen;
+          }
+          return null;
+        }),
         todayBorder: const BorderSide(
           color: TagaTowersDesignTokens.primaryGreen,
           width: 1.8,

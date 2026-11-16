@@ -413,7 +413,7 @@ class _CategoryDocumentsScreenState
 
         return ListView.separated(
           physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
+            parent: ClampingScrollPhysics(),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           itemCount: documents.length,
@@ -438,7 +438,7 @@ class _CategoryDocumentsScreenState
     return Center(
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
+          parent: ClampingScrollPhysics(),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
         child: Column(
@@ -500,7 +500,7 @@ class _CategoryDocumentsScreenState
     return Center(
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
+          parent: ClampingScrollPhysics(),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
         child: Container(

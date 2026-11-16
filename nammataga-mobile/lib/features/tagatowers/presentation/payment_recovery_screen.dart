@@ -418,7 +418,7 @@ Thank you.''';
         body: SafeArea(
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
+              parent: ClampingScrollPhysics(),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
             child: Column(
