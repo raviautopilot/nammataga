@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/taga_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../domain/booking_model.dart';
@@ -230,12 +231,7 @@ class _GuestDetailsScreenState extends ConsumerState<GuestDetailsScreen> {
       setState(() {
         guest1.clear(defaultGender: defaultGender);
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Guest 1 cleared'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      TagaToast.info(context, 'Guest 1 cleared');
       return;
     }
 
@@ -267,20 +263,18 @@ class _GuestDetailsScreenState extends ConsumerState<GuestDetailsScreen> {
     final restriction = _getEffectiveGenderRestriction(room, avail);
     if (restriction != null) {
       if (restriction == 'male' && memberGender == 'female') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Your profile is Female, but this room is restricted to Male guests only.'),
-            backgroundColor: Colors.redAccent,
-          ),
+        TagaToast.error(
+          context,
+          'Your profile is Female, but this room is restricted to Male guests only.',
+          title: 'Room Restriction',
         );
         return;
       }
       if (restriction == 'female' && memberGender == 'male') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Your profile is Male, but this room is restricted to Female guests only.'),
-            backgroundColor: Colors.redAccent,
-          ),
+        TagaToast.error(
+          context,
+          'Your profile is Male, but this room is restricted to Female guests only.',
+          title: 'Room Restriction',
         );
         return;
       }
@@ -300,12 +294,11 @@ class _GuestDetailsScreenState extends ConsumerState<GuestDetailsScreen> {
       guest1.genderError = null;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Guest 1 auto-filled from your profile'),
-        duration: Duration(seconds: 2),
-        backgroundColor: TagaTowersDesignTokens.primaryGreen,
-      ),
+    TagaToast.success(
+      context,
+      'Guest 1 auto-filled from your profile',
+      title: 'Auto-filled',
+      duration: const Duration(seconds: 2),
     );
   }
 
@@ -375,11 +368,10 @@ class _GuestDetailsScreenState extends ConsumerState<GuestDetailsScreen> {
     }
 
     if (hasValidationError) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please correct the highlighted errors before continuing'),
-          backgroundColor: Colors.redAccent,
-        ),
+      TagaToast.error(
+        context,
+        'Please correct the highlighted errors before continuing',
+        title: 'Validation Error',
       );
       return;
     }
@@ -392,56 +384,45 @@ class _GuestDetailsScreenState extends ConsumerState<GuestDetailsScreen> {
     final isLadiesDorm = room?.type == 'ladies-dorm' || room?.id == 'ladies-dorm';
 
     if (isGentsDorm && hasFemale) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gents Dormitory is strictly for male guests only.'),
-          backgroundColor: Colors.redAccent,
-        ),
+      TagaToast.error(
+        context,
+        'Gents Dormitory is strictly for male guests only.',
+        title: 'Room Restriction',
       );
       return;
     }
 
     if (isLadiesDorm && hasMale) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ladies Dormitory is strictly for female guests only.'),
-          backgroundColor: Colors.redAccent,
-        ),
+      TagaToast.error(
+        context,
+        'Ladies Dormitory is strictly for female guests only.',
+        title: 'Room Restriction',
       );
       return;
     }
 
     if (restriction != null && restriction.isNotEmpty) {
       if (restriction == 'male' && hasFemale) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'This room is partially occupied by male guests — only male guests can book remaining beds.',
-            ),
-            backgroundColor: Colors.redAccent,
-          ),
+        TagaToast.error(
+          context,
+          'This room is partially occupied by male guests — only male guests can book remaining beds.',
+          title: 'Gender Restriction',
         );
         return;
       }
       if (restriction == 'female' && hasMale) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'This room is partially occupied by female guests — only female guests can book remaining beds.',
-            ),
-            backgroundColor: Colors.redAccent,
-          ),
+        TagaToast.error(
+          context,
+          'This room is partially occupied by female guests — only female guests can book remaining beds.',
+          title: 'Gender Restriction',
         );
         return;
       }
       if (hasMale && hasFemale) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'This room is partially occupied by $restriction guests — mixed groups cannot share with existing single occupants.',
-            ),
-            backgroundColor: Colors.redAccent,
-          ),
+        TagaToast.error(
+          context,
+          'This room is partially occupied by $restriction guests — mixed groups cannot share with existing single occupants.',
+          title: 'Gender Restriction',
         );
         return;
       }
@@ -449,11 +430,10 @@ class _GuestDetailsScreenState extends ConsumerState<GuestDetailsScreen> {
 
     // Dormitories cannot have mixed guests even if fully available
     if ((isGentsDorm || isLadiesDorm) && hasMale && hasFemale) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Dormitories cannot accommodate mixed gender bookings.'),
-          backgroundColor: Colors.redAccent,
-        ),
+      TagaToast.error(
+        context,
+        'Dormitories cannot accommodate mixed gender bookings.',
+        title: 'Dormitory Policy',
       );
       return;
     }
@@ -935,13 +915,10 @@ class _GuestDetailsScreenState extends ConsumerState<GuestDetailsScreen> {
             errorText: entry.genderError,
             onGenderSelected: (gender) {
               if (isLockedByRoom) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Gender is locked to ${restriction.toUpperCase()} by room policy.',
-                    ),
-                    duration: const Duration(seconds: 2),
-                  ),
+                TagaToast.warning(
+                  context,
+                  'Gender is locked to ${restriction.toUpperCase()} by room policy.',
+                  title: 'Locked Option',
                 );
                 return;
               }
@@ -1298,11 +1275,10 @@ class _GuestDetailsScreenState extends ConsumerState<GuestDetailsScreen> {
     return BouncyButton(
       onTap: isDisabled
           ? () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('$label is prohibited by this room\'s gender restriction.'),
-                  duration: const Duration(seconds: 2),
-                ),
+              TagaToast.warning(
+                context,
+                '$label is prohibited by this room\'s gender restriction.',
+                title: 'Gender Restriction',
               );
             }
           : onTap,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/taga_toast.dart';
 import '../../providers/auth_provider.dart';
 
 class ChangePasswordSheet extends ConsumerStatefulWidget {
@@ -100,9 +101,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
           );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), backgroundColor: AppColors.primary),
-        );
+        TagaToast.success(context, msg, title: 'Password Changed');
         Navigator.of(context).pop(true);
       }
     } catch (e) {

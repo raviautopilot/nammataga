@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/taga_toast.dart';
 import '../services/document_download_service.dart';
 
 /// High-performance, buttery-smooth in-app PDF viewing experience for NammaTAGA documents.
@@ -93,13 +94,10 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
     final fileName = _getFileName();
 
     if (!mounted) return null;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Preparing document for $actionName...'),
-        duration: const Duration(seconds: 2),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-      ),
+    TagaToast.info(
+      context,
+      'Preparing document for $actionName...',
+      duration: const Duration(seconds: 2),
     );
 
     try {
@@ -109,11 +107,9 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to prepare document: $e'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Failed to prepare document: $e',
         );
       }
       return null;
@@ -129,32 +125,10 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
     final fileName = _getFileName();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Downloading "$fileName" to device Downloads...',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 4),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-        ),
+      TagaToast.info(
+        context,
+        'Downloading "$fileName" to device Downloads...',
+        duration: const Duration(seconds: 4),
       );
     }
 
@@ -168,48 +142,39 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
 
       if (mounted) {
         setState(() => _isDownloading = false);
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(
-                  LucideIcons.checkCircle2,
-                  color: Colors.white,
-                  size: 20,
+        TagaToast.success(
+          context,
+          'Saved "$fileName" to device Downloads',
+          duration: const Duration(seconds: 5),
+          action: GestureDetector(
+            onTap: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              OpenFilex.open(savedFile.path);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'Open',
+                style: TextStyle(
+                  color: Color(0xFFB7E4C7),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Saved "$fileName" to device Downloads',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+              ),
             ),
-            action: SnackBarAction(
-              label: 'Open',
-              textColor: const Color(0xFFB7E4C7),
-              onPressed: () {
-                OpenFilex.open(savedFile.path);
-              },
-            ),
-            backgroundColor: AppColors.primary,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 5),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isDownloading = false);
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Download failed: $e'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Download failed: $e',
         );
       }
     }
@@ -231,11 +196,9 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Share failed: $e'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Share failed: $e',
         );
       }
     }
@@ -255,11 +218,9 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Print failed: $e'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Print failed: $e',
         );
       }
     }
@@ -274,20 +235,16 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
     try {
       final result = await OpenFilex.open(file.path);
       if (result.type != ResultType.done && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not open external app: ${result.message}'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Could not open external app: ${result.message}',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error launching external viewer: $e'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Error launching external viewer: $e',
         );
       }
     }
@@ -386,11 +343,9 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Could not launch browser: $e'),
-              backgroundColor: AppColors.destructive,
-            ),
+          TagaToast.error(
+            context,
+            'Could not launch browser: $e',
           );
         }
       }

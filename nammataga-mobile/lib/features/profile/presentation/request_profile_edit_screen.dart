@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/taga_toast.dart';
 import '../domain/edit_request_model.dart';
 import '../domain/member_profile.dart';
 import '../providers/profile_provider.dart';
@@ -104,13 +105,10 @@ class _RequestProfileEditScreenState
         permanent != profile.permanentAddress;
 
     if (!changed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'No changes detected compared to your current profile.',
-          ),
-          backgroundColor: Color(0xFFD97706),
-        ),
+      TagaToast.warning(
+        context,
+        'No changes detected compared to your current profile.',
+        title: 'No Changes',
       );
       return;
     }
@@ -141,11 +139,10 @@ class _RequestProfileEditScreenState
     } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to submit request: $e'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Failed to submit request: $e',
+          title: 'Submission Failed',
         );
       }
     }

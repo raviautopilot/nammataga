@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/taga_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../domain/booking_model.dart';
@@ -59,29 +60,12 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
 
   Future<void> _copyToClipboard(String text, String label) async {
     await Clipboard.setData(ClipboardData(text: text));
-    HapticFeedback.lightImpact();
     if (mounted) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(LucideIcons.checkCheck, color: Colors.white, size: 18),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  '$label copied to clipboard',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: TagaTowersDesignTokens.deepEmerald,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
+      TagaToast.success(
+        context,
+        '$label copied to clipboard',
+        title: 'Copied',
+        duration: const Duration(seconds: 2),
       );
     }
   }
@@ -95,23 +79,17 @@ class _BookingDetailsScreenState extends ConsumerState<BookingDetailsScreen> {
         await launchUrl(uri);
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Could not open phone dialer for $phoneNumber'),
-              backgroundColor: Colors.redAccent,
-              behavior: SnackBarBehavior.floating,
-            ),
+          TagaToast.error(
+            context,
+            'Could not open phone dialer for $phoneNumber',
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to initiate call: $e'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
+        TagaToast.error(
+          context,
+          'Failed to initiate call: $e',
         );
       }
     }

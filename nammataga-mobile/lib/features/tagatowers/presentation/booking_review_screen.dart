@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/taga_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../domain/booking_model.dart';
 import '../domain/room_model.dart';
@@ -171,25 +172,10 @@ class _BookingReviewScreenState extends ConsumerState<BookingReviewScreen> {
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(LucideIcons.alertCircle, color: Colors.white, size: 18),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFFDC2626),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 4),
-      ),
+    TagaToast.error(
+      context,
+      message,
+      title: 'Booking Error',
     );
   }
 

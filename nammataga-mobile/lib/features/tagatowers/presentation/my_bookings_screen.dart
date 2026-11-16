@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/taga_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../domain/booking_model.dart';
@@ -594,20 +595,9 @@ class _BookingCard extends ConsumerWidget {
   void _copyReference(BuildContext context) {
     Clipboard.setData(ClipboardData(text: booking.id));
     HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(LucideIcons.check, size: 18, color: Colors.white),
-            const SizedBox(width: 8),
-            Text('Booking Reference #${booking.id} copied to clipboard'),
-          ],
-        ),
-        backgroundColor: TagaTowersDesignTokens.deepEmerald,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
+    TagaToast.success(
+      context,
+      'Booking Reference #${booking.id} copied to clipboard',
     );
   }
 
@@ -620,17 +610,14 @@ class _BookingCard extends ConsumerWidget {
     context.push('/taga-towers/booking/details/${booking.id}', extra: booking);
   }
 
-  void _onCancelBooking(BuildContext context, WidgetRef ref) {
+  Future<void> _onCancelBooking(BuildContext context, WidgetRef ref) async {
     HapticFeedback.mediumImpact();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _CancellationConfirmDialog(
-        booking: booking,
-        bookerId: bookerId,
-      ),
+    await context.push(
+      '/taga-towers/booking/cancel/${booking.id}',
+      extra: booking,
     );
+    ref.invalidate(userBookingsProvider);
+    ref.invalidate(pastBookingsProvider);
   }
 
   @override
@@ -1101,328 +1088,6 @@ class _FeatureChip extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CANCELLATION CONFIRMATION BOTTOM SHEET
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _CancellationConfirmDialog extends ConsumerStatefulWidget {
-  final BookingResponse booking;
-  final String bookerId;
-
-  const _CancellationConfirmDialog({
-    required this.booking,
-    required this.bookerId,
-  });
-
-  @override
-  ConsumerState<_CancellationConfirmDialog> createState() =>
-      _CancellationConfirmDialogState();
-}
-
-class _CancellationConfirmDialogState
-    extends ConsumerState<_CancellationConfirmDialog> {
-  bool _isCancelling = false;
-  String? _errorMessage;
-
-  Future<void> _performCancellation() async {
-    setState(() {
-      _isCancelling = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final repo = ref.read(tagaTowersRepositoryProvider);
-      await repo.cancelBooking(widget.booking.id);
-
-      // Invalidate providers to force a fresh fetch from server
-      ref.invalidate(userBookingsProvider(widget.bookerId));
-      ref.invalidate(pastBookingsProvider(null));
-
-      if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(LucideIcons.checkCircle2, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Booking #${widget.booking.id} has been successfully cancelled.',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: TagaTowersDesignTokens.primaryGreen,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isCancelling = false;
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        16,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-
-          // Icon & Header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEE2E2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFECACA)),
-                ),
-                child: const Icon(
-                  LucideIcons.alertTriangle,
-                  size: 24,
-                  color: Color(0xFFDC2626),
-                ),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Cancel Booking?',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'This action cannot be undone.',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Booking Summary Box
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: TagaTowersDesignTokens.mutedBackground,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: TagaTowersDesignTokens.subtleBorder),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Reference:',
-                      style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
-                    ),
-                    Text(
-                      '#${widget.booking.id}',
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'monospace',
-                        color: TagaTowersDesignTokens.deepEmerald,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Room / Beds:',
-                      style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
-                    ),
-                    Text(
-                      '${widget.booking.roomName} (${widget.booking.bedCount} Bed${widget.booking.bedCount > 1 ? 's' : ''})',
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Advance Paid:',
-                      style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
-                    ),
-                    Text(
-                      '₹${widget.booking.advanceAmount}',
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2E7D32),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          // Association Policy Disclaimer Banner
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFFBEB),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFDE68A)),
-            ),
-            child: const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(LucideIcons.info, size: 16, color: Color(0xFFB45309)),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Association Advance Policy: Please note that the advance deposit is non-refundable upon cancellation. Your bed allocation will immediately be made available for other members.',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      height: 1.4,
-                      color: Color(0xFF92400E),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          if (_errorMessage != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFECACA)),
-              ),
-              child: Text(
-                _errorMessage!,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFFDC2626),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 20),
-
-          // Buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _isCancelling ? null : () => Navigator.of(context).pop(),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    side: const BorderSide(color: Color(0xFFCBD5E1)),
-                  ),
-                  child: const Text(
-                    'Keep Booking',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _isCancelling ? null : _performCancellation,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    backgroundColor: const Color(0xFFDC2626),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: _isCancelling
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Yes, Cancel',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
-            ],
           ),
         ],
       ),

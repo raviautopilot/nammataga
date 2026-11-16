@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nammataga_mobile/features/auth/domain/member_session.dart';
 import 'package:nammataga_mobile/features/auth/providers/auth_provider.dart';
 import 'package:nammataga_mobile/features/profile/domain/member_profile.dart';
@@ -137,6 +138,27 @@ void main() {
     List<BookingResponse> pastBookings = const [],
     int initialTab = 0,
   }) {
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) =>
+              MyBookingsScreen(initialTabIndex: initialTab),
+        ),
+        GoRoute(
+          path: '/taga-towers/booking/cancel/:id',
+          builder: (context, state) =>
+              const Scaffold(body: Text('Cancellation Screen')),
+        ),
+        GoRoute(
+          path: '/taga-towers/booking/details/:id',
+          builder: (context, state) =>
+              const Scaffold(body: Text('Booking Details Screen')),
+        ),
+      ],
+    );
+
     return ProviderScope(
       overrides: [
         authProvider.overrideWith(() => _MockAuthNotifier(mockSession)),
@@ -148,8 +170,8 @@ void main() {
         pastBookingsProvider('2026')
             .overrideWith((ref) => Future.value(pastBookings)),
       ],
-      child: MaterialApp(
-        home: MyBookingsScreen(initialTabIndex: initialTab),
+      child: MaterialApp.router(
+        routerConfig: router,
       ),
     );
   }
@@ -196,7 +218,7 @@ void main() {
       expect(find.textContaining('Cannot cancel after check-in'), findsOneWidget);
     });
 
-    testWidgets('Tapping Cancel Booking opens confirmation bottom sheet',
+    testWidgets('Tapping Cancel Booking does not open legacy bottom sheet but triggers direct cancellation flow',
         (WidgetTester tester) async {
       await tester.pumpWidget(createWidget(
         userBookings: [upcomingBooking],
@@ -207,17 +229,9 @@ void main() {
       await tester.tap(find.text('Cancel Booking'));
       await tester.pumpAndSettle();
 
-      // Bottom sheet confirmation
-      expect(find.text('Cancel Booking?'), findsOneWidget);
-      expect(find.text('This action cannot be undone.'), findsOneWidget);
-      expect(find.textContaining('Association Advance Policy'), findsOneWidget);
-      expect(find.text('Keep Booking'), findsOneWidget);
-      expect(find.text('Yes, Cancel'), findsOneWidget);
-
-      // Dismiss dialog
-      await tester.tap(find.text('Keep Booking'));
-      await tester.pumpAndSettle();
-      expect(find.text('Cancel Booking?'), findsNothing);
+      // Confirms navigated to Cancellation Screen directly and bottom sheet is absent
+      expect(find.text('Cancellation Screen'), findsOneWidget);
+      expect(find.text('Keep Booking'), findsNothing);
     });
 
     testWidgets('Past Bookings tab displays completed and cancelled stays',

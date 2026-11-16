@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/payment/razorpay_checkout_manager.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/taga_toast.dart';
 import '../domain/subscription_plan.dart';
 import '../providers/profile_provider.dart';
 import 'widgets/profile_subpage_scaffold.dart';
@@ -71,11 +72,10 @@ class _SubscriptionPlansScreenState
     required String memberTagaId,
   }) async {
     if (amountInRupees <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter an amount greater than zero.'),
-          backgroundColor: AppColors.destructive,
-        ),
+      TagaToast.error(
+        context,
+        'Please enter an amount greater than zero.',
+        title: 'Invalid Amount',
       );
       return;
     }
@@ -142,11 +142,10 @@ class _SubscriptionPlansScreenState
               _isProcessingPayment = false;
               _processingPlanId = null;
             });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Payment Error: $errorMessage'),
-                backgroundColor: AppColors.destructive,
-              ),
+            TagaToast.error(
+              context,
+              errorMessage,
+              title: 'Payment Error',
             );
           }
         },
@@ -156,12 +155,10 @@ class _SubscriptionPlansScreenState
               _isProcessingPayment = false;
               _processingPlanId = null;
             });
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Payment cancelled.'),
-                backgroundColor: AppColors.textSecondary,
-                duration: Duration(seconds: 2),
-              ),
+            TagaToast.info(
+              context,
+              'Payment cancelled.',
+              title: 'Cancelled',
             );
           }
         },
@@ -172,11 +169,10 @@ class _SubscriptionPlansScreenState
           _isProcessingPayment = false;
           _processingPlanId = null;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to initiate payment: $e'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Failed to initiate payment: $e',
+          title: 'Payment Error',
         );
       }
     }
@@ -222,11 +218,10 @@ class _SubscriptionPlansScreenState
           _isProcessingPayment = false;
           _processingPlanId = null;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Payment verification issue: $e'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Payment verification issue: $e',
+          title: 'Verification Issue',
         );
       }
     }

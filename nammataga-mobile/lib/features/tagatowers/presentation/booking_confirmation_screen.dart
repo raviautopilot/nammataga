@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/taga_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../domain/booking_model.dart';
 import '../providers/tagatowers_provider.dart';
@@ -189,24 +190,11 @@ class _BookingConfirmationScreenState
     HapticFeedback.lightImpact();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(LucideIcons.check, color: Colors.white, size: 16),
-              const SizedBox(width: 8),
-              Text(
-                '$label copied to clipboard',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          backgroundColor: TagaTowersDesignTokens.deepEmerald,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          duration: const Duration(seconds: 2),
-        ),
+      TagaToast.success(
+        context,
+        '$label copied to clipboard',
+        title: 'Copied',
+        duration: const Duration(seconds: 2),
       );
     }
 

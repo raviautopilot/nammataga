@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/inner_screen_back_scope.dart';
+import '../../../core/widgets/taga_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../providers/booking_flow_provider.dart';
@@ -115,21 +117,11 @@ class _TagaTowersHomeScreenState extends ConsumerState<TagaTowersHomeScreen> {
 
   void _copyToClipboard(String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
-    HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(LucideIcons.checkCheck, color: Colors.white, size: 16),
-            const SizedBox(width: 8),
-            Text('$label copied to clipboard'),
-          ],
-        ),
-        backgroundColor: TagaTowersDesignTokens.deepEmerald,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 2),
-      ),
+    TagaToast.success(
+      context,
+      '$label copied to clipboard',
+      title: 'Copied',
+      duration: const Duration(seconds: 2),
     );
   }
 
@@ -208,13 +200,16 @@ class _TagaTowersHomeScreenState extends ConsumerState<TagaTowersHomeScreen> {
 
     // Access restricted for non-subscribers
     if (!isPaid) {
-      return const TagatowersAccessRestrictedScreen();
+      return const InnerScreenBackScope(
+        child: TagatowersAccessRestrictedScreen(),
+      );
     }
 
     // ═════════════════════════════════════════════════════════════════════════
     // 2. MAIN HOME / LANDING VIEW
     // ═════════════════════════════════════════════════════════════════════════
-    return Scaffold(
+    return InnerScreenBackScope(
+      child: Scaffold(
       backgroundColor: const Color(0xFFF8FAF7),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(64),
@@ -467,8 +462,9 @@ class _TagaTowersHomeScreenState extends ConsumerState<TagaTowersHomeScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SUB-COMPONENTS

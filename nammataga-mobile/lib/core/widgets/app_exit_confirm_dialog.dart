@@ -68,7 +68,7 @@ class AppExitConfirmDialog extends StatelessWidget {
 
             // Description
             const Text(
-              'Are you sure you want to close Namma TAGA? Any unsaved entries may be lost.',
+              'Are you sure you want to close TAGA? Any unsaved entries may be lost.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Roboto',

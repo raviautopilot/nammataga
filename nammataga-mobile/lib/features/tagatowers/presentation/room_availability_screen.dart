@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/taga_toast.dart';
 import '../domain/room_model.dart';
 import '../providers/tagatowers_provider.dart';
 import 'theme/tagatowers_design_tokens.dart';
@@ -93,27 +94,10 @@ class _RoomAvailabilityScreenState
   }
 
   void _showRoomUnavailableToast(Room room) {
-    HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(LucideIcons.alertCircle, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '${room.name} is fully booked for these dates. Please try another room or change dates.',
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.destructive,
-        duration: const Duration(seconds: 3),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
+    TagaToast.error(
+      context,
+      '${room.name} is fully booked for these dates. Please try another room or change dates.',
+      title: 'Room Unavailable',
     );
   }
 

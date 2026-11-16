@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/taga_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../domain/booking_model.dart';
 import '../providers/tagatowers_provider.dart';
@@ -928,12 +929,11 @@ class _CancellationScreenState extends ConsumerState<CancellationScreen> {
               BouncyButton(
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: booking.id));
-                  HapticFeedback.selectionClick();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Booking ID copied to clipboard'),
-                      duration: Duration(seconds: 2),
-                    ),
+                  TagaToast.success(
+                    context,
+                    'Booking ID copied to clipboard',
+                    title: 'Copied',
+                    duration: const Duration(seconds: 2),
                   );
                 },
                 child: const Padding(

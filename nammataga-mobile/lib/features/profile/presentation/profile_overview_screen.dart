@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/inner_screen_back_scope.dart';
 import '../domain/member_profile.dart';
 import '../providers/profile_provider.dart';
 
@@ -21,7 +22,8 @@ class ProfileOverviewScreen extends ConsumerWidget {
     final unreadCountAsync = ref.watch(unreadAnnouncementsCountProvider);
     final unreadCount = unreadCountAsync.value ?? 0;
 
-    return Scaffold(
+    return InnerScreenBackScope(
+      child: Scaffold(
       backgroundColor: const Color(0xFFF9FAF7),
       body: RefreshIndicator(
         color: AppColors.primary,
@@ -74,8 +76,9 @@ class ProfileOverviewScreen extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader(
     BuildContext context,

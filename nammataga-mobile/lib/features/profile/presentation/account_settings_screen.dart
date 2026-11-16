@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/sign_out_confirm_dialog.dart';
 import '../../auth/presentation/widgets/change_password_sheet.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'widgets/about_taga_modal.dart';
@@ -287,35 +288,19 @@ class AccountSettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmSignOut(BuildContext context, WidgetRef ref) {
-    showDialog(
+  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.mediumImpact();
+    final shouldSignOut = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirm Logout'),
-        content: const Text(
-          'Are you sure you want to log out of your TAGA account?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.destructive,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ref.read(authProvider.notifier).logout();
-              if (context.mounted) {
-                context.go('/auth/login');
-              }
-            },
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
+      barrierDismissible: true,
+      builder: (ctx) => const SignOutConfirmDialog(),
     );
+
+    if (shouldSignOut == true && context.mounted) {
+      await ref.read(authProvider.notifier).logout();
+      if (context.mounted) {
+        context.go('/auth/login');
+      }
+    }
   }
 }

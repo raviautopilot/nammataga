@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/taga_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../profile/domain/member_profile.dart';
 import '../../profile/providers/profile_provider.dart';
@@ -215,12 +216,10 @@ class _BookingBedSelectionScreenState
         _phoneError = phoneError;
       });
       _phoneFocusNode.requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(phoneError),
-          backgroundColor: AppColors.destructive,
-          behavior: SnackBarBehavior.floating,
-        ),
+      TagaToast.error(
+        context,
+        phoneError,
+        title: 'Validation Error',
       );
       return;
     }

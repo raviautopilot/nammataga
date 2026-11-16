@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/inner_screen_back_scope.dart';
 import 'theme/tagatowers_design_tokens.dart';
 import 'widgets/tagatowers_hero_card.dart';
 
@@ -65,7 +66,8 @@ class TagatowersAccessRestrictedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return InnerScreenBackScope(
+      child: Scaffold(
       backgroundColor: const Color(0xFFF9FAF7),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(64),
@@ -419,8 +421,9 @@ class TagatowersAccessRestrictedScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 /// Type alias for camel-case consistency across callers

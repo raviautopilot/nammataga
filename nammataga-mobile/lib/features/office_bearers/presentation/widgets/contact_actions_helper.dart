@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/widgets/taga_toast.dart';
 
 /// Clean utility for dialing, messaging, emailing
 class ContactActionsHelper {
@@ -34,12 +35,7 @@ class ContactActionsHelper {
       }
     } catch (_) {}
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not open phone dialer for $phone'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      TagaToast.error(context, 'Could not open phone dialer for $phone');
     }
     return false;
   }
@@ -55,12 +51,7 @@ class ContactActionsHelper {
       }
     } catch (_) {}
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not open email app for $email'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      TagaToast.error(context, 'Could not open email app for $email');
     }
     return false;
   }
@@ -82,12 +73,7 @@ class ContactActionsHelper {
       }
     } catch (_) {}
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not launch WhatsApp for $phone'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      TagaToast.error(context, 'Could not launch WhatsApp for $phone');
     }
     return false;
   }

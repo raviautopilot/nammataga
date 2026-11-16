@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/inner_screen_back_scope.dart';
 import 'gallery_screen.dart';
 import 'upcoming_events_screen.dart';
 
@@ -47,7 +48,8 @@ class _EventsScreenState extends State<EventsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return InnerScreenBackScope(
+      child: Scaffold(
       backgroundColor: const Color(0xFFF8FAF7),
       body: Column(
         children: [
@@ -301,8 +303,9 @@ class _EventsScreenState extends State<EventsScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _TabButton extends StatelessWidget {

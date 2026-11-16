@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/taga_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../domain/booking_model.dart';
 import '../domain/payment_model.dart';
@@ -314,23 +315,9 @@ class _PaymentRecoveryScreenState extends ConsumerState<PaymentRecoveryScreen>
   void _copyToClipboard(String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
     HapticFeedback.selectionClick();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(LucideIcons.circleCheck, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              '$label copied to clipboard',
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-        backgroundColor: TagaTowersDesignTokens.deepEmerald,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
+    TagaToast.success(
+      context,
+      '$label copied to clipboard',
     );
   }
 
@@ -344,8 +331,9 @@ class _PaymentRecoveryScreenState extends ConsumerState<PaymentRecoveryScreen>
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open phone dialer for $phoneNumber')),
+        TagaToast.error(
+          context,
+          'Could not open phone dialer for $phoneNumber',
         );
       }
     }
@@ -381,8 +369,9 @@ Thank you.''';
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open email client')),
+        TagaToast.error(
+          context,
+          'Could not open email client',
         );
       }
     }

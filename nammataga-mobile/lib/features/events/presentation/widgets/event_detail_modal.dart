@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/taga_toast.dart';
 import '../../domain/event_model.dart';
 
 /// Modal bottom sheet presenting in-depth details of an upcoming event.
@@ -231,11 +232,11 @@ class EventDetailModal extends StatelessWidget {
                                 Clipboard.setData(
                                   ClipboardData(text: event.location),
                                 );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Venue copied to clipboard'),
-                                    duration: Duration(seconds: 2),
-                                  ),
+                                TagaToast.success(
+                                  context,
+                                  'Venue copied to clipboard',
+                                  title: 'Copied',
+                                  duration: const Duration(seconds: 2),
                                 );
                               },
                             ),

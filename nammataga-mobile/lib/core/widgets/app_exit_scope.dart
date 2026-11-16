@@ -1,31 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'app_exit_confirm_dialog.dart';
+import 'taga_toast.dart';
 
-/// Production-grade exit guard wrapper.
+/// Production-grade exit guard wrapper enforcing the two-step exit flow:
 ///
-/// Features:
-/// 1. Double back-press / swipe to exit within [doubleBackCooldown] (default 2 seconds)
-///    with a refined, non-intrusive floating SnackBar and light haptic feedback.
-/// 2. Modal exit confirmation dialog with an instant "Exit Now" action and option to show
-///    it explicitly or when requested.
-/// 3. Safely verifies whether inner navigators (modals, sheets, sub-routes) have history to pop
-///    before triggering exit logic, avoiding trapped flows or false exits.
+/// 1st Back Press: Displays the improvised Option A floating capsule toast notice
+///                 for 5 seconds. If the user does not press back again, it vanishes.
+/// 2nd Back Press (within 5 seconds): Displays the Exit Confirmation pop-up dialog
+///                 before closing the application.
 class AppExitScope extends StatefulWidget {
   final Widget child;
 
-  /// Custom duration window within which a second back-press exits the app.
+  /// Custom duration window within which a second back-press triggers the exit dialog.
+  /// Defaults to 5 seconds per requirements.
   final Duration doubleBackCooldown;
 
-  /// Whether the exit confirmation dialog should be presented directly on back-press
-  /// instead of / in addition to double-press.
+  /// Whether the exit confirmation dialog should be presented directly on back-press.
   final bool showConfirmDialog;
 
   const AppExitScope({
     super.key,
     required this.child,
-    this.doubleBackCooldown = const Duration(seconds: 2),
+    this.doubleBackCooldown = const Duration(seconds: 5),
     this.showConfirmDialog = false,
   });
 
@@ -51,94 +48,64 @@ class AppExitScope extends StatefulWidget {
 
 class _AppExitScopeState extends State<AppExitScope> {
   DateTime? _lastBackPressTime;
+  bool _isNavigating = false;
 
   Future<void> _handleBackPress() async {
-    // 1. If an inner navigator (e.g. nested modal, bottom sheet, or sub-route) can pop,
-    // let it pop first.
-    final navigator = Navigator.maybeOf(context);
-    if (navigator != null && navigator.canPop()) {
-      navigator.maybePop();
-      return;
-    }
+    if (_isNavigating) return;
+    _isNavigating = true;
 
-    // 2. If explicit confirmation dialog mode is active:
-    if (widget.showConfirmDialog) {
-      final shouldExit = await AppExitScope.showExitConfirmation(context);
-      if (shouldExit && mounted) {
-        AppExitScope.exitApp();
+    try {
+      // 1. If an inner navigator (e.g. nested modal, bottom sheet, or sub-route) can pop,
+      // let it pop first cleanly without recursive loops.
+      final navigator = Navigator.maybeOf(context);
+      if (navigator != null && navigator.canPop()) {
+        navigator.pop();
+        return;
       }
-      return;
-    }
 
-    // 3. Double-back / swipe again to exit mode with popup option on notice:
-    final now = DateTime.now();
-    final isWithinCooldown = _lastBackPressTime != null &&
-        now.difference(_lastBackPressTime!) <= widget.doubleBackCooldown;
+      // 2. If explicit confirmation dialog mode is active:
+      if (widget.showConfirmDialog) {
+        final shouldExit = await AppExitScope.showExitConfirmation(context);
+        if (shouldExit && mounted) {
+          AppExitScope.exitApp();
+        }
+        return;
+      }
 
-    if (isWithinCooldown) {
-      // Second back within cooldown -> Close the application cleanly
-      AppExitScope.exitApp();
-    } else {
-      _lastBackPressTime = now;
-      HapticFeedback.lightImpact();
+      // 3. Two-step back-press flow
+      final now = DateTime.now();
+      final isWithinCooldown = _lastBackPressTime != null &&
+          now.difference(_lastBackPressTime!) <= widget.doubleBackCooldown;
 
-      if (!mounted) return;
-      final messenger = ScaffoldMessenger.maybeOf(context);
-      if (messenger != null) {
-        messenger.clearSnackBars();
-        messenger.showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Icon(
-                    LucideIcons.undo2,
-                    color: Colors.white,
-                    size: 15,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Text(
-                    'Press back or swipe again to exit',
-                    style: TextStyle(
-                      fontFamily: 'Roboto',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            action: SnackBarAction(
-              label: 'Exit',
-              textColor: const Color(0xFFFFB4AB),
-              onPressed: () async {
-                messenger.hideCurrentSnackBar();
-                final shouldExit =
-                    await AppExitScope.showExitConfirmation(context);
-                if (shouldExit && mounted) {
-                  AppExitScope.exitApp();
-                }
-              },
-            ),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: const Color(0xFF1B4332),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Color(0x33D8F3DC), width: 1),
-            ),
-            duration: widget.doubleBackCooldown,
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-          ),
+      if (isWithinCooldown) {
+        // 2nd back press within 5s -> Show Exit Confirmation pop-up before closing!
+        _lastBackPressTime = null;
+        if (!mounted) return;
+        ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+        final shouldExit = await AppExitScope.showExitConfirmation(context);
+        if (shouldExit && mounted) {
+          AppExitScope.exitApp();
+        }
+      } else {
+        // 1st back press -> Record time, light haptic feedback, and show 5-second exit toast
+        _lastBackPressTime = now;
+        HapticFeedback.lightImpact();
+
+        if (!mounted) return;
+        TagaToast.exitNotice(
+          context,
+          duration: widget.doubleBackCooldown,
+          onExitTapped: () async {
+            ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+            final shouldExit = await AppExitScope.showExitConfirmation(context);
+            if (shouldExit && mounted) {
+              AppExitScope.exitApp();
+            }
+          },
         );
       }
+    } finally {
+      _isNavigating = false;
     }
   }
 

@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/inner_screen_back_scope.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../profile/providers/profile_provider.dart';
 
@@ -26,7 +27,8 @@ class GrievanceIntroScreen extends ConsumerWidget {
         ref.watch(authProvider).value?.isPaid ??
         false;
 
-    return Scaffold(
+    return InnerScreenBackScope(
+      child: Scaffold(
       backgroundColor: const Color(0xFFF8FAF7),
       body: RefreshIndicator(
         color: AppColors.primary,
@@ -174,8 +176,9 @@ class GrievanceIntroScreen extends ConsumerWidget {
         ),
       ),
       bottomNavigationBar: _buildBottomBar(context, isPaid),
-    );
-  }
+    ),
+  );
+}
 
   /// Builds the bespoke NammaTAGA multi-stop emerald gradient header
   /// with 30px curved bottom radius, subtle leaf watermark, back button,

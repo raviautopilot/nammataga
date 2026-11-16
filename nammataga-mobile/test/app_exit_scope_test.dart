@@ -38,7 +38,7 @@ void main() {
       expect(find.text('Exit Application?'), findsOneWidget);
       expect(
         find.text(
-          'Are you sure you want to close Namma TAGA? Any unsaved entries may be lost.',
+          'Are you sure you want to close TAGA? Any unsaved entries may be lost.',
         ),
         findsOneWidget,
       );
@@ -87,7 +87,7 @@ void main() {
   });
 
   group('AppExitScope Tests', () {
-    testWidgets('First back press shows SnackBar and triggering exit confirmation dialog works', (tester) async {
+    testWidgets('First back press shows Exit Toast and triggering exit confirmation dialog works', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -107,30 +107,30 @@ void main() {
 
       expect(find.text('Direct Popup'), findsOneWidget);
 
-      // Simulate system back button invocation
+      // Simulate system back button invocation (1st press)
       final dynamic widgetsAppState = tester.state(find.byType(WidgetsApp));
       await widgetsAppState.didPopRoute();
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
-      // Verify the snackbar message is shown
+      // Verify the toast message is shown with Option A styling
+      expect(find.text('Exit Application?'), findsOneWidget);
       expect(find.text('Press back or swipe again to exit'), findsOneWidget);
-      expect(find.text('Exit'), findsOneWidget);
+      expect(find.text('EXIT'), findsOneWidget);
 
       // Direct popup via helper
       await tester.tap(find.text('Direct Popup'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Exit Application?'), findsOneWidget);
       expect(find.text('Stay in App'), findsOneWidget);
       expect(find.text('Exit Now'), findsOneWidget);
 
       // Dismiss dialog
       await tester.tap(find.text('Stay in App'));
       await tester.pumpAndSettle();
-      expect(find.text('Exit Application?'), findsNothing);
+      expect(find.text('Stay in App'), findsNothing);
     });
 
-    testWidgets('Double back press within cooldown triggers system exit', (tester) async {
+    testWidgets('Second back press within 5s cooldown shows Exit Confirmation dialog and exits', (tester) async {
       final List<MethodCall> log = <MethodCall>[];
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(SystemChannels.platform, (MethodCall methodCall) async {
@@ -142,7 +142,7 @@ void main() {
         const MaterialApp(
           home: Scaffold(
             body: AppExitScope(
-              doubleBackCooldown: Duration(seconds: 2),
+              doubleBackCooldown: Duration(seconds: 5),
               child: Center(child: Text('Home Content')),
             ),
           ),
@@ -151,14 +151,22 @@ void main() {
 
       final dynamic widgetsAppState = tester.state(find.byType(WidgetsApp));
 
-      // First back press -> SnackBar
+      // First back press -> Toast shown
       await widgetsAppState.didPopRoute();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Press back or swipe again to exit'), findsOneWidget);
 
-      // Second back press within cooldown -> Exit app
+      // Second back press within 5s -> Shows Exit Confirmation dialog!
       await widgetsAppState.didPopRoute();
-      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Exit Application?'), findsOneWidget);
+      expect(find.text('Exit Now'), findsOneWidget);
+      expect(find.text('Stay in App'), findsOneWidget);
+
+      // Confirm Exit
+      await tester.tap(find.text('Exit Now'));
+      await tester.pumpAndSettle();
 
       // Verify SystemNavigator.pop was called
       expect(
@@ -207,7 +215,7 @@ void main() {
       await widgetsAppState.didPopRoute();
       await tester.pumpAndSettle();
 
-      // Subpage is popped back to root page, and no exit SnackBar was triggered
+      // Subpage is popped back to root page, and no exit toast was triggered
       expect(find.text('Subpage Content'), findsNothing);
       expect(find.text('Go to Subpage'), findsOneWidget);
       expect(find.text('Press back or swipe again to exit'), findsNothing);

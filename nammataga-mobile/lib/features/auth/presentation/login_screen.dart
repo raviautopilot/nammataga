@@ -8,6 +8,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/storage/secure_storage_service.dart';
 import '../../../core/widgets/app_exit_scope.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/taga_toast.dart';
 import '../providers/auth_provider.dart';
 import 'widgets/ambient_background.dart';
 import 'widgets/change_password_sheet.dart';
@@ -147,22 +148,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
         if (changed == true && mounted) {
           _passwordController.clear();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Password set successfully. Please sign in with your new password.',
-              ),
-              backgroundColor: AppColors.primary,
-            ),
+          TagaToast.success(
+            context,
+            'Password set successfully. Please sign in with your new password.',
+            title: 'Password Updated',
           );
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome back, ${session.displayName}!'),
-            backgroundColor: AppColors.primary,
-            duration: const Duration(seconds: 2),
-          ),
+        TagaToast.success(
+          context,
+          'Welcome back, ${session.displayName}!',
+          title: 'Welcome to TAGA',
+          duration: const Duration(seconds: 3),
         );
         widget.onLoginSuccess?.call();
       }

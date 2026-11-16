@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bouncy_button.dart';
+import '../../../core/widgets/inner_screen_back_scope.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../domain/resource_category.dart';
@@ -93,13 +94,16 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
     }
 
     if (!isPaid) {
-      return const ResourcesAccessRestrictedScreen();
+      return const InnerScreenBackScope(
+        child: ResourcesAccessRestrictedScreen(),
+      );
     }
 
     // 2. Resource Categories
     final categoriesAsync = ref.watch(resourceCategoriesProvider);
 
-    return Scaffold(
+    return InnerScreenBackScope(
+      child: Scaffold(
       backgroundColor: const Color(0xFFF8FAF7),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,8 +165,9 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   /// Section heading: "Browse Categories"
   Widget _buildSectionHeading() {

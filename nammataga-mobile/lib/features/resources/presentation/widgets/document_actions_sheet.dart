@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/taga_toast.dart';
 import '../../domain/resource_document.dart';
 import '../../services/document_download_service.dart';
 import '../pdf_viewer_screen.dart';
@@ -123,7 +124,7 @@ class _DocumentActionsSheetState extends ConsumerState<DocumentActionsSheet> {
 
     try {
       final fileName = _getFileName();
-      final savedFile = await DocumentDownloadService.instance.downloadDocument(
+      await DocumentDownloadService.instance.downloadDocument(
         widget.document.fullUrl,
         fileName,
         saveToPublicDownloads: true,
@@ -132,42 +133,20 @@ class _DocumentActionsSheetState extends ConsumerState<DocumentActionsSheet> {
       if (mounted) {
         setState(() => _isDownloading = false);
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(LucideIcons.checkCircle2, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Saved "$fileName" to Downloads',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            action: SnackBarAction(
-              label: 'Open',
-              textColor: const Color(0xFFB7E4C7),
-              onPressed: () {
-                OpenFilex.open(savedFile.path);
-              },
-            ),
-            backgroundColor: AppColors.primary,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-          ),
+        TagaToast.success(
+          context,
+          'Saved "$fileName" to Downloads',
+          title: 'Downloaded',
+          duration: const Duration(seconds: 4),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isDownloading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Download failed: $e'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Download failed: $e',
+          title: 'Download Error',
         );
       }
     }
@@ -185,11 +164,10 @@ class _DocumentActionsSheetState extends ConsumerState<DocumentActionsSheet> {
       if (file != null) {
         final result = await OpenFilex.open(file.path);
         if (result.type != ResultType.done && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Could not launch external app: ${result.message}'),
-              backgroundColor: AppColors.destructive,
-            ),
+          TagaToast.error(
+            context,
+            'Could not launch external app: ${result.message}',
+            title: 'Open Error',
           );
         } else if (mounted) {
           Navigator.of(context).pop();
@@ -197,11 +175,10 @@ class _DocumentActionsSheetState extends ConsumerState<DocumentActionsSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to open document: $e'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Failed to open document: $e',
+          title: 'Open Error',
         );
       }
     } finally {
@@ -232,11 +209,10 @@ class _DocumentActionsSheetState extends ConsumerState<DocumentActionsSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Share failed: $e'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Share failed: $e',
+          title: 'Share Error',
         );
       }
     } finally {
@@ -265,11 +241,10 @@ class _DocumentActionsSheetState extends ConsumerState<DocumentActionsSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Print failed: $e'),
-            backgroundColor: AppColors.destructive,
-          ),
+        TagaToast.error(
+          context,
+          'Print failed: $e',
+          title: 'Print Error',
         );
       }
     } finally {

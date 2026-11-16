@@ -9,7 +9,41 @@ import '../../providers/home_provider.dart';
 class ContactGlassHub extends ConsumerWidget {
   const ContactGlassHub({super.key});
 
-  static const String _mapLocationUrl = 'https://share.google/uYKmchpjGIp9ZHHbS';
+  static const String _mapAddressQuery =
+      'Taga Tower, 45, SAIT Colony 2nd St, Egmore, Chennai, Tamil Nadu 600008';
+
+  Future<void> _openGoogleMaps() async {
+    final encodedQuery = Uri.encodeComponent(_mapAddressQuery);
+    final geoUri = Uri.parse('geo:0,0?q=$encodedQuery');
+    final googleMapsAppUri = Uri.parse('comgooglemaps://?q=$encodedQuery');
+    final webMapsUri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$encodedQuery',
+    );
+
+    // 1. Native Android geo URI (routes directly into Google Maps app)
+    try {
+      if (await canLaunchUrl(geoUri)) {
+        await launchUrl(geoUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {}
+
+    // 2. iOS Google Maps app scheme
+    try {
+      if (await canLaunchUrl(googleMapsAppUri)) {
+        await launchUrl(googleMapsAppUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {}
+
+    // 3. Google Maps universal search URL in external application mode
+    try {
+      if (await canLaunchUrl(webMapsUri)) {
+        await launchUrl(webMapsUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {}
+  }
 
   Future<void> _launch(String urlString) async {
     final uri = Uri.parse(urlString);
@@ -298,7 +332,7 @@ class ContactGlassHub extends ConsumerWidget {
                             const SizedBox(height: 4),
                             InkWell(
                               borderRadius: BorderRadius.circular(10),
-                              onTap: () => _launch(_mapLocationUrl),
+                              onTap: _openGoogleMaps,
                               child: Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
@@ -359,7 +393,7 @@ class ContactGlassHub extends ConsumerWidget {
                         child: _buildActionPill(
                           label: 'Map',
                           icon: LucideIcons.mapPin,
-                          onTap: () => _launch(_mapLocationUrl),
+                          onTap: _openGoogleMaps,
                         ),
                       ),
                     ],

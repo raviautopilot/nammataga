@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/inner_screen_back_scope.dart';
 import '../domain/district_office_bearer.dart';
 import '../domain/state_executive_member.dart';
 import '../providers/office_bearers_provider.dart';
@@ -67,7 +68,8 @@ class _OfficeBearersScreenState extends ConsumerState<OfficeBearersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return InnerScreenBackScope(
+      child: Scaffold(
       backgroundColor: const Color(0xFFF8FAF7),
       body: Column(
         children: [
@@ -92,8 +94,9 @@ class _OfficeBearersScreenState extends ConsumerState<OfficeBearersScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   /// Builds the signature emerald gradient header matching Events & Resources
   Widget _buildExecutiveHeader() {

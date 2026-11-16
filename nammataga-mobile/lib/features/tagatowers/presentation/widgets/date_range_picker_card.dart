@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/taga_toast.dart';
 import '../theme/tagatowers_design_tokens.dart';
 
 /// A card widget allowing members to select check-in and check-out dates
@@ -175,13 +176,10 @@ class DateRangePickerCard extends StatelessWidget {
     final absoluteMaxCheckout = today.add(Duration(days: maxHorizonDays));
 
     if (minCheckout.isAfter(absoluteMaxCheckout)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Check-in is on the latest available day. Check-out must be the following day.',
-          ),
-          duration: Duration(seconds: 2),
-        ),
+      TagaToast.warning(
+        context,
+        'Check-in is on the latest available day. Check-out must be the following day.',
+        title: 'Check-out Notice',
       );
       return;
     }

@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/payment/razorpay_checkout_manager.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/taga_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../domain/booking_model.dart';
 import '../domain/payment_model.dart';
@@ -190,12 +191,9 @@ class _PaymentReviewScreenState extends ConsumerState<PaymentReviewScreen> {
         _isProcessing = false;
         _errorMessage = e.toString().replaceAll('Exception: ', '');
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Payment setup failed: $_errorMessage'),
-          backgroundColor: AppColors.destructive,
-          duration: const Duration(seconds: 4),
-        ),
+      TagaToast.error(
+        context,
+        'Payment setup failed: $_errorMessage',
       );
     }
   }
@@ -257,23 +255,9 @@ class _PaymentReviewScreenState extends ConsumerState<PaymentReviewScreen> {
       _isProcessing = false;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            Icon(LucideIcons.info, color: Colors.white, size: 16),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Payment window closed.',
-                style: TextStyle(fontSize: 12.5),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Color(0xFF1E293B),
-        duration: Duration(seconds: 4),
-      ),
+    TagaToast.info(
+      context,
+      'Payment window closed.',
     );
   }
 
@@ -286,19 +270,9 @@ class _PaymentReviewScreenState extends ConsumerState<PaymentReviewScreen> {
       _errorMessage = errorMsg;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Payment Failed: $errorMsg'),
-        backgroundColor: AppColors.destructive,
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: 'Dismiss',
-          textColor: Colors.white,
-          onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
-        ),
-      ),
+    TagaToast.error(
+      context,
+      'Payment Failed: $errorMsg',
     );
   }
 

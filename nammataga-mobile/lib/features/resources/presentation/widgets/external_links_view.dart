@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/taga_toast.dart';
 import '../../../tagatowers/presentation/theme/tagatowers_design_tokens.dart';
 import '../../domain/external_link.dart';
 import '../../providers/resources_provider.dart';
@@ -149,7 +150,7 @@ class ExternalLinksView extends ConsumerWidget {
     var finalUrl = rawUrl.trim();
     if (finalUrl.isEmpty) {
       if (context.mounted) {
-        _showSnackBar(context, 'Invalid external link URL.', isError: true);
+        _showToast(context, 'Invalid external link URL.', isError: true);
       }
       return false;
     }
@@ -167,7 +168,7 @@ class ExternalLinksView extends ConsumerWidget {
       );
 
       if (!launched && context.mounted) {
-        _showSnackBar(
+        _showToast(
           context,
           'Could not launch external portal: $finalUrl',
           isError: true,
@@ -176,7 +177,7 @@ class ExternalLinksView extends ConsumerWidget {
       return launched;
     } catch (e) {
       if (context.mounted) {
-        _showSnackBar(
+        _showToast(
           context,
           'Failed to open portal. Please check your web browser.',
           isError: true,
@@ -186,40 +187,16 @@ class ExternalLinksView extends ConsumerWidget {
     }
   }
 
-  static void _showSnackBar(
+  static void _showToast(
     BuildContext context,
     String message, {
     bool isError = false,
   }) {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: isError ? AppColors.destructive : AppColors.primaryDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-        content: Row(
-          children: [
-            Icon(
-              isError ? LucideIcons.alertCircle : LucideIcons.externalLink,
-              color: Colors.white,
-              size: 18,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    if (isError) {
+      TagaToast.error(context, message);
+    } else {
+      TagaToast.info(context, message);
+    }
   }
 
   /// Extracts a clean host domain for subtle secondary labeling (e.g. "tnagrisnet.tn.gov.in").
