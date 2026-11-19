@@ -119,32 +119,13 @@ class ProfileRepository {
     return [];
   }
 
-  /// Marks a notification as read via `PUT /api/member/notifications/:id/read`
+  /// Stubbed out as read/unread tracking is eliminated. Always a no-op.
   Future<void> markNotificationRead(String id) async {
-    try {
-      await _dio.put(ApiEndpoints.markNotificationRead(id));
-    } catch (e) {
-      debugPrint('[ProfileRepository] Error marking notification read: $e');
-    }
+    // Read/unread tracking is eliminated.
   }
 
-  /// Fetches unread notifications count from `GET /api/member/notifications/unread/count`
+  /// Stubbed out as read/unread tracking is eliminated. Always returns 0.
   Future<int> getUnreadCount({String? memberId}) async {
-    try {
-      final response = await _dio.get(
-        ApiEndpoints.unreadNotificationsCount,
-        queryParameters: memberId != null && memberId.isNotEmpty
-            ? {'member_id': memberId}
-            : null,
-      );
-      if (response.data is Map) {
-        final countVal =
-            response.data['unread_count'] ?? response.data['count'];
-        if (countVal != null) {
-          return int.tryParse(countVal.toString()) ?? 0;
-        }
-      }
-    } catch (_) {}
     return 0;
   }
 

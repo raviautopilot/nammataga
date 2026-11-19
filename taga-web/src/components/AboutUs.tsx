@@ -7,9 +7,14 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Target, Heart, Mail, Phone, MapPin, Globe } from "lucide-react";
+import { Target, Heart, Mail, Phone, MapPin, Globe, Bell, ChevronRight } from "lucide-react";
 import { API_BASE_URL } from "../config/api";
 /* ---------------- TYPES ---------------- */
+
+export interface AboutUsProps {
+  onNavigateToAnnouncements?: () => void;
+  isAdmin?: boolean;
+}
 
 interface ContactData {
   primary_email: string;
@@ -46,11 +51,12 @@ interface AboutData {
 
 /* ---------------- COMPONENT ---------------- */
 
-export function AboutUs() {
+export function AboutUs({ onNavigateToAnnouncements, isAdmin }: AboutUsProps = {}) {
   const [about, setAbout] = useState<AboutData | null>(null);
   const [contact, setContact] = useState<ContactData | null>(null);
   const [objectives, setObjectives] = useState<ObjectiveData[]>([]);
   const [stats, setStats] = useState<StatData[]>([]);
+  const [latestAnnouncement, setLatestAnnouncement] = useState<{ title: string; message: string; priority: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const bannerImage = `${API_BASE_URL}/images/about.jpg`;
   const objectivesImage = `${API_BASE_URL}/images/tagatower_final.png`;
@@ -78,6 +84,19 @@ export function AboutUs() {
 
         // ✅ ensure stats is always array
         setStats(Array.isArray(statsData) ? statsData : []);
+
+        // Fetch active announcements for the home screen banner
+        try {
+          const notifRes = await fetch(`${API_BASE_URL}/member/notifications`);
+          if (notifRes.ok) {
+            const notifs = await notifRes.json();
+            if (Array.isArray(notifs) && notifs.length > 0) {
+              setLatestAnnouncement(notifs[0]);
+            }
+          }
+        } catch {
+          // ignore notification fetch error
+        }
       } catch (err) {
         console.error("API ERROR:", err);
       } finally {
@@ -92,6 +111,40 @@ export function AboutUs() {
 
   return (
     <div className="space-y-10">
+      {/* ✅ ACTIVE ANNOUNCEMENT ALERT BANNER (Home Screen) */}
+      {!isAdmin && latestAnnouncement && (
+        <div
+          onClick={onNavigateToAnnouncements}
+          className="flex items-center justify-between p-3.5 px-5 bg-gradient-to-r from-emerald-50 via-green-50 to-emerald-50 dark:from-emerald-950/40 dark:via-green-950/30 dark:to-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl cursor-pointer hover:shadow-md transition-all duration-200"
+          role="button"
+          tabIndex={0}
+          data-testid="testid-home-announcement-banner"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="relative p-2 bg-white dark:bg-emerald-900 rounded-full shadow-xs shrink-0">
+              <Bell className="w-4 h-4 text-emerald-700 dark:text-emerald-300" />
+              <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-emerald-900 animate-pulse" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm text-emerald-900 dark:text-emerald-100 truncate">
+                  {latestAnnouncement.title}
+                </span>
+                <Badge className="bg-emerald-600 text-white text-[10px] px-1.5 py-0 capitalize shrink-0">
+                  {latestAnnouncement.priority || 'Active'}
+                </Badge>
+              </div>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300 truncate mt-0.5">
+                {latestAnnouncement.message}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center text-xs font-semibold text-emerald-800 dark:text-emerald-200 shrink-0 ml-3">
+            View All <ChevronRight className="w-4 h-4 ml-0.5" />
+          </div>
+        </div>
+      )}
+
       {/* ✅ HERO (same design) */}
       <div className="relative overflow-hidden rounded-2xl shadow-2xl">
         <div className="absolute inset-0">

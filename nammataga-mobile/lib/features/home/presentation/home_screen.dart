@@ -8,6 +8,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/app_exit_scope.dart';
 import '../../../core/widgets/sign_out_confirm_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../profile/providers/profile_provider.dart';
 import '../providers/home_provider.dart';
 import 'widgets/contact_glass_hub.dart';
 import 'widgets/home_hero_card.dart';
@@ -26,6 +27,10 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final announcementsAsync = ref.watch(memberAnnouncementsProvider);
+    final hasActiveAnnouncements =
+        announcementsAsync.value?.isNotEmpty ?? false;
+
     return AppExitScope(
       child: Scaffold(
         backgroundColor: AppColors.background,
@@ -85,6 +90,38 @@ class HomeScreen extends ConsumerWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      LucideIcons.bell,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
+                    tooltip: 'Announcements',
+                    onPressed: () => context.push('/profile/announcements'),
+                  ),
+                  if (hasActiveAnnouncements)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        key: const Key('active_announcements_dot'),
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
               IconButton(
                 icon: const Icon(
                   LucideIcons.user,
@@ -114,6 +151,7 @@ class HomeScreen extends ConsumerWidget {
           ref.invalidate(aboutInfoProvider);
           ref.invalidate(objectivesProvider);
           ref.invalidate(contactInfoProvider);
+          ref.invalidate(memberAnnouncementsProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(

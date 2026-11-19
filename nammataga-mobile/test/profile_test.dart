@@ -437,6 +437,8 @@ void main() {
       expect(find.text('URGENT'), findsOneWidget);
       expect(find.text('Annual Subscription Renewal Notice'), findsOneWidget);
       expect(find.text('NORMAL'), findsOneWidget);
+      expect(find.text('Tap to mark read'), findsNothing);
+      expect(find.byIcon(LucideIcons.check), findsNothing);
     });
   });
 }

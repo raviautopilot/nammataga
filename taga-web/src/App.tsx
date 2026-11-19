@@ -15,7 +15,8 @@ import {
     Building2,
     Calendar,
     CreditCard,
-    Shield
+    Shield,
+    Bell
 } from 'lucide-react';
 import { AboutUs } from './components/AboutUs';
 import { OfficeBearers } from "./components/OfficeBearers";
@@ -28,6 +29,7 @@ import { TAGATowers } from './components/TAGATowers';
 import { Membership } from './components/Membership';
 import { Events } from './components/Events';
 import { AuditLog } from './components/admin/AuditLog';
+import { NotificationBell } from './components/NotificationBell';
 import { getLogo } from './api/logo';
 import { getMemberProfile } from './api/member';
 import API_BASE_URL from "./config/api";
@@ -71,6 +73,21 @@ export default function App() {
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
     const [copyrightClickCount, setCopyrightClickCount] = useState(0);
+    const [membershipTab, setMembershipTab] = useState<'profile' | 'subscriptions' | 'announcements'>('profile');
+
+    const handleBellClick = () => {
+        setMobileMenuOpen(false);
+        if (!isLoggedIn) {
+            navigateTo('member-login');
+            return;
+        }
+        if (isAdmin) {
+            navigateTo('members');
+            return;
+        }
+        setMembershipTab('announcements');
+        navigateTo('membership');
+    };
 
     // Ref to track whether a page change came from the popstate event (Back/Forward)
     // so we don't push a duplicate history entry.
@@ -380,7 +397,7 @@ export default function App() {
 
         switch (currentPage) {
             case 'home':
-                return <AboutUs />;
+                return <AboutUs onNavigateToAnnouncements={handleBellClick} isAdmin={isAdmin} />;
             case 'office-bearers':
                 return <OfficeBearers />;
             case 'member-login':
@@ -393,13 +410,13 @@ export default function App() {
             case 'audit-log':
                 return <AuditLog isAdmin={isAdmin} />;
             case 'resources':
-                return <Resources isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} onNavigateToMembership={() => navigateTo('membership')} />;
+                return <Resources isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} onNavigateToMembership={() => { setMembershipTab('profile'); navigateTo('membership'); }} />;
             case 'grievance':
-                return <Grievance isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} onNavigateToMembership={() => navigateTo('membership')} />;
+                return <Grievance isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} onNavigateToMembership={() => { setMembershipTab('profile'); navigateTo('membership'); }} />;
             case 'taga-towers':
-                return <TAGATowers isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} isAdmin={isAdmin} onNavigateToMembership={() => navigateTo('membership')} />;
+                return <TAGATowers isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} isAdmin={isAdmin} onNavigateToMembership={() => { setMembershipTab('profile'); navigateTo('membership'); }} />;
             case 'membership':
-                return <Membership isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} />;
+                return <Membership isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} initialTab={membershipTab} onTabChange={(tab) => setMembershipTab(tab as any)} />;
             case 'events':
                 return <Events isLoggedIn={isLoggedIn} />;
             default:
@@ -437,7 +454,12 @@ export default function App() {
                                     <Button
                                         key={item.id}
                                         variant={currentPage === item.id ? "default" : "ghost"}
-                                        onClick={() => navigateTo(item.id as Page)}
+                                        onClick={() => {
+                                            if (item.id === 'membership') {
+                                                setMembershipTab('profile');
+                                            }
+                                            navigateTo(item.id as Page);
+                                        }}
                                         className="flex items-center space-x-2"
                                         size="sm"
                                         data-testid={`testid-${item.id}-button`}
@@ -447,22 +469,33 @@ export default function App() {
                                     </Button>
                                 );
                             })}
-                            {isLoggedIn && (
-                                <Button variant="outline" onClick={handleLogout} className="ml-4" size="sm" data-testid="testid-logout-button">
-                                    Logout
-                                </Button>
-                            )}
+                            <div className="ml-2 flex items-center space-x-2">
+                                {!isAdmin && currentPage !== 'admin-login' && (
+                                    <div className="flex items-center pl-2 border-l border-border/60">
+                                        <NotificationBell isLoggedIn={isLoggedIn} onClick={handleBellClick} />
+                                    </div>
+                                )}
+                                {isLoggedIn && (
+                                    <Button variant="outline" onClick={handleLogout} size="sm" data-testid="testid-logout-button">
+                                        Logout
+                                    </Button>
+                                )}
+                            </div>
                         </nav>
 
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="lg:hidden"
-                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            data-testid="testid-mobile-menu-button"
-                        >
-                            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                        </Button>
+                        <div className="flex items-center space-x-1 lg:hidden">
+                            {!isAdmin && currentPage !== 'admin-login' && (
+                                <NotificationBell isLoggedIn={isLoggedIn} onClick={handleBellClick} />
+                            )}
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                data-testid="testid-mobile-menu-button"
+                            >
+                                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                            </Button>
+                        </div>
                     </div>
 
                     {mobileMenuOpen && (
@@ -475,6 +508,9 @@ export default function App() {
                                             key={item.id}
                                             variant={currentPage === item.id ? "default" : "ghost"}
                                             onClick={() => {
+                                                if (item.id === 'membership') {
+                                                    setMembershipTab('profile');
+                                                }
                                                 navigateTo(item.id as Page);
                                                 setMobileMenuOpen(false);
                                             }}
@@ -487,6 +523,21 @@ export default function App() {
                                         </Button>
                                     );
                                 })}
+                                {!isAdmin && currentPage !== 'admin-login' && (
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => {
+                                            handleBellClick();
+                                            setMobileMenuOpen(false);
+                                        }}
+                                        className="flex items-center space-x-2 justify-start text-foreground"
+                                        size="sm"
+                                        data-testid="testid-mobile-announcements-button"
+                                    >
+                                        <Bell className="w-4 h-4" />
+                                        <span>Announcements</span>
+                                    </Button>
+                                )}
                                 {isLoggedIn && (
                                     <Button
                                         variant="outline"

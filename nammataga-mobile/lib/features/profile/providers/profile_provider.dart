@@ -50,7 +50,7 @@ final memberPaidSubscriptionsProvider =
       return repo.getMemberPaidSubscriptions(email);
     });
 
-/// FutureProvider for association announcements (replaces legacy notifications)
+/// FutureProvider for association announcements (active announcements)
 final memberAnnouncementsProvider =
     FutureProvider.autoDispose<List<MemberNotification>>((ref) async {
       final repo = ref.watch(profileRepositoryProvider);
@@ -64,19 +64,11 @@ final memberAnnouncementsProvider =
       return repo.getNotifications(memberId: memberId);
     });
 
-/// FutureProvider for unread announcements count
+/// Compatibility provider: returns 0 as unread tracking is eliminated
 final unreadAnnouncementsCountProvider = FutureProvider.autoDispose<int>((
   ref,
 ) async {
-  final repo = ref.watch(profileRepositoryProvider);
-  final session = ref.watch(authProvider).value;
-  final profile = ref.watch(memberProfileProvider).value;
-  final memberId = (profile?.id.isNotEmpty == true)
-      ? profile!.id
-      : ((session?.memberId.isNotEmpty == true)
-          ? session!.memberId
-          : session?.memberEmail);
-  return repo.getUnreadCount(memberId: memberId);
+  return 0;
 });
 
 /// Aliases for backward compatibility

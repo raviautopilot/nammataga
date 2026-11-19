@@ -6,7 +6,6 @@ import { Separator } from './ui/separator';
 import { Alert, AlertDescription } from './ui/alert';
 import { AdminActions } from './AdminActions';
 import { ActivityDetails } from './ActivityDetails';
-import { NotificationBell } from './NotificationBell';
 import { getMemberStats } from '../api/adminContent';
 import {
     CreditCard,
@@ -308,7 +307,6 @@ export function MembersDashboard({ isAdmin }: MembersDashboardProps) {
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
-                    <NotificationBell memberId={membershipStatus.id} />
                     <Badge variant="default" className="bg-green-100 text-green-800">
                         {membershipStatus.status}
                     </Badge>

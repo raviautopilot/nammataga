@@ -19,6 +19,8 @@ import { loadRazorpayScript } from '../utils/razorpay';
 interface MembershipProps {
   isLoggedIn: boolean;
   isPaidMember: boolean;
+  initialTab?: 'announcements' | 'profile' | 'subscriptions';
+  onTabChange?: (tab: string) => void;
 }
 
 interface Member {
@@ -71,11 +73,25 @@ interface MemberNotification {
   title: string;
   message: string;
   priority: string;
-  is_read: boolean;
-  created_at: string;
+  is_read?: boolean;
+  created_at?: string;
+  sent_at?: string;
+  published_at?: string;
 }
 
-export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
+export function Membership({
+  isLoggedIn,
+  isPaidMember,
+  initialTab = 'profile',
+  onTabChange,
+}: MembershipProps) {
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [memberProfile, setMemberProfile] = useState<Member | null>(null);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,31 +186,28 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
   // Fetch notifications
   const fetchNotifications = async () => {
     try {
-      const token = localStorage.getItem('member_token');
+      const token = localStorage.getItem('member_token') || localStorage.getItem('token');
       const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const memberId = user.id || user.emailId;
 
-      if (!user.id && !user.emailId) {
-        setNotificationsLoading(false);
-        return;
+      const url = memberId
+        ? `${API_BASE}/member/notifications?member_id=${encodeURIComponent(memberId)}`
+        : `${API_BASE}/member/notifications`;
+
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Get member ID from stored user
-      const memberId = user.id;
+      const response = await axios.get(url, { headers });
 
-      if (!memberId) {
-        setNotificationsLoading(false);
-        return;
-      }
-
-      const response = await axios.get(`${API_BASE}/member/notifications?member_id=${memberId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      // Sort by date (newest first)
+      const sorted = (response.data || []).sort((a: any, b: any) => {
+        const dateA = new Date(a.published_at || a.created_at || a.sent_at || 0).getTime();
+        const dateB = new Date(b.published_at || b.created_at || b.sent_at || 0).getTime();
+        return dateB - dateA;
       });
-
-      // Sort by date (newest first) and limit to recent 10
-      const sorted = (response.data || []).sort((a: MemberNotification, b: MemberNotification) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      setNotifications(sorted.slice(0, 10));
+      setNotifications(sorted);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -202,31 +215,33 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
     }
   };
 
-  // Mark notification as read
-  const markAsRead = async (notificationId: string) => {
-    try {
-      const token = localStorage.getItem('member_token');
-      await axios.put(`${API_BASE}/member/notifications/${notificationId}/read`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      // Update local state
-      setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
-      );
-    } catch (error) {
-      console.error('Failed to mark as read:', error);
-    }
-  };
-
   // Get priority styles
   const getPriorityStyles = (priority: string) => {
     switch (priority?.toLowerCase()) {
       case 'urgent':
-        return { bg: 'bg-red-50 dark:bg-red-950/30', border: 'border-red-500', icon: AlertCircle, color: 'text-red-600' };
+        return {
+          bg: 'bg-red-50 dark:bg-red-950/30',
+          border: 'border-red-500',
+          badgeBg: 'bg-red-600',
+          icon: AlertCircle,
+          color: 'text-red-600',
+        };
       case 'high':
-        return { bg: 'bg-orange-50 dark:bg-orange-950/30', border: 'border-orange-500', icon: AlertTriangle, color: 'text-orange-600' };
+        return {
+          bg: 'bg-orange-50 dark:bg-orange-950/30',
+          border: 'border-orange-500',
+          badgeBg: 'bg-orange-600',
+          icon: AlertTriangle,
+          color: 'text-orange-600',
+        };
       default:
-        return { bg: 'bg-blue-50 dark:bg-blue-950/30', border: 'border-blue-500', icon: Bell, color: 'text-blue-600' };
+        return {
+          bg: 'bg-blue-50 dark:bg-blue-950/30',
+          border: 'border-blue-500',
+          badgeBg: 'bg-blue-600',
+          icon: Bell,
+          color: 'text-blue-600',
+        };
     }
   };
 
@@ -547,8 +562,6 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
     return null;
   }
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
-
   return (
     <div className="space-y-6" data-testid="testid-membership-page">
 
@@ -579,7 +592,15 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6" data-testid="testid-membership-tabs-form">
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => {
+          setActiveTab(val);
+          onTabChange?.(val);
+        }}
+        className="space-y-6"
+        data-testid="testid-membership-tabs-form"
+      >
 
         {/* TAB BUTTONS */}
         <TabsList className="grid w-full grid-cols-3" data-testid="testid-membership-tabs-list">
@@ -588,11 +609,6 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
           <TabsTrigger value="announcements" data-testid="testid-member-announcements-button">
             <Megaphone className="w-4 h-4 mr-2" />
             Announcements
-            {unreadCount > 0 && (
-              <Badge className="ml-2 bg-red-500 text-white">
-                {unreadCount}
-              </Badge>
-            )}
           </TabsTrigger>
         </TabsList>
 
@@ -840,7 +856,7 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Megaphone className="w-5 h-5" />
+                <Megaphone className="w-5 h-5 text-primary" />
                 Announcements & Notifications
               </CardTitle>
               <CardDescription>
@@ -859,26 +875,28 @@ export function Membership({ isLoggedIn, isPaidMember }: MembershipProps) {
                   {notifications.map((notification) => {
                     const styles = getPriorityStyles(notification.priority);
                     const IconComponent = styles.icon;
+                    const timestamp = notification.published_at || notification.created_at || notification.sent_at;
+                    const formattedDate = timestamp ? new Date(timestamp).toLocaleDateString('en-GB') : '-';
+
                     return (
                       <div
                         key={notification.id}
-                        className={`p-4 rounded-lg border-l-4 ${styles.bg} ${styles.border} ${!notification.is_read ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
-                        onClick={() => !notification.is_read && markAsRead(notification.id)}
+                        className={`p-4 rounded-lg border-l-4 ${styles.bg} ${styles.border} shadow-sm`}
                       >
                         <div className="flex items-start gap-3">
-                          <IconComponent className={`w-5 h-5 mt-0.5 ${styles.color}`} />
-                          <div className="flex-1">
+                          <IconComponent className={`w-5 h-5 mt-0.5 ${styles.color} shrink-0`} />
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between flex-wrap gap-2">
-                              <h3 className="font-semibold flex items-center gap-2">
-                                {notification.title}
-                                {!notification.is_read && (
-                                  <Badge variant="default" className="bg-green-500 text-white text-xs">
-                                    New
-                                  </Badge>
-                                )}
-                              </h3>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-semibold text-foreground">
+                                  {notification.title}
+                                </h3>
+                                <Badge className={`${styles.badgeBg} text-white text-xs capitalize`}>
+                                  {notification.priority || 'Normal'}
+                                </Badge>
+                              </div>
                               <span className="text-xs text-muted-foreground">
-                                {new Date(notification.created_at).toLocaleDateString('en-GB')}
+                                {formattedDate}
                               </span>
                             </div>
                             <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">

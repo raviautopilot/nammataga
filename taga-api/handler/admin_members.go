@@ -598,30 +598,7 @@ func DeleteMember(c *gin.Context) {
 }
 
 func cleanupMemberNotifications(memberID, memberTagaID string) {
-	if memberID == "" && memberTagaID == "" {
-		return
-	}
-	notificationsFile := filepath.Join("data", "notifications", "member_notifications.json")
-	data, err := os.ReadFile(notificationsFile)
-	if err != nil {
-		return
-	}
-
-	var notifs []map[string]interface{}
-	if err := json.Unmarshal(data, &notifs); err != nil {
-		return
-	}
-
-	filtered := make([]map[string]interface{}, 0, len(notifs))
-	for _, n := range notifs {
-		id, _ := n["member_id"].(string)
-		if id != memberID && id != memberTagaID {
-			filtered = append(filtered, n)
-		}
-	}
-
-	updatedData, _ := json.MarshalIndent(filtered, "", "  ")
-	os.WriteFile(notificationsFile, updatedData, 0644)
+	// No-op: individual member notifications eliminated in favor of broadcast announcements
 }
 
 func cleanupMembershipApplications(memberEmail string) {

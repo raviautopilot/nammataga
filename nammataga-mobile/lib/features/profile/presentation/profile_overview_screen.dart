@@ -19,8 +19,6 @@ class ProfileOverviewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(memberProfileProvider);
     final subStatusAsync = ref.watch(memberSubscriptionStatusProvider);
-    final unreadCountAsync = ref.watch(unreadAnnouncementsCountProvider);
-    final unreadCount = unreadCountAsync.value ?? 0;
 
     return InnerScreenBackScope(
       child: Scaffold(
@@ -32,7 +30,6 @@ class ProfileOverviewScreen extends ConsumerWidget {
           ref.invalidate(memberProfileProvider);
           ref.invalidate(memberSubscriptionStatusProvider);
           ref.invalidate(memberAnnouncementsProvider);
-          ref.invalidate(unreadAnnouncementsCountProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(
@@ -68,7 +65,7 @@ class ProfileOverviewScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
 
                     // Profile Navigation List Card with Official Announcements
-                    _buildNavigationList(context, unreadCount: unreadCount),
+                    _buildNavigationList(context),
                   ],
                 ),
               ),
@@ -626,7 +623,7 @@ class ProfileOverviewScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildNavigationList(BuildContext context, {int unreadCount = 0}) {
+  Widget _buildNavigationList(BuildContext context) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -648,7 +645,6 @@ class ProfileOverviewScreen extends ConsumerWidget {
             icon: LucideIcons.megaphone,
             title: 'Official Announcements',
             route: '/profile/announcements',
-            badgeCount: unreadCount,
           ),
           const Divider(height: 1, indent: 58, color: Color(0xFFEFF4F0)),
           _buildNavItem(

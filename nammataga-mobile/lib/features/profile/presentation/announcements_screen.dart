@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -104,143 +103,99 @@ class AnnouncementsScreen extends ConsumerWidget {
         ? const Color(0xFFB91C1C)
         : (isHigh ? const Color(0xFFB45309) : AppColors.primary);
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: () async {
-        HapticFeedback.lightImpact();
-        if (!announcement.isRead) {
-          await ref
-              .read(profileRepositoryProvider)
-              .markNotificationRead(announcement.id);
-          ref.invalidate(memberAnnouncementsProvider);
-          ref.invalidate(unreadAnnouncementsCountProvider);
-        }
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: announcement.isRead
-                ? const Color(0xFFE5ECE7)
-                : const Color(0xFF52B788),
-            width: announcement.isRead ? 1 : 1.3,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFE5ECE7),
+          width: 1.1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x061B4332),
+            blurRadius: 10,
+            offset: Offset(0, 3),
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x061B4332),
-              blurRadius: 10,
-              offset: Offset(0, 3),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8F5EE),
+              shape: BoxShape.circle,
             ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: announcement.isRead
-                    ? const Color(0xFFF3F4F6)
-                    : const Color(0xFFE8F5EE),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                LucideIcons.megaphone,
-                size: 18,
-                color: announcement.isRead
-                    ? const Color(0xFF9CA3AF)
-                    : AppColors.primary,
-              ),
+            child: const Icon(
+              LucideIcons.megaphone,
+              size: 18,
+              color: AppColors.primary,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          announcement.title,
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: announcement.isRead
-                                ? FontWeight.w600
-                                : FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: badgeColor,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          announcement.priority.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.bold,
-                            color: badgeTextColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    announcement.message,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: AppColors.textSecondary,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        announcement.formattedDate,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        announcement.title,
                         style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF9CA3AF),
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                      if (!announcement.isRead)
-                        const Row(
-                          children: [
-                            Icon(
-                              LucideIcons.check,
-                              size: 12,
-                              color: AppColors.primary,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Tap to mark read',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: badgeColor,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        announcement.priority.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: badgeTextColor,
                         ),
-                    ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  announcement.message,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.textSecondary,
+                    height: 1.4,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  announcement.formattedDate,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

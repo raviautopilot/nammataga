@@ -862,90 +862,53 @@ func SendAnnouncement(c *gin.Context) {
 		respondOK(c, gin.H{
 			"message":    "No members found in the system",
 			"recipients": 0,
-			"send_to":    req.SendTo,
+			"send_to":    "all",
 		})
 		return
 	}
 
 	var recipients []map[string]interface{}
-	sendToLower := strings.ToLower(strings.TrimSpace(req.SendTo))
-
 	for _, member := range members {
 		email, ok := member["emailId"].(string)
-		if !ok || email == "" {
+		if !ok || strings.TrimSpace(email) == "" {
 			continue
 		}
 
 		memberID, _ := member["id"].(string)
-		workingDistrict := getString(member, "working_district")
-		paymentStatus := getString(member, "payment_status")
-		include := false
-
-		switch sendToLower {
-		case "all", "all members":
-			include = true
-		case "paid", "paid members", "paid members only":
-			if strings.EqualFold(paymentStatus, "paid") {
-				include = true
-			}
-		case "unpaid", "unpaid members":
-			if strings.EqualFold(paymentStatus, "unpaid") {
-				include = true
-			}
-		case "district", "district members":
-			if req.District != "" && strings.EqualFold(workingDistrict, req.District) {
-				include = true
-			}
-		default:
-			include = true
-		}
-
-		if include {
-			recipients = append(recipients, map[string]interface{}{
-				"email":            email,
-				"id":               memberID,
-				"working_district": workingDistrict,
-				"payment_status":   paymentStatus,
-			})
-		}
+		recipients = append(recipients, map[string]interface{}{
+			"email": strings.TrimSpace(email),
+			"id":    memberID,
+		})
 	}
 
 	if len(recipients) == 0 {
 		respondOK(c, gin.H{
-			"message":    fmt.Sprintf("No recipients found for filter: %s", req.SendTo),
+			"message":    "No recipients found with valid email address",
 			"recipients": 0,
-			"send_to":    req.SendTo,
+			"send_to":    "all",
 		})
 		return
 	}
 
+	now := time.Now().UTC()
 	announcement := model.Notification{
-		ID:         uuid.New().String(),
-		Title:      req.Title,
-		Message:    req.Message,
-		Priority:   req.Priority,
-		SendTo:     req.SendTo,
-		SentBy:     adminEmail.(string),
-		SentAt:     time.Now(),
-		Recipients: len(recipients),
-		District:   req.District,
+		ID:          uuid.New().String(),
+		Title:       req.Title,
+		Message:     req.Message,
+		Priority:    req.Priority,
+		SendTo:      "all",
+		SentBy:      adminEmail.(string),
+		SentAt:      now,
+		PublishedAt: now,
+		CreatedAt:   now,
+		Recipients:  len(recipients),
+		District:    req.District,
 	}
 
-	_ = saveAnnouncementToFile(announcement)
-
-	for _, recipient := range recipients {
-		memberNotification := model.MemberNotification{
-			ID:             uuid.New().String(),
-			MemberID:       recipient["id"].(string),
-			MemberEmail:    recipient["email"].(string),
-			NotificationID: announcement.ID,
-			Title:          req.Title,
-			Message:        req.Message,
-			Priority:       req.Priority,
-			IsRead:         false,
-			CreatedAt:      time.Now(),
-		}
-		_ = saveMemberNotificationToFile(memberNotification)
+	if err := SaveAnnouncement(announcement); err != nil {
+		config.Logger.Error("Failed to save announcement", zap.Error(err))
+		respondError(c, http.StatusInternalServerError, "Failed to save announcement")
+		return
 	}
 
 	go func() {
@@ -960,13 +923,13 @@ func SendAnnouncement(c *gin.Context) {
 	_ = audit.Log(c, "admin", getAdminUsername(c),
 		audit.ActionCreate, audit.ModuleResource,
 		"announcement", announcement.ID,
-		fmt.Sprintf("Admin sent announcement '%s' to %d recipients via %s", announcement.Title, len(recipients), announcement.SendTo),
+		fmt.Sprintf("Admin sent announcement '%s' to %d recipients via all", announcement.Title, len(recipients)),
 		nil, audit.Sanitize(announcement))
 
 	respondOK(c, AnnouncementResponse{
 		Message:        fmt.Sprintf("Announcement sent successfully to %d recipients", len(recipients)),
 		Recipients:     len(recipients),
-		SendTo:         req.SendTo,
+		SendTo:         "all",
 		AnnouncementID: announcement.ID,
 	})
 }
@@ -992,51 +955,6 @@ func HandleSendRenewalReminders(c *gin.Context) {
 		nil, nil)
 
 	respondMessage(c, "Reminders processed")
-}
-
-// File Storage Helpers for Notifications
-func getAnnouncementsFilePath() string {
-	dir := "data/announcements"
-	_ = os.MkdirAll(dir, 0755)
-	return filepath.Join(dir, "announcements.json")
-}
-
-func getMemberNotificationsFilePath() string {
-	dir := "data/notifications"
-	_ = os.MkdirAll(dir, 0755)
-	return filepath.Join(dir, "member_notifications.json")
-}
-
-func saveAnnouncementToFile(announcement model.Notification) error {
-	filePath := getAnnouncementsFilePath()
-	var announcements []model.Notification
-	data, err := os.ReadFile(filePath)
-	if err == nil && len(data) > 0 {
-		_ = json.Unmarshal(data, &announcements)
-	}
-
-	announcements = append([]model.Notification{announcement}, announcements...)
-	updatedData, err := json.MarshalIndent(announcements, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filePath, updatedData, 0644)
-}
-
-func saveMemberNotificationToFile(notification model.MemberNotification) error {
-	filePath := getMemberNotificationsFilePath()
-	var notifications []model.MemberNotification
-	data, err := os.ReadFile(filePath)
-	if err == nil && len(data) > 0 {
-		_ = json.Unmarshal(data, &notifications)
-	}
-
-	notifications = append(notifications, notification)
-	updatedData, err := json.MarshalIndent(notifications, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filePath, updatedData, 0644)
 }
 
 func formatAnnouncementSubject(title, priority string) string {
