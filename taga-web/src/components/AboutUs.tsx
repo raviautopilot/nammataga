@@ -9,6 +9,7 @@ import {
 import { Badge } from "./ui/badge";
 import { Target, Heart, Mail, Phone, MapPin, Globe } from "lucide-react";
 import { API_BASE_URL } from "../config/api";
+
 /* ---------------- TYPES ---------------- */
 
 interface ContactData {
@@ -151,9 +152,7 @@ export function AboutUs() {
       <div className="grid md:grid-cols-2 gap-8">
         <Card className="border-green-100 bg-gradient-to-br from-background to-secondary/20 shadow-md">
           <CardHeader>
-            <CardTitle className="text-primary text-xl font-bold">Our Mission
-              {/* <Target className="w-5 h-5 text-primary" /> Our Mission */}
-            </CardTitle>
+            <CardTitle className="text-primary text-xl font-bold">Our Mission</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground leading-relaxed">
@@ -164,9 +163,7 @@ export function AboutUs() {
 
         <Card className="border-green-100 bg-gradient-to-br from-background to-secondary/30 shadow-md">
           <CardHeader>
-            <CardTitle className="text-primary text-xl font-bold">Our Vision
-              {/* <Heart className="w-5 h-5 text-primary" /> Our Vision */}
-            </CardTitle>
+            <CardTitle className="text-primary text-xl font-bold">Our Vision</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground leading-relaxed">
@@ -176,43 +173,50 @@ export function AboutUs() {
         </Card>
       </div>
 
-      <Card className="border border-[#e2e4db] shadow-md">
-        <CardHeader>
-          <CardTitle className="text-primary text-xl font-bold">Our Objectives</CardTitle>
-          <CardDescription> Key goals that drive our association's activities and initiatives </CardDescription>
-        </CardHeader>
+      {/* ✅ OUR OBJECTIVES - FLUSH OUTER & INNER CARD */}
+      {/* OUTER PARENT CARD */}
+      <Card className="border-green-100 bg-white/50 dark:bg-black/20 shadow-md">
+        
+        {/* GRID TO SPLIT LEFT AND RIGHT */}
+        <div className="grid md:grid-cols-3 items-center">
+          
+          {/* LEFT SIDE: INNER CARD (Takes 2 columns) */}
+          <Card className="md:col-span-2 bg-transparent shadow-none border-none">
+            <CardHeader className="pb-2 pt-6 px-6">
+              <CardTitle className="text-primary text-xl font-bold">Our Objectives</CardTitle>
+              <CardDescription className="text-sm max-w-md">
+                Key goals that drive our association's activities and initiatives
+              </CardDescription>
+            </CardHeader>
 
-        <CardContent>
-          {/* Change the grid from md:grid-cols-2 to this: */}
-          <div className="grid md:grid-cols-3 gap-8">
-
-            {/* LEFT SIDE - takes 2 columns */}
-            <div className="md:col-span-2 space-y-4">
-              {objectives.map((obj) => (
-                <div key={obj.id} className="flex items-start space-x-4">
-                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <div className="w-3 h-3 bg-primary rounded-full" />
+            <CardContent className="pt-0 px-6 pb-6">
+              <div className="space-y-4">
+                {objectives.map((obj) => (
+                  <div key={obj.id} className="flex items-start space-x-4">
+                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                      <div className="w-3 h-3 bg-primary rounded-full" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-1 text-base">{obj.title}</h4>
+                      <p className="text-muted-foreground text-base">{obj.description}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground mb-1 text-base">{obj.title}</h4>
-                    <p className="text-muted-foreground text-base">{obj.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* RIGHT SIDE - takes 1 column, natural square */}
-            <div className="hidden md:flex items-center justify-center">
-              <img
-                src={objectivesImage}
-                alt="TAGA Tower"
-                className="rounded-xl shadow-md w-full aspect-square object-cover"
-                style={{ objectPosition: '50% 30%' }}
-              />
-            </div>
-
+          {/* RIGHT SIDE: IMAGE (Takes 1 column) */}
+          <div className="hidden md:flex justify-center items-center p-6">
+            <img
+              src={objectivesImage}
+              alt="TAGA Tower"
+              className="rounded-xl shadow-md w-full aspect-square object-cover"
+              style={{ objectPosition: '50% 20%' }}
+            />
           </div>
-        </CardContent>
+
+        </div>
       </Card>
 
       {/* ✅ CONTACT - SAME AS HARDCODED UI */}
@@ -227,10 +231,8 @@ export function AboutUs() {
 
           <CardContent>
             <div className="grid md:grid-cols-2 gap-8">
-
               {/* LEFT SIDE */}
               <div className="space-y-6">
-
                 {/* EMAIL */}
                 <div className="flex items-start space-x-3">
                   <Mail className="w-5 h-5 text-primary mt-1" />
