@@ -35,8 +35,8 @@ void main() {
       expect(find.text('Changes to Terms'), findsOneWidget);
       expect(find.text('Contact Us'), findsOneWidget);
 
-      // Verify contact placeholders are preserved
-      expect(find.text('[Insert TAGA Email]'), findsOneWidget);
+      // Verify official contact email
+      expect(find.text('nammataga@gmail.com'), findsOneWidget);
     });
   });
 
@@ -61,9 +61,9 @@ void main() {
       expect(find.text('Changes to This Privacy Policy'), findsOneWidget);
       expect(find.text('Contact Us'), findsOneWidget);
 
-      // Verify Grievance officer placeholders are preserved
-      expect(find.text('[Insert Grievance Officer Name]'), findsOneWidget);
-      expect(find.text('[Insert TAGA Phone Number]'), findsOneWidget);
+      // Verify Grievance officer details
+      expect(find.text('Joint Secretary (Legal)'), findsOneWidget);
+      expect(find.text('044 34919949'), findsOneWidget);
     });
   });
 

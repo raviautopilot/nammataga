@@ -163,7 +163,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
                   '4.2. If your membership ceases, or if the Association determines that your account is no longer required, the Association may deactivate or delete your account without prior notice.',
                 ),
                 _buildParagraph(
-                  '4.3. If you wish to update your profile details or request deletion of your account, you may raise a query through the App or contact the Association at [Insert TAGA Email]. Such requests will be processed at the discretion of the administrators in accordance with association records and applicable requirements.',
+                  '4.3. If you wish to update your profile details or request deletion of your account, you may raise a query through the App or contact the Association at nammataga@gmail.com. Such requests will be processed at the discretion of the administrators in accordance with association records and applicable requirements.',
                 ),
               ],
             ),
@@ -307,7 +307,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
                 _buildContactTile(
                   icon: LucideIcons.mail,
                   title: 'Email',
-                  value: '[Insert TAGA Email]',
+                  value: 'nammataga@gmail.com',
                 ),
                 const SizedBox(height: 8),
                 _buildContactTile(

@@ -30,12 +30,14 @@ import { Membership } from './components/Membership';
 import { Events } from './components/Events';
 import { AuditLog } from './components/admin/AuditLog';
 import { NotificationBell } from './components/NotificationBell';
+import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
+import { TermsConditionsModal } from './components/TermsConditionsModal';
 import { getLogo } from './api/logo';
 import { getMemberProfile } from './api/member';
 import API_BASE_URL from "./config/api";
 
 type Page =
-    'home'
+    | 'home'
     | 'office-bearers'
     | 'member-login'
     | 'admin-login'
@@ -45,12 +47,14 @@ type Page =
     | 'taga-towers'
     | 'membership'
     | 'events'
-    | 'audit-log';
+    | 'audit-log'
+    | 'privacy-policy'
+    | 'terms-conditions';
 
 type UserType = 'general' | 'member' | 'subscriber';
 
 const authenticatedPages: Page[] = ['members', 'resources', 'grievance', 'taga-towers', 'membership'];
-const publicPages: Page[] = ['home', 'office-bearers', 'events', 'member-login', 'admin-login'];
+const publicPages: Page[] = ['home', 'office-bearers', 'events', 'member-login', 'admin-login', 'privacy-policy', 'terms-conditions'];
 
 // 🔥 Helper: Read isPaid directly from localStorage (synchronous, no state lag)
 function getIsPaidFromStorage(): boolean {
@@ -74,6 +78,8 @@ export default function App() {
     const [isInitialized, setIsInitialized] = useState(false);
     const [copyrightClickCount, setCopyrightClickCount] = useState(0);
     const [membershipTab, setMembershipTab] = useState<'profile' | 'subscriptions' | 'announcements'>('profile');
+    const [privacyPolicyOpen, setPrivacyPolicyOpen] = useState(false);
+    const [termsConditionsOpen, setTermsConditionsOpen] = useState(false);
 
     const handleBellClick = () => {
         setMobileMenuOpen(false);
@@ -251,6 +257,15 @@ export default function App() {
         return () => window.removeEventListener('popstate', handlePopState);
     }, []);
 
+    // Sync Privacy Policy modal if navigating directly to privacy-policy
+    useEffect(() => {
+        if (currentPage === 'privacy-policy') {
+            setPrivacyPolicyOpen(true);
+        } else if (currentPage === 'terms-conditions') {
+            setTermsConditionsOpen(true);
+        }
+    }, [currentPage]);
+
     // ==================== SAVE CURRENT PAGE TO LOCAL STORAGE ====================
     // Using localStorage instead of sessionStorage — sessionStorage is cleared when mobile browsers kill tabs
     useEffect(() => {
@@ -347,6 +362,8 @@ export default function App() {
             'members': false, // 🔥 FIX: Members cannot access the 'members' page at all
             'member-login': !isLoggedIn,
             'audit-log': false, // Only admins can access audit log
+            'privacy-policy': true,
+            'terms-conditions': true,
         };
 
         return accessControl[page] ?? true;
@@ -397,7 +414,11 @@ export default function App() {
 
         switch (currentPage) {
             case 'home':
-                return <AboutUs onNavigateToAnnouncements={handleBellClick} isAdmin={isAdmin} />;
+                return <AboutUs onNavigateToAnnouncements={handleBellClick} isAdmin={isAdmin} onOpenPrivacyPolicy={() => setPrivacyPolicyOpen(true)} onOpenTermsConditions={() => setTermsConditionsOpen(true)} />;
+            case 'privacy-policy':
+                return <AboutUs onNavigateToAnnouncements={handleBellClick} isAdmin={isAdmin} onOpenPrivacyPolicy={() => setPrivacyPolicyOpen(true)} onOpenTermsConditions={() => setTermsConditionsOpen(true)} />;
+            case 'terms-conditions':
+                return <AboutUs onNavigateToAnnouncements={handleBellClick} isAdmin={isAdmin} onOpenPrivacyPolicy={() => setPrivacyPolicyOpen(true)} onOpenTermsConditions={() => setTermsConditionsOpen(true)} />;
             case 'office-bearers':
                 return <OfficeBearers />;
             case 'member-login':
@@ -576,22 +597,44 @@ export default function App() {
                             {" "}2026 Tamil Nadu Agriculture Graduates Association (TAGA). All rights reserved.
                         </p>
                         <p className="mt-2">Empowering agricultural graduates of the Tamil Nadu agriculture department with knowledge, unity, and progress.</p>
-                        {!isLoggedIn && (
-                            <div className="mt-4">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => navigateTo('admin-login')}
-                                    className="text-xs text-muted-foreground hover:text-foreground"
-                                    data-testid="testid-admin-login-button"
-                                >
-                                    Administrative Access
-                                </Button>
-                            </div>
-                        )}
+<div className="mt-4 flex items-center justify-center gap-6 sm:gap-10">
+    <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setPrivacyPolicyOpen(true)}
+        className="text-xs text-muted-foreground hover:text-foreground"
+        data-testid="testid-privacy-policy-button"
+    >
+        Privacy Policy
+    </Button>
+
+    {!isLoggedIn && (
+        <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigateTo('admin-login')}
+            className="text-xs text-muted-foreground hover:text-foreground"
+            data-testid="testid-admin-login-button"
+        >
+            Administrative Access
+        </Button>
+    )}
+
+    <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setTermsConditionsOpen(true)}
+        className="text-xs text-muted-foreground hover:text-foreground"
+        data-testid="testid-terms-conditions-button"
+    >
+        Terms & Conditions
+    </Button>
+</div>
                     </div>
                 </div>
             </footer>
+            <PrivacyPolicyModal open={privacyPolicyOpen} onOpenChange={setPrivacyPolicyOpen} />
+            <TermsConditionsModal open={termsConditionsOpen} onOpenChange={setTermsConditionsOpen} />
             <Toaster />
         </div>
     );

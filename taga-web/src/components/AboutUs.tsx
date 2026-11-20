@@ -7,7 +7,8 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Target, Heart, Mail, Phone, MapPin, Globe, Bell, ChevronRight } from "lucide-react";
+import { Button } from "./ui/button";
+import { Target, Heart, Mail, Phone, MapPin, Globe, Bell, ChevronRight, ShieldCheck, Scale } from "lucide-react";
 import { API_BASE_URL } from "../config/api";
 
 /* ---------------- TYPES ---------------- */
@@ -15,6 +16,8 @@ import { API_BASE_URL } from "../config/api";
 export interface AboutUsProps {
   onNavigateToAnnouncements?: () => void;
   isAdmin?: boolean;
+  onOpenPrivacyPolicy?: () => void;
+  onOpenTermsConditions?: () => void;
 }
 
 interface ContactData {
@@ -52,7 +55,7 @@ interface AboutData {
 
 /* ---------------- COMPONENT ---------------- */
 
-export function AboutUs({ onNavigateToAnnouncements, isAdmin }: AboutUsProps = {}) {
+export function AboutUs({ onNavigateToAnnouncements, isAdmin, onOpenPrivacyPolicy, onOpenTermsConditions }: AboutUsProps = {}) {
   const [about, setAbout] = useState<AboutData | null>(null);
   const [contact, setContact] = useState<ContactData | null>(null);
   const [objectives, setObjectives] = useState<ObjectiveData[]>([]);
@@ -361,6 +364,34 @@ export function AboutUs({ onNavigateToAnnouncements, isAdmin }: AboutUsProps = {
                       <p className="text-sm text-muted-foreground leading-relaxed">
                         {contact.headquarters?.address}
                       </p>
+                    </div>
+
+                    <div className="pt-2 flex flex-wrap gap-2">
+                      {onOpenPrivacyPolicy && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={onOpenPrivacyPolicy}
+                          className="text-xs text-primary border-primary/30 hover:bg-primary/5 hover:text-primary gap-1.5"
+                          data-testid="testid-about-privacy-policy-link"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                          View TAGA Privacy Policy
+                        </Button>
+                      )}
+
+                      {onOpenTermsConditions && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={onOpenTermsConditions}
+                          className="text-xs text-primary border-primary/30 hover:bg-primary/5 hover:text-primary gap-1.5"
+                          data-testid="testid-about-terms-conditions-link"
+                        >
+                          <Scale className="w-3.5 h-3.5 text-primary" />
+                          View TAGA Terms &amp; Conditions
+                        </Button>
+                      )}
                     </div>
 
                   </div>

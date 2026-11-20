@@ -167,7 +167,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   '4.1. Retention: We will retain your Personal Data only for as long as is necessary for the purposes set out in this Privacy Policy and for the duration of your membership with the Association. Payment transaction records may be retained for a longer period as required by applicable tax and accounting laws.',
                 ),
                 _buildParagraph(
-                  '4.2. Account Deletion: Accounts are deleted by Association administrators. If you wish to request deletion of your account and associated personal data, you may raise a query through the App or contact us at [Insert TAGA Email]. Requests will be reviewed and actioned by the administrators in accordance with association records and applicable retention requirements. Note that payment transaction records held by Razorpay are subject to Razorpay\'s own retention policies and cannot be deleted by the Association directly.',
+                  '4.2. Account Deletion: Accounts are deleted by Association administrators. If you wish to request deletion of your account and associated personal data, you may raise a query through the App or contact us at nammataga@gmail.com / tagastage@gmail.com. Requests will be reviewed and actioned by the administrators in accordance with association records and applicable retention requirements. Note that payment transaction records held by Razorpay are subject to Razorpay\'s own retention policies and cannot be deleted by the Association directly.',
                 ),
                 _buildParagraph(
                   '4.3. Razorpay Data: To exercise data deletion rights with Razorpay, please refer to Razorpay\'s privacy policy and contact Razorpay directly.',
@@ -202,19 +202,19 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 _buildContactTile(
                   icon: LucideIcons.user,
                   title: 'Grievance Officer',
-                  value: '[Insert Grievance Officer Name]',
+                  value: 'Joint Secretary (Legal)',
                 ),
                 const SizedBox(height: 8),
                 _buildContactTile(
                   icon: LucideIcons.mail,
                   title: 'Email',
-                  value: '[Insert TAGA Email]',
+                  value: 'tagastate@gmail.com',
                 ),
                 const SizedBox(height: 8),
                 _buildContactTile(
                   icon: LucideIcons.phone,
                   title: 'Phone',
-                  value: '[Insert TAGA Phone Number]',
+                  value: '044 34919949',
                 ),
                 const SizedBox(height: 8),
                 _buildParagraph(
@@ -255,7 +255,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 _buildContactTile(
                   icon: LucideIcons.mail,
                   title: 'Email',
-                  value: '[Insert TAGA Email]',
+                  value: 'nammataga@gmail.com / tagastage@gmail.com',
                 ),
                 const SizedBox(height: 8),
                 _buildContactTile(

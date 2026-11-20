@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/bouncy_button.dart';
@@ -323,6 +324,61 @@ class AboutTagaSheet extends ConsumerWidget {
                         ),
                         const SizedBox(height: 14),
                       ],
+
+                      // Legal Links (Privacy Policy & Terms)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              context.push('/profile/privacy');
+                            },
+                            icon: const Icon(
+                              LucideIcons.shieldCheck,
+                              size: 14,
+                              color: AppColors.primary,
+                            ),
+                            label: const Text(
+                              'Privacy Policy',
+                              style: TextStyle(
+                                fontFamily: 'Roboto',
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const Text(
+                            '•',
+                            style: TextStyle(
+                              color: AppColors.border,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              context.push('/profile/terms');
+                            },
+                            icon: const Icon(
+                              LucideIcons.scale,
+                              size: 14,
+                              color: AppColors.primary,
+                            ),
+                            label: const Text(
+                              'Terms of Use',
+                              style: TextStyle(
+                                fontFamily: 'Roboto',
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
 
                       // App Version Footer
                       Center(
