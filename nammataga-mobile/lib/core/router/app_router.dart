@@ -9,6 +9,7 @@ import '../../features/grievance/presentation/grievance_success_screen.dart';
 import '../../features/grievance/presentation/widgets/grievance_access_restricted_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/office_bearers/presentation/office_bearers_screen.dart';
+import '../../features/profile/presentation/account_deletion_screen.dart';
 import '../../features/profile/presentation/account_settings_screen.dart';
 import '../../features/profile/presentation/address_details_screen.dart';
 import '../../features/profile/presentation/announcements_screen.dart';
@@ -217,6 +218,17 @@ GoRouter createRouter({String initialLocation = '/splash'}) {
           pageBuilder: (context, state) => CustomTransitionPage(
             key: state.pageKey,
             child: const AccountSettingsScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+        GoRoute(
+          path: 'account-deletion',
+          name: 'profile-account-deletion',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            key: state.pageKey,
+            child: const AccountDeletionScreen(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) =>
                     FadeTransition(opacity: animation, child: child),

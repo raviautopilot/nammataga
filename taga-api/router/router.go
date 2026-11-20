@@ -158,6 +158,11 @@ func SetupRouter() *gin.Engine {
 		memberRoutes.GET("/notifications", handler.GetMemberNotifications)
 		memberRoutes.PUT("/notifications/:id/read", handler.MarkNotificationRead)
 		memberRoutes.GET("/notifications/unread/count", handler.GetUnreadCount)
+
+		// Account Deletion Endpoints
+		memberRoutes.GET("/account-deletion/eligibility", handler.GetAccountDeletionEligibility)
+		memberRoutes.POST("/account-deletion", handler.RequestAccountDeletion)
+		memberRoutes.GET("/account-deletion/status", handler.GetAccountDeletionStatus)
 	}
 
 	// Resources (Protected with Member Auth)
@@ -266,6 +271,11 @@ func SetupRouter() *gin.Engine {
 		admin.POST("/members/bulk-upload", handler.BulkUploadMembers)
 		admin.PUT("/members/:id", handler.UpdateMember)
 		admin.DELETE("/members/:id", handler.DeleteMember)
+
+		// Account Deletion Requests Management
+		admin.GET("/deletion-requests", handler.ListDeletionRequests)
+		admin.POST("/deletion-requests/:id/approve", handler.ApproveDeletionRequest)
+		admin.POST("/deletion-requests/:id/reject", handler.RejectDeletionRequest)
 
 		// Reports
 		admin.GET("/reports/members", handler.GenerateMemberReport)

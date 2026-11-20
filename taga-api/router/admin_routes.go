@@ -47,6 +47,11 @@ func RegisterAdminRoutes(r *gin.Engine) {
 		admin.PUT("/members/:id", handler.UpdateMember)
 		admin.DELETE("/members/:id", handler.DeleteMember)
 
+		// Account Deletion Requests Management
+		admin.GET("/deletion-requests", handler.ListDeletionRequests)
+		admin.POST("/deletion-requests/:id/approve", handler.ApproveDeletionRequest)
+		admin.POST("/deletion-requests/:id/reject", handler.RejectDeletionRequest)
+
 		// Reports & Export
 		admin.GET("/reports/members", handler.GenerateMemberReport)
 		admin.GET("/members/export", handler.ExportMembersToExcel)

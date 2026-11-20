@@ -151,9 +151,6 @@ class AuthRepository {
   }
 
   String _extractErrorMessage(DioException e) {
-    if (e.response?.statusCode == 401) {
-      return 'Invalid credentials';
-    }
     if (e.response?.data != null) {
       final data = e.response!.data;
       if (data is Map<String, dynamic>) {
@@ -174,6 +171,12 @@ class AuthRepository {
           return data;
         }
       }
+    }
+    if (e.response?.statusCode == 401) {
+      return 'Invalid credentials';
+    }
+    if (e.response?.statusCode == 403) {
+      return 'Your account deletion request is awaiting administrator review. You cannot access your account while the request is pending.';
     }
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {

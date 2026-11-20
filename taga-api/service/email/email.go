@@ -208,3 +208,119 @@ func SendTemporaryPasswordEmail(to, tempPassword string) error {
 
 	return SendHTMLEmail(to, subject, htmlBody)
 }
+
+// SendAccountDeletionConfirmation sends a confirmation email when a member's account has been deleted.
+func SendAccountDeletionConfirmation(to, memberName, tagaID string) error {
+	if to == "" {
+		return nil
+	}
+	if memberName == "" {
+		memberName = "Member"
+	}
+	subject := "TAGA Portal - Account Deletion Confirmation"
+	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Deletion Confirmation</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e5e7eb;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #991b1b 0%%, #dc2626 100%%); color: white; padding: 32px 24px; text-align: center;">
+            <div style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(255, 255, 255, 0.2); margin-bottom: 12px;">
+                Account Status
+            </div>
+            <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Account Deletion Confirmation</h1>
+            <p style="margin: 0; font-size: 15px; opacity: 0.9;">Your TAGA account has been permanently removed</p>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 32px 24px;">
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #374151;">
+                Dear <strong>%s</strong> (TAGA ID: %s),
+            </p>
+            <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">
+                This email confirms that your TAGA Member account has been permanently deleted in accordance with your request or administrative action.
+            </p>
+            <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 4px; margin-bottom: 24px;">
+                <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #991b1b;">What this means:</p>
+                <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #7f1d1d; line-height: 1.6;">
+                    <li>Your login access and credentials have been revoked.</li>
+                    <li>Active subscriptions have been cancelled.</li>
+                    <li>Any upcoming room reservations at TAGA Towers have been released.</li>
+                </ul>
+            </div>
+            <p style="margin: 0; font-size: 14px; color: #6b7280; text-align: center;">
+                If you believe this was done in error or if you have any questions, please contact the TAGA administrator at <a href="mailto:nammataga@gmail.com" style="color: #dc2626; text-decoration: underline;">nammataga@gmail.com</a>.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #475569;">Tamil Nadu Agricultural Graduates Association</p>
+            <p style="margin: 0; font-size: 12px; color: #94a3b8;">TAGA Towers, Chennai &bull; &copy; 2026 TAGA. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`, memberName, tagaID)
+
+	return SendHTMLEmail(to, subject, htmlBody)
+}
+
+// SendAccountDeletionRejection sends an email when an account deletion request is rejected by an administrator.
+func SendAccountDeletionRejection(to, memberName, tagaID, remarks string) error {
+	if to == "" {
+		return nil
+	}
+	if memberName == "" {
+		memberName = "Member"
+	}
+	subject := "TAGA Portal - Account Deletion Request Update"
+	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Deletion Request Update</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e5e7eb;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%%, #2563eb 100%%); color: white; padding: 32px 24px; text-align: center;">
+            <div style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(255, 255, 255, 0.2); margin-bottom: 12px;">
+                Account Review
+            </div>
+            <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Account Deletion Request Update</h1>
+            <p style="margin: 0; font-size: 15px; opacity: 0.9;">Review results for your account deletion request</p>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 32px 24px;">
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #374151;">
+                Dear <strong>%s</strong> (TAGA ID: %s),
+            </p>
+            <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">
+                Your account deletion request has been reviewed and was <strong>not approved</strong> by the association administrator.
+            </p>
+            <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-bottom: 24px;">
+                <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 700; color: #92400e; text-transform: uppercase; letter-spacing: 0.05em;">Administrator Remarks:</p>
+                <p style="margin: 0; font-size: 14px; color: #78350f; line-height: 1.5;">%s</p>
+            </div>
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #374151;">
+                Your account remains fully active, and you can now log in normally to access your member dashboard and services.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #475569;">Tamil Nadu Agricultural Graduates Association</p>
+            <p style="margin: 0; font-size: 12px; color: #94a3b8;">TAGA Towers, Chennai &bull; &copy; 2026 TAGA. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`, memberName, tagaID, remarks)
+
+	return SendHTMLEmail(to, subject, htmlBody)
+}

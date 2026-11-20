@@ -42,6 +42,7 @@
   "office_dir": "data/office",
   "members_file": "data/member/members.json",
   "deleted_members_file": "data/member/deleted_member.json",
+  "deletion_requests_file": "data/member/deletion_requests.json",
   "processed_payments_file": "data/payments/processed_payments.json",
   "about_file": "data/about/about.json",
   "contact_file": "data/about/contact.json",

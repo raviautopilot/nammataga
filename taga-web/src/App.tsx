@@ -29,6 +29,7 @@ import { TAGATowers } from './components/TAGATowers';
 import { Membership } from './components/Membership';
 import { Events } from './components/Events';
 import { AuditLog } from './components/admin/AuditLog';
+import { AccountDeletion } from './components/AccountDeletion';
 import { NotificationBell } from './components/NotificationBell';
 import { getLogo } from './api/logo';
 import { getMemberProfile } from './api/member';
@@ -45,11 +46,12 @@ type Page =
     | 'taga-towers'
     | 'membership'
     | 'events'
-    | 'audit-log';
+    | 'audit-log'
+    | 'account-deletion';
 
 type UserType = 'general' | 'member' | 'subscriber';
 
-const authenticatedPages: Page[] = ['members', 'resources', 'grievance', 'taga-towers', 'membership'];
+const authenticatedPages: Page[] = ['members', 'resources', 'grievance', 'taga-towers', 'membership', 'account-deletion'];
 const publicPages: Page[] = ['home', 'office-bearers', 'events', 'member-login', 'admin-login'];
 
 // 🔥 Helper: Read isPaid directly from localStorage (synchronous, no state lag)
@@ -132,6 +134,11 @@ export default function App() {
             // Will set to audit-log after auth is checked below
         }
 
+        const isAccountDeletionRoute =
+            window.location.pathname === '/account-deletion' ||
+            window.location.hash === '#account-deletion' ||
+            window.location.hash === '#/account-deletion';
+
         if (pageParam && validQueryPages.includes(pageParam)) {
             setCurrentPage(pageParam);
             window.history.replaceState({}, '', window.location.pathname);
@@ -177,7 +184,9 @@ export default function App() {
                 const isPaid = getIsPaidFromStorage();
                 setUserType(isPaid ? 'subscriber' : 'member');
 
-                if (savedPage && savedPage !== 'member-login' && savedPage !== 'admin-login') {
+                if (isAccountDeletionRoute) {
+                    restoredPage = 'account-deletion';
+                } else if (savedPage && savedPage !== 'member-login' && savedPage !== 'admin-login') {
                     // 🔥 FIX: If saved page is 'members', redirect to home instead
                     if (savedPage === 'members') {
                         restoredPage = 'home';
@@ -216,7 +225,10 @@ export default function App() {
                 localStorage.removeItem('member_role');
                 localStorage.removeItem('user');
 
-                if (savedPage && publicPages.includes(savedPage)) {
+                if (isAccountDeletionRoute) {
+                    sessionStorage.setItem('post_login_redirect', 'account-deletion');
+                    restoredPage = 'member-login';
+                } else if (savedPage && publicPages.includes(savedPage)) {
                     restoredPage = savedPage;
                 }
             }
@@ -238,6 +250,23 @@ export default function App() {
     // ==================== BROWSER BACK/FORWARD HANDLER ====================
     useEffect(() => {
         const handlePopState = (event: PopStateEvent) => {
+            const isAccountDeletionRoute =
+                window.location.pathname === '/account-deletion' ||
+                window.location.hash === '#account-deletion' ||
+                window.location.hash === '#/account-deletion';
+
+            if (isAccountDeletionRoute) {
+                isPopstateNav.current = true;
+                const token = localStorage.getItem('member_token');
+                if (!token) {
+                    sessionStorage.setItem('post_login_redirect', 'account-deletion');
+                    setCurrentPage('member-login');
+                } else {
+                    setCurrentPage('account-deletion');
+                }
+                return;
+            }
+
             const page = event.state?.page as Page;
             if (page) {
                 isPopstateNav.current = true;
@@ -281,6 +310,14 @@ export default function App() {
         setIsLoggedIn(true);
         setIsAdmin(isAdminLogin);
         setUserType(isAdminLogin || isPaid ? 'subscriber' : 'member');
+
+        const postLoginRedirect = sessionStorage.getItem('post_login_redirect');
+        if (!isAdminLogin && postLoginRedirect === 'account-deletion') {
+            sessionStorage.removeItem('post_login_redirect');
+            navigateTo('account-deletion');
+            toast.success('Member logged in successfully');
+            return;
+        }
 
         const lastPage = localStorage.getItem('lastPage') as Page;
         const subscriberPages: Page[] = ['resources', 'taga-towers', 'grievance'];
@@ -347,6 +384,7 @@ export default function App() {
             'members': false, // 🔥 FIX: Members cannot access the 'members' page at all
             'member-login': !isLoggedIn,
             'audit-log': false, // Only admins can access audit log
+            'account-deletion': isLoggedIn && !isAdmin,
         };
 
         return accessControl[page] ?? true;
@@ -400,8 +438,10 @@ export default function App() {
                 return <AboutUs onNavigateToAnnouncements={handleBellClick} isAdmin={isAdmin} />;
             case 'office-bearers':
                 return <OfficeBearers />;
+            case 'account-deletion':
+                return <AccountDeletion onNavigate={navigateTo} onLogout={handleLogout} />;
             case 'member-login':
-                return <MemberLogin onLogin={(paid) => handleLogin(false, paid !== undefined ? paid : getIsPaidFromStorage())} />;
+                return <MemberLogin onLogin={(paid) => handleLogin(false, paid !== undefined ? paid : getIsPaidFromStorage())} onNavigate={navigateTo} />;
             case 'admin-login':
                 return <AdminLogin onLogin={() => handleLogin(true)} />;
             case 'members':
@@ -416,7 +456,7 @@ export default function App() {
             case 'taga-towers':
                 return <TAGATowers isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} isAdmin={isAdmin} onNavigateToMembership={() => { setMembershipTab('profile'); navigateTo('membership'); }} />;
             case 'membership':
-                return <Membership isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} initialTab={membershipTab} onTabChange={(tab) => setMembershipTab(tab as any)} />;
+                return <Membership isLoggedIn={isLoggedIn} isPaidMember={isPaidSubscriber} initialTab={membershipTab} onTabChange={(tab) => setMembershipTab(tab as any)} onNavigate={navigateTo} />;
             case 'events':
                 return <Events isLoggedIn={isLoggedIn} />;
             default:

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"taga-api/config"
 	"taga-api/model"
+	"taga-api/service"
 	"taga-api/service/audit"
 	"taga-api/service/auth"
 	"taga-api/service/jwt"
@@ -182,6 +183,21 @@ func MemberLoginHandler(c *gin.Context) {
 		return
 	}
 
+	cleanIdentifier := strings.TrimSpace(req.Email)
+	if cleanIdentifier == "" {
+		respondError(c, http.StatusBadRequest, "Email or identifier is required")
+		return
+	}
+
+	// 1. Check if identifier directly matches a pending deletion request BEFORE any password check
+	if service.IsMemberDeletionPending("", cleanIdentifier) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error":   service.PendingAccountMessage,
+			"message": service.PendingAccountMessage,
+		})
+		return
+	}
+
 	members, err := readExistingMembers()
 	if err != nil {
 		config.Logger.Error("Failed to read members", zap.Error(err))
@@ -191,18 +207,62 @@ func MemberLoginHandler(c *gin.Context) {
 
 	var foundMember map[string]interface{}
 	for _, member := range members {
-		email, ok := member["emailId"].(string)
-		if ok && strings.EqualFold(email, req.Email) {
+		email, _ := member["emailId"].(string)
+		if email == "" {
+			email, _ = member["email"].(string)
+		}
+		uname, _ := member["username"].(string)
+		tId, _ := member["tagaId"].(string)
+		phone, _ := member["mobile_number"].(string)
+
+		if (email != "" && strings.EqualFold(email, cleanIdentifier)) ||
+			(uname != "" && strings.EqualFold(uname, cleanIdentifier)) ||
+			(tId != "" && strings.EqualFold(tId, cleanIdentifier)) ||
+			(phone != "" && phone == cleanIdentifier) {
 			foundMember = member
 			break
 		}
 	}
 
 	if foundMember == nil {
+		if service.IsAccountArchivedOrDeleted(cleanIdentifier) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error":   "This account has been deleted per association records. Login access is no longer available.",
+				"message": "This account has been deleted per association records. Login access is no longer available.",
+			})
+			return
+		}
 		respondError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
 
+	memberID := utils.GetStringFromMap(foundMember, "id")
+	memberEmail := utils.GetStringFromMap(foundMember, "emailId")
+	if memberEmail == "" {
+		memberEmail = utils.GetStringFromMap(foundMember, "email")
+	}
+	memberName := utils.GetStringFromMap(foundMember, "name")
+	tagaID := utils.GetStringFromMap(foundMember, "tagaId")
+
+	// 2. CHECK IF ACCOUNT DELETION IS PENDING BEFORE PASSWORD COMPARISON
+	if service.IsMemberDeletionPending(memberID, memberEmail) ||
+		(tagaID != "" && service.IsMemberDeletionPending(tagaID, tagaID)) ||
+		service.IsMemberDeletionPending(memberID, cleanIdentifier) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error":   service.PendingAccountMessage,
+			"message": service.PendingAccountMessage,
+		})
+		return
+	}
+	if delStatus, ok := foundMember["deletion_status"].(string); ok && strings.EqualFold(delStatus, "pending") {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error":   service.PendingAccountMessage,
+			"message": service.PendingAccountMessage,
+		})
+		return
+	}
+
+	// 3. Verify member password only when deletion status is clear
 	storedPassword, ok := foundMember["password"].(string)
 	if !ok {
 		respondError(c, http.StatusUnauthorized, "Invalid credentials")
@@ -210,25 +270,23 @@ func MemberLoginHandler(c *gin.Context) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(req.Password)); err != nil {
-		config.Logger.Warn("Invalid password for member", zap.String("email", req.Email))
+		config.Logger.Warn("Invalid password for member", zap.String("identifier", cleanIdentifier))
 		// Audit failed login — use tagaId if resolvable, otherwise anonymous
-		tagaID := getMemberTagaIdByEmail(req.Email)
-		resID := tagaID
-		if tagaID == "" {
-			tagaID = "anonymous"
-			resID = req.Email
+		tID := tagaID
+		if tID == "" {
+			tID = "anonymous"
 		}
-		_ = audit.Log(c, tagaID, req.Email,
+		resID := cleanIdentifier
+		if memberEmail != "" {
+			resID = memberEmail
+		}
+		_ = audit.Log(c, tID, resID,
 			audit.ActionLoginFailed, audit.ModuleAuth,
-			"member", resID, fmt.Sprintf("Member login failed for %s: invalid password", req.Email),
+			"member", resID, fmt.Sprintf("Member login failed for %s: invalid password", cleanIdentifier),
 			nil, nil)
 		respondError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
-
-	memberID := utils.GetStringFromMap(foundMember, "id")
-	memberEmail := utils.GetStringFromMap(foundMember, "emailId")
-	memberName := utils.GetStringFromMap(foundMember, "name")
 
 	firstLogin := false
 	if val, ok := foundMember["first_login"].(bool); ok {
@@ -296,7 +354,9 @@ func MemberLoginHandler(c *gin.Context) {
 	})
 
 	// Audit successful member login (after response so it does not delay the user)
-	tagaID := getMemberTagaIdByEmail(req.Email)
+	if tagaID == "" {
+		tagaID = getMemberTagaIdByEmail(req.Email)
+	}
 	if tagaID == "" {
 		tagaID = memberID
 	}

@@ -221,6 +221,167 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/admin/deletion-requests": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "List account deletion requests for admin review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by status (e.g. pending, approved, rejected)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/deletion-requests/{id}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Approve an account deletion request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deletion Request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/deletion-requests/{id}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Reject an account deletion request with mandatory remarks",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deletion Request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Rejection remarks",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.RejectDeletionRequestPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/edit-requests": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Edit Requests"
+                ],
+                "summary": "Get all pending member edit requests",
+                "responses": {}
+            }
+        },
+        "/api/admin/edit-requests/bulk-process": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Edit Requests"
+                ],
+                "summary": "Bulk approve or reject field edit requests",
+                "parameters": [
+                    {
+                        "description": "Bulk Approval Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.BulkProcessPayload"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/api/admin/events/create": {
             "post": {
                 "security": [
@@ -1253,7 +1414,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "produces": [
-                    "text/csv"
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 ],
                 "tags": [
                     "Admin Reports"
@@ -1266,6 +1427,13 @@ const docTemplate = `{
                         "description": "Report type (membership, financial, etc.)",
                         "name": "report_type",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "all_time",
+                        "description": "Period filter (current_month, last_month, current_quarter, current_year, all_time)",
+                        "name": "period",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1273,6 +1441,129 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/resources/external-links": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Content"
+                ],
+                "summary": "Add a new external link to the External Links CSV",
+                "parameters": [
+                    {
+                        "description": "External link details",
+                        "name": "link",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.AddExternalLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/resources/external-links/{title}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Content"
+                ],
+                "summary": "Delete an external link from the External Links CSV",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Link title to delete",
+                        "name": "title",
+                        "in": "path"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Link title to delete (query param)",
+                        "name": "title",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -1985,6 +2276,94 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/member/account-deletion": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Member"
+                ],
+                "summary": "Request account deletion with password verification",
+                "parameters": [
+                    {
+                        "description": "Account deletion payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.AccountDeletionRequestPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/member/account-deletion/eligibility": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Member"
+                ],
+                "summary": "Check account deletion eligibility",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.AccountDeletionEligibilityResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/member/account-deletion/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Member"
+                ],
+                "summary": "Get account deletion status for current member",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/member/edit-request": {
             "post": {
                 "security": [
@@ -2103,14 +2482,13 @@ const docTemplate = `{
                 "tags": [
                     "Member Notifications"
                 ],
-                "summary": "Get notifications for a member",
+                "summary": "Get active announcements for members",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "Member ID",
                         "name": "member_id",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2119,7 +2497,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.MemberNotification"
+                                "$ref": "#/definitions/model.Notification"
                             }
                         }
                     }
@@ -2148,8 +2526,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Member ID",
                         "name": "member_id",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3639,6 +4016,21 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handler.AddExternalLinkRequest": {
+            "type": "object",
+            "required": [
+                "title",
+                "url"
+            ],
+            "properties": {
+                "title": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.AddMemberRequest": {
             "type": "object",
             "required": [
@@ -3792,6 +4184,32 @@ const docTemplate = `{
                 },
                 "send_to": {
                     "type": "string"
+                }
+            }
+        },
+        "handler.BulkProcessItem": {
+            "type": "object",
+            "properties": {
+                "adminRemarks": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "\"approved\" or \"rejected\"",
+                    "type": "string"
+                }
+            }
+        },
+        "handler.BulkProcessPayload": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.BulkProcessItem"
+                    }
                 }
             }
         },
@@ -4198,6 +4616,34 @@ const docTemplate = `{
                 }
             }
         },
+        "model.AccountDeletionEligibilityResponse": {
+            "type": "object",
+            "properties": {
+                "eligible": {
+                    "type": "boolean"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.AccountDeletionRequestPayload": {
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
         "model.BookingFor": {
             "type": "string",
             "enum": [
@@ -4427,6 +4873,9 @@ const docTemplate = `{
             "properties": {
                 "email": {
                     "type": "string"
+                },
+                "tbfNumber": {
+                    "type": "string"
                 }
             }
         },
@@ -4457,11 +4906,13 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "male",
-                "female"
+                "female",
+                "mixed"
             ],
             "x-enum-varnames": [
                 "GenderMale",
-                "GenderFemale"
+                "GenderFemale",
+                "GenderMixed"
             ]
         },
         "model.Grievance": {
@@ -4483,6 +4934,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "lastUpdate": {
+                    "type": "string"
+                },
+                "memberEmail": {
+                    "type": "string"
+                },
+                "memberName": {
                     "type": "string"
                 },
                 "preferredResponse": {
@@ -4532,44 +4989,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.MemberNotification": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "is_read": {
-                    "type": "boolean"
-                },
-                "member_email": {
-                    "type": "string"
-                },
-                "member_id": {
-                    "type": "string"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "notification_id": {
-                    "type": "string"
-                },
-                "priority": {
-                    "type": "string"
-                },
-                "read_at": {
-                    "type": "string"
-                },
-                "taga_id": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                }
-            }
-        },
         "model.Membership": {
             "type": "object",
             "properties": {
@@ -4616,6 +5035,53 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "specialization": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Notification": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "district": {
+                    "description": "if send_to is district",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_read": {
+                    "description": "backward compatibility for clients expecting is_read",
+                    "type": "boolean"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "priority": {
+                    "description": "normal, high, urgent",
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "recipients": {
+                    "description": "number of members who received",
+                    "type": "integer"
+                },
+                "send_to": {
+                    "description": "all, paid, district",
+                    "type": "string"
+                },
+                "sent_at": {
+                    "type": "string"
+                },
+                "sent_by": {
+                    "description": "admin email",
+                    "type": "string"
+                },
+                "title": {
                     "type": "string"
                 }
             }
@@ -4673,6 +5139,17 @@ const docTemplate = `{
                 }
             }
         },
+        "model.RejectDeletionRequestPayload": {
+            "type": "object",
+            "required": [
+                "remarks"
+            ],
+            "properties": {
+                "remarks": {
+                    "type": "string"
+                }
+            }
+        },
         "model.ResetPasswordRequest": {
             "type": "object",
             "properties": {
@@ -4713,6 +5190,9 @@ const docTemplate = `{
                 },
                 "capacity": {
                     "type": "integer"
+                },
+                "hide": {
+                    "type": "boolean"
                 },
                 "id": {
                     "type": "string"

@@ -21,6 +21,7 @@ interface MembershipProps {
   isPaidMember: boolean;
   initialTab?: 'announcements' | 'profile' | 'subscriptions';
   onTabChange?: (tab: string) => void;
+  onNavigate?: (page: string) => void;
 }
 
 interface Member {
@@ -84,6 +85,7 @@ export function Membership({
   isPaidMember,
   initialTab = 'profile',
   onTabChange,
+  onNavigate,
 }: MembershipProps) {
   const [activeTab, setActiveTab] = useState<string>(initialTab);
 
@@ -701,6 +703,35 @@ export function Membership({
               <Field label="Email" value={memberProfile.emailId} />
               <Field label="Residential Address" value={memberProfile.residentialAddress} />
               <Field label="Permanent Address" value={memberProfile.permanentAddress} />
+            </CardContent>
+          </Card>
+
+          {/* ACCOUNT SETTINGS & DELETION (DANGER ZONE) */}
+          <Card className="border-red-200 bg-red-50/20 shadow-sm" data-testid="testid-account-settings-danger-card">
+            <CardHeader>
+              <CardTitle className="text-red-700 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+                Account Settings &amp; Deletion
+              </CardTitle>
+              <CardDescription>
+                Manage critical account settings, membership retirement, and permanent account deletion.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <p className="font-semibold text-slate-800 text-sm">Delete Association Account</p>
+                <p className="text-xs text-muted-foreground">
+                  Permanently request retirement of your TAGA membership and access to member services.
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                className="bg-red-600 hover:bg-red-700 text-white shrink-0"
+                onClick={() => onNavigate?.('account-deletion')}
+                data-testid="testid-request-account-deletion-button"
+              >
+                Request Account Deletion
+              </Button>
             </CardContent>
           </Card>
 

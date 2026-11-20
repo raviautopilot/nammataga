@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/secure_storage_service.dart';
+import '../domain/deletion_request_model.dart';
 import '../domain/edit_request_model.dart';
 import '../domain/member_notification_model.dart';
 import '../domain/member_profile.dart';
@@ -227,6 +228,92 @@ class ProfileRepository {
       return map ?? {'success': true};
     } catch (e) {
       debugPrint('[ProfileRepository] Error verifying Razorpay payment: $e');
+      if (e is DioException) {
+        final errMap = _toMap(e.response?.data);
+        final errMsg = errMap?['error'] ?? errMap?['message'] ?? e.message;
+        throw Exception(errMsg);
+      }
+      rethrow;
+    }
+  }
+
+  /// Fetches account deletion eligibility from `GET /api/member/account-deletion/eligibility`
+  Future<DeletionEligibility> getAccountDeletionEligibility() async {
+    try {
+      final response = await _dio.get(
+        ApiEndpoints.accountDeletionEligibility,
+        options: Options(
+          sendTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ),
+      );
+      final map = _toMap(response.data);
+      if (map != null) {
+        return DeletionEligibility.fromJson(map);
+      }
+      return const DeletionEligibility(canDelete: true, hasActiveStay: false);
+    } catch (e) {
+      debugPrint('[ProfileRepository] Error fetching deletion eligibility: $e');
+      if (e is DioException) {
+        final errMap = _toMap(e.response?.data);
+        final errMsg = errMap?['error'] ?? errMap?['message'] ?? e.message;
+        final reason = errMap?['reason']?.toString();
+        if (reason == 'active_stay' || errMsg?.toString().contains('TAGA Towers') == true) {
+          return DeletionEligibility(
+            canDelete: false,
+            hasActiveStay: true,
+            message: errMsg?.toString(),
+            reason: 'active_stay',
+          );
+        }
+      }
+      return const DeletionEligibility(canDelete: true, hasActiveStay: false);
+    }
+  }
+
+  /// Fetches account deletion status from `GET /api/member/account-deletion/status`
+  Future<AccountDeletionRequestStatus> getAccountDeletionStatus() async {
+    try {
+      final response = await _dio.get(
+        ApiEndpoints.accountDeletionStatus,
+        options: Options(
+          sendTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ),
+      );
+      final map = _toMap(response.data);
+      if (map != null) {
+        return AccountDeletionRequestStatus.fromJson(map);
+      }
+      return const AccountDeletionRequestStatus(status: 'none');
+    } catch (e) {
+      debugPrint('[ProfileRepository] Error fetching deletion status: $e');
+      return const AccountDeletionRequestStatus(status: 'none');
+    }
+  }
+
+  /// Submits an account deletion request to `POST /api/member/account-deletion`
+  Future<Map<String, dynamic>> submitAccountDeletionRequest({
+    required String password,
+    String? reason,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.accountDeletion,
+        data: {
+          'password': password,
+          if (reason != null && reason.trim().isNotEmpty)
+            'reason': reason.trim(),
+        },
+      );
+      final map = _toMap(response.data);
+      return map ??
+          {
+            'success': true,
+            'message': 'Account deletion request submitted successfully',
+          };
+    } catch (e) {
+      debugPrint('[ProfileRepository] Error submitting deletion request: $e');
       if (e is DioException) {
         final errMap = _toMap(e.response?.data);
         final errMsg = errMap?['error'] ?? errMap?['message'] ?? e.message;

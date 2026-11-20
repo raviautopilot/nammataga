@@ -284,7 +284,7 @@ func AddMember(c *gin.Context) {
 	isPaid := strings.EqualFold(paymentStatus, "Paid")
 
 	newMember := model.Member{
-		ID:                       uuid.New().String(),
+		ID:                       service.ResolveMemberUID(req.TagaID, req.Email, existingMembers),
 		TagaID:                   req.TagaID,
 		Username:                 req.Email,
 		Name:                     req.Name,
@@ -523,77 +523,74 @@ func DeleteMember(c *gin.Context) {
 		return
 	}
 
-	cfg := config.GetConfig()
-	data, err := os.ReadFile(cfg.MembersFile)
+	members, err := readExistingMembers()
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "Failed to read members")
 		return
 	}
 
-	var members []map[string]interface{}
-	if err := json.Unmarshal(data, &members); err != nil {
-		respondError(c, http.StatusInternalServerError, "Failed to parse members")
-		return
-	}
-
-	found := false
-	var deletedMember map[string]interface{}
-	var deletedName string
-	filtered := make([]map[string]interface{}, 0, len(members))
+	var targetMember map[string]interface{}
 	for _, m := range members {
 		id, _ := m["id"].(string)
 		if id == memberID {
-			found = true
-			deletedName, _ = m["name"].(string)
-			// Capture the member before deletion for audit
-			deletedMember = m
-			continue
+			targetMember = m
+			break
 		}
-		filtered = append(filtered, m)
 	}
 
-	if !found {
+	if targetMember == nil {
 		respondError(c, http.StatusNotFound, "Member not found")
 		return
 	}
 
-	updatedData, err := json.MarshalIndent(filtered, "", "  ")
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "Failed to save members")
-		return
-	}
-
-	if err := os.WriteFile(cfg.MembersFile, updatedData, 0644); err != nil {
-		respondError(c, http.StatusInternalServerError, "Failed to save members")
-		return
-	}
-
-	// Audit member deletion
-	resourceTagaID := ""
-	if deletedMember != nil {
-		resourceTagaID, _ = deletedMember["tagaId"].(string)
-	}
-	_ = audit.Log(c, "admin", getAdminUsername(c),
-		audit.ActionDelete, audit.ModuleMember,
-		"member", resourceTagaID,
-		fmt.Sprintf("Admin deleted member '%s' (tagaId: %s)", deletedName, resourceTagaID),
-		audit.Sanitize(deletedMember), nil)
-
-	// Cleanups and backups
-	memberEmail := getString(deletedMember, "emailId")
+	deletedName, _ := targetMember["name"].(string)
+	memberTagaID, _ := targetMember["tagaId"].(string)
+	memberEmail := getString(targetMember, "emailId")
 	if memberEmail == "" {
-		memberEmail = getString(deletedMember, "email") // fallback
+		memberEmail = getString(targetMember, "email")
 	}
-	
-	memberTagaID := getString(deletedMember, "tagaId")
-	
-	go cleanupMemberSubscriptions(memberID, memberTagaID)
-	go cleanupPaymentTransactions(memberID, memberTagaID)
-	go cleanupMemberPayments(memberEmail)
-	go cleanupMemberNotifications(memberID, memberTagaID)
-	go cleanupMembershipApplications(memberEmail)
-	go saveDeletedMember(deletedMember)
-	
+
+	// 1. Active Stay Safety Check
+	hasActiveStay, err := service.HasActiveStayAtTagaTowers(memberID, memberTagaID)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "Failed to verify stay status")
+		return
+	}
+	if hasActiveStay {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   service.ActiveStayMessage,
+			"message": service.ActiveStayMessage,
+		})
+		return
+	}
+
+	adminUsername := getAdminUsername(c)
+	if adminUsername == "" {
+		adminUsername = "admin"
+	}
+
+	// 2. Execute central deletion service
+	err = service.ExecuteAccountDeletion(c, memberID, memberTagaID, adminUsername, "Admin direct deletion", "")
+	if err != nil {
+		if err == service.ErrActiveStay {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   service.ActiveStayMessage,
+				"message": service.ActiveStayMessage,
+			})
+			return
+		}
+		respondError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete member: %s", err.Error()))
+		return
+	}
+
+	// Clean up legacy membership applications if applicable
+	if memberEmail != "" {
+		go cleanupMembershipApplications(memberEmail)
+	}
+
+	// CRITICAL ACCOUNTING FIX:
+	// cleanupPaymentTransactions and cleanupMemberPayments are STOPPED and NOT called!
+
 	respondMessage(c, fmt.Sprintf("Member '%s' deleted permanently", deletedName))
 }
 
@@ -856,7 +853,7 @@ func BulkUploadMembers(c *gin.Context) {
 		}
 
 		newMember := map[string]interface{}{
-			"id":                        uuid.New().String(),
+			"id":                        service.ResolveMemberUID(reg.TagaID, reg.EmailId, existingMembers),
 			"tagaId":                    reg.TagaID,
 			"username":                  reg.EmailId,
 			"sno":                       idx + 1,
@@ -1724,7 +1721,7 @@ func storeMemberDetails(req *RegistrationRequest, tempPassword string, existingM
 	}
 
 	newMember := map[string]interface{}{
-		"id":                        uuid.New().String(),
+		"id":                        service.ResolveMemberUID(req.TagaID, req.EmailId, existingMembers),
 		"tagaId":                    req.TagaID,
 		"username":                  req.EmailId,
 		"sno":                       req.SNo,

@@ -49,6 +49,11 @@ class ApiEndpoints {
   static String get changePassword => '$baseUrl/member/change-password';
   static String get profile => '$baseUrl/member/profile';
   static String get editRequest => '$baseUrl/member/edit-request';
+  static String get accountDeletion => '$baseUrl/member/account-deletion';
+  static String get accountDeletionStatus =>
+      '$baseUrl/member/account-deletion/status';
+  static String get accountDeletionEligibility =>
+      '$baseUrl/member/account-deletion/eligibility';
 
   // Membership & Districts
   static String get districts => '$baseUrl/membership/districts';

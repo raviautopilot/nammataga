@@ -194,3 +194,47 @@ export const createEditRequest = async (data: any) => {
   const response = await API.post("/member/edit-request", data);
   return response.data;
 };
+
+// ==================== ACCOUNT DELETION ====================
+export interface AccountDeletionEligibility {
+  eligible: boolean;
+  message: string;
+  reason?: string;
+}
+
+export interface AccountDeletionStatus {
+  status: 'none' | 'pending' | 'rejected' | 'approved';
+  request_id?: string;
+  requested_at?: string;
+  processed_at?: string;
+  remarks?: string;
+  reason?: string;
+}
+
+export interface SubmitAccountDeletionPayload {
+  password: string;
+  reason?: string;
+}
+
+export interface SubmitAccountDeletionResponse {
+  message: string;
+  status: string;
+  request_id: string;
+}
+
+export const getAccountDeletionEligibility = async (): Promise<AccountDeletionEligibility> => {
+  const response = await API.get<AccountDeletionEligibility>("/member/account-deletion/eligibility");
+  return response.data;
+};
+
+export const submitAccountDeletionRequest = async (
+  payload: SubmitAccountDeletionPayload
+): Promise<SubmitAccountDeletionResponse> => {
+  const response = await API.post<SubmitAccountDeletionResponse>("/member/account-deletion", payload);
+  return response.data;
+};
+
+export const getAccountDeletionStatus = async (): Promise<AccountDeletionStatus> => {
+  const response = await API.get<AccountDeletionStatus>("/member/account-deletion/status");
+  return response.data;
+};

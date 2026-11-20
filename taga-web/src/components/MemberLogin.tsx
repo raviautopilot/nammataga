@@ -28,9 +28,10 @@ import {
 
 interface MemberLoginProps {
   onLogin: (isPaid?: boolean) => void;
+  onNavigate?: (page: string) => void;
 }
 
-export function MemberLogin({ onLogin }: MemberLoginProps) {
+export function MemberLogin({ onLogin, onNavigate }: MemberLoginProps) {
 
   // ✅ STATES
   const [formData, setFormData] = useState({
@@ -150,22 +151,28 @@ setIsLoading(false);
 
     //toast.success(res.message || "Login successful");
 
+    const postLoginRedirect = sessionStorage.getItem('post_login_redirect');
     const isUserPaid = res.user?.isPaid === true || res.user?.subscription_active === true;
+
+    if (postLoginRedirect === 'account-deletion') {
+      sessionStorage.removeItem('post_login_redirect');
+      if (onNavigate) {
+        onNavigate('account-deletion');
+      }
+    }
+
     onLogin(isUserPaid);
 
   } catch (err: any) {
 
-    setError(
+    const errorMsg =
       err.response?.data?.error ||
       err.response?.data?.message ||
-      "Login failed"
-    );
+      "Login failed";
 
-    toast.error(
-      err.response?.data?.error ||
-      err.response?.data?.message ||
-      "Login failed"
-    );
+    setError(errorMsg);
+
+    toast.error(errorMsg);
 
   } finally {
     setIsLoading(false);

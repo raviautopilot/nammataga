@@ -1,5 +1,15 @@
 basePath: /
 definitions:
+  handler.AddExternalLinkRequest:
+    properties:
+      title:
+        type: string
+      url:
+        type: string
+    required:
+    - title
+    - url
+    type: object
   handler.AddMemberRequest:
     properties:
       cpsGpfNumber:
@@ -106,6 +116,23 @@ definitions:
         type: integer
       send_to:
         type: string
+    type: object
+  handler.BulkProcessItem:
+    properties:
+      adminRemarks:
+        type: string
+      id:
+        type: string
+      status:
+        description: '"approved" or "rejected"'
+        type: string
+    type: object
+  handler.BulkProcessPayload:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handler.BulkProcessItem'
+        type: array
     type: object
   handler.BulkUploadFailure:
     properties:
@@ -373,6 +400,24 @@ definitions:
       vision:
         type: string
     type: object
+  model.AccountDeletionEligibilityResponse:
+    properties:
+      eligible:
+        type: boolean
+      message:
+        type: string
+      reason:
+        type: string
+    type: object
+  model.AccountDeletionRequestPayload:
+    properties:
+      password:
+        type: string
+      reason:
+        type: string
+    required:
+    - password
+    type: object
   model.BookingFor:
     enum:
     - self
@@ -534,6 +579,8 @@ definitions:
     properties:
       email:
         type: string
+      tbfNumber:
+        type: string
     type: object
   model.GalleryImage:
     properties:
@@ -554,10 +601,12 @@ definitions:
     enum:
     - male
     - female
+    - mixed
     type: string
     x-enum-varnames:
     - GenderMale
     - GenderFemale
+    - GenderMixed
   model.Grievance:
     properties:
       assignedTo:
@@ -571,6 +620,10 @@ definitions:
       id:
         type: string
       lastUpdate:
+        type: string
+      memberEmail:
+        type: string
+      memberName:
         type: string
       preferredResponse:
         type: string
@@ -606,31 +659,6 @@ definitions:
         example: TAGA Headquarters
         type: string
     type: object
-  model.MemberNotification:
-    properties:
-      created_at:
-        type: string
-      id:
-        type: string
-      is_read:
-        type: boolean
-      member_email:
-        type: string
-      member_id:
-        type: string
-      message:
-        type: string
-      notification_id:
-        type: string
-      priority:
-        type: string
-      read_at:
-        type: string
-      taga_id:
-        type: string
-      title:
-        type: string
-    type: object
   model.Membership:
     properties:
       address:
@@ -662,6 +690,39 @@ definitions:
       references:
         type: string
       specialization:
+        type: string
+    type: object
+  model.Notification:
+    properties:
+      created_at:
+        type: string
+      district:
+        description: if send_to is district
+        type: string
+      id:
+        type: string
+      is_read:
+        description: backward compatibility for clients expecting is_read
+        type: boolean
+      message:
+        type: string
+      priority:
+        description: normal, high, urgent
+        type: string
+      published_at:
+        type: string
+      recipients:
+        description: number of members who received
+        type: integer
+      send_to:
+        description: all, paid, district
+        type: string
+      sent_at:
+        type: string
+      sent_by:
+        description: admin email
+        type: string
+      title:
         type: string
     type: object
   model.Objective:
@@ -702,6 +763,13 @@ definitions:
         example: +91-44-2345-6789
         type: string
     type: object
+  model.RejectDeletionRequestPayload:
+    properties:
+      remarks:
+        type: string
+    required:
+    - remarks
+    type: object
   model.ResetPasswordRequest:
     properties:
       email:
@@ -729,6 +797,8 @@ definitions:
         type: boolean
       capacity:
         type: integer
+      hide:
+        type: boolean
       id:
         type: string
       name:
@@ -965,6 +1035,105 @@ paths:
       summary: Get audit user list
       tags:
       - Admin Audit
+  /api/admin/deletion-requests:
+    get:
+      parameters:
+      - description: Filter by status (e.g. pending, approved, rejected)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List account deletion requests for admin review
+      tags:
+      - Admin
+  /api/admin/deletion-requests/{id}/approve:
+    post:
+      parameters:
+      - description: Deletion Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Approve an account deletion request
+      tags:
+      - Admin
+  /api/admin/deletion-requests/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Deletion Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Rejection remarks
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/model.RejectDeletionRequestPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reject an account deletion request with mandatory remarks
+      tags:
+      - Admin
+  /api/admin/edit-requests:
+    get:
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all pending member edit requests
+      tags:
+      - Admin Edit Requests
+  /api/admin/edit-requests/bulk-process:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Bulk Approval Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.BulkProcessPayload'
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Bulk approve or reject field edit requests
+      tags:
+      - Admin Edit Requests
   /api/admin/events/{id}:
     delete:
       parameters:
@@ -1622,8 +1791,14 @@ paths:
         in: query
         name: report_type
         type: string
+      - default: all_time
+        description: Period filter (current_month, last_month, current_quarter, current_year,
+          all_time)
+        in: query
+        name: period
+        type: string
       produces:
-      - text/csv
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
       responses:
         "200":
           description: OK
@@ -1658,6 +1833,86 @@ paths:
       security:
       - BearerAuth: []
       summary: Delete resource document
+      tags:
+      - Admin Content
+  /api/admin/resources/external-links:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: External link details
+        in: body
+        name: link
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AddExternalLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add a new external link to the External Links CSV
+      tags:
+      - Admin Content
+  /api/admin/resources/external-links/{title}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Link title to delete
+        in: path
+        name: title
+        type: string
+      - description: Link title to delete (query param)
+        in: query
+        name: title
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an external link from the External Links CSV
       tags:
       - Admin Content
   /api/admin/resources/upload:
@@ -2071,6 +2326,59 @@ paths:
       summary: Get member banner image info
       tags:
       - member
+  /api/member/account-deletion:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Account deletion payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AccountDeletionRequestPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Request account deletion with password verification
+      tags:
+      - Member
+  /api/member/account-deletion/eligibility:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.AccountDeletionEligibilityResponse'
+      security:
+      - BearerAuth: []
+      summary: Check account deletion eligibility
+      tags:
+      - Member
+  /api/member/account-deletion/status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get account deletion status for current member
+      tags:
+      - Member
   /api/member/edit-request:
     post:
       consumes:
@@ -2141,7 +2449,6 @@ paths:
       - description: Member ID
         in: query
         name: member_id
-        required: true
         type: string
       produces:
       - application/json
@@ -2150,11 +2457,11 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/model.MemberNotification'
+              $ref: '#/definitions/model.Notification'
             type: array
       security:
       - BearerAuth: []
-      summary: Get notifications for a member
+      summary: Get active announcements for members
       tags:
       - Member Notifications
   /api/member/notifications/{id}/read:
@@ -2188,7 +2495,6 @@ paths:
       - description: Member ID
         in: query
         name: member_id
-        required: true
         type: string
       produces:
       - application/json

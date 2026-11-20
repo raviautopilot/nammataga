@@ -864,3 +864,74 @@ export const exportMembersToExcel = async (
   console.log('Export successful, blob size:', response.headers.get('content-length'));
   return response.blob();
 };
+
+// ==================== ACCOUNT DELETION REQUESTS ====================
+export interface AdminDeletionRequest {
+  id: string;
+  member_id: string;
+  tagaId: string;
+  taga_id?: string;
+  member_name: string;
+  email: string;
+  mobile?: string;
+  mobile_number?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reason?: string;
+  remarks?: string;
+  requested_at: string;
+  processed_at?: string;
+  processed_by?: string;
+  subscription_status?: string;
+  payment_status?: string;
+}
+
+export interface AdminDeletionRequestsResponse {
+  requests: AdminDeletionRequest[];
+  total: number;
+}
+
+export const getAdminDeletionRequests = async (status?: string): Promise<AdminDeletionRequestsResponse> => {
+  const url = status 
+    ? `${API_BASE}/admin/deletion-requests?status=${encodeURIComponent(status)}`
+    : `${API_BASE}/admin/deletion-requests`;
+  const response = await authFetch(url, {
+    method: 'GET',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Failed to fetch deletion requests');
+  }
+
+  return response.json();
+};
+
+export const approveDeletionRequest = async (id: string): Promise<{ message: string }> => {
+  const response = await authFetch(`${API_BASE}/admin/deletion-requests/${encodeURIComponent(id)}/approve`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Failed to approve deletion request');
+  }
+
+  return response.json();
+};
+
+export const rejectDeletionRequest = async (id: string, remarks: string): Promise<{ message: string }> => {
+  const response = await authFetch(`${API_BASE}/admin/deletion-requests/${encodeURIComponent(id)}/reject`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ remarks }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Failed to reject deletion request');
+  }
+
+  return response.json();
+};

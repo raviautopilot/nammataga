@@ -26,6 +26,8 @@ const (
 	ActionBookingCreated    = "BOOKING_CREATED"
 	ActionBookingCancelled  = "BOOKING_CANCELLED"
 	ActionPaymentConfirmed  = "PAYMENT_CONFIRMED"
+	ActionApprove           = "APPROVE"
+	ActionReject            = "REJECT"
 )
 
 // ─── Module constants ────────────────────────────────────────────────────────

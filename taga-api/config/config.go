@@ -62,6 +62,7 @@ type AppConfig struct {
 	OfficeDir             string      `json:"office_dir"`
 	MembersFile           string      `json:"members_file"`
 	DeletedMembersFile    string      `json:"deleted_members_file"`
+	DeletionRequestsFile  string      `json:"deletion_requests_file"`
 	ProcessedPaymentsFile string      `json:"processed_payments_file"`
 	AboutFile             string      `json:"about_file"`
 	ContactFile           string      `json:"contact_file"`
@@ -471,11 +472,17 @@ func validatePaths() {
 	if Config.DeletedMembersFile == "" {
 		Config.DeletedMembersFile = "data/member/deleted_member.json"
 	}
+	if Config.DeletionRequestsFile == "" {
+		Config.DeletionRequestsFile = "data/member/deletion_requests.json"
+	}
 	if Config.ProcessedPaymentsFile == "" {
 		Config.ProcessedPaymentsFile = "data/payments/processed_payments.json"
 	}
 	if Config.DeletedMembersFile == "" {
 		Config.DeletedMembersFile = "data/member/deleted_member.json"
+	}
+	if Config.DeletionRequestsFile == "" {
+		Config.DeletionRequestsFile = "data/member/deletion_requests.json"
 	}
 	if Config.ProcessedPaymentsFile == "" {
 		Config.ProcessedPaymentsFile = "data/payments/processed_payments.json"
@@ -496,8 +503,9 @@ func ensureDataFiles() {
 	}
 
 	files := map[string]string{
-		Config.MembersFile:    `[]`,
-		Config.AboutFile:      `{"id":1}`,
+		Config.MembersFile:          `[]`,
+		Config.DeletionRequestsFile: `[]`,
+		Config.AboutFile:            `{"id":1}`,
 		Config.ContactFile:    `{}`,
 		Config.ObjectivesFile: `[]`,
 		Config.ServicesFile:   `[]`,

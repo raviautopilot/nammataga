@@ -91,7 +91,31 @@ class AccountSettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
 
-          // 2. Destructive Logout Card matching reference
+          // 2. Destructive Account Deletion Card (Apple Guideline 5.1.1(v) Compliant)
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFFEE2E2), width: 1.1),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x04DC2626),
+                  blurRadius: 14,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: _buildSettingRow(
+              icon: LucideIcons.userX,
+              title: 'Request Account Deletion',
+              isDestructive: true,
+              onTap: () => context.push('/profile/account-deletion'),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 3. Destructive Logout Card matching reference
           Container(
             width: double.infinity,
             decoration: BoxDecoration(

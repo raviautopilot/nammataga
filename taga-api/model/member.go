@@ -29,4 +29,5 @@ type Member struct {
 	// Payment fields
 	PaymentStatus      string `json:"payment_status,omitempty"`
 	SubscriptionActive bool   `json:"subscription_active,omitempty"`
+	DeletionStatus     string `json:"deletion_status,omitempty"`
 }

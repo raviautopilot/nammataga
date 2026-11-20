@@ -40,6 +40,7 @@ import { sortDocuments, sortExternalLinks, getExternalLinks } from '../api/resou
 import { MemberListTable } from './MemberListTable';
 import DistrictOfficeBearersManager from './admin/DistrictOfficeBearersManager';
 import AdminEditRequestsButton from './admin/AdminEditRequests';
+import AdminDeletionRequestsButton from './admin/AdminDeletionRequests';
 import MinimalGrievances from './admin/MinimalGrievances';
 
 interface AdminActionsProps {
@@ -1160,10 +1161,11 @@ export function AdminActions({ memberStats }: AdminActionsProps) {
       <Card>
         <CardHeader>
           <CardTitle>Admin Notifications</CardTitle>
-          <CardDescription>Pending edit requests and member grievances</CardDescription>
+          <CardDescription>Pending edit requests, deletion requests, and member grievances</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <AdminEditRequestsButton />
+          <AdminDeletionRequestsButton />
           <MinimalGrievances />
         </CardContent>
       </Card>

@@ -32,6 +32,11 @@ func RegisterMemberRoutes(r *gin.Engine) {
 		memberProtected.GET("/notifications", handler.GetMemberNotifications)
 		memberProtected.PUT("/notifications/:id/read", handler.MarkNotificationRead)
 		memberProtected.GET("/notifications/unread/count", handler.GetUnreadCount)
+
+		// Account Deletion Endpoints
+		memberProtected.GET("/account-deletion/eligibility", handler.GetAccountDeletionEligibility)
+		memberProtected.POST("/account-deletion", handler.RequestAccountDeletion)
+		memberProtected.GET("/account-deletion/status", handler.GetAccountDeletionStatus)
 	}
 
 	// Membership Registration / Details (Protected with Member Auth)

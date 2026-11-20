@@ -333,6 +333,7 @@ void main() {
       expect(find.text('Account & Settings'), findsOneWidget);
       expect(find.text('Change Password'), findsOneWidget);
       expect(find.text('Announcements'), findsNothing);
+      expect(find.text('Request Account Deletion'), findsOneWidget);
       expect(find.text('Logout'), findsOneWidget);
     });
 

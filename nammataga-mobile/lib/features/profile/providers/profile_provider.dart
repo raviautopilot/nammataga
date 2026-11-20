@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../data/profile_repository.dart';
+import '../domain/deletion_request_model.dart';
 import '../domain/member_notification_model.dart';
 import '../domain/member_profile.dart';
 import '../domain/subscription_plan.dart';
@@ -74,3 +75,17 @@ final unreadAnnouncementsCountProvider = FutureProvider.autoDispose<int>((
 /// Aliases for backward compatibility
 final memberNotificationsProvider = memberAnnouncementsProvider;
 final unreadNotificationsCountProvider = unreadAnnouncementsCountProvider;
+
+/// FutureProvider for checking account deletion eligibility
+final accountDeletionEligibilityProvider =
+    FutureProvider.autoDispose<DeletionEligibility>((ref) async {
+  final repo = ref.watch(profileRepositoryProvider);
+  return repo.getAccountDeletionEligibility();
+});
+
+/// FutureProvider for checking current account deletion status
+final accountDeletionStatusProvider =
+    FutureProvider.autoDispose<AccountDeletionRequestStatus>((ref) async {
+  final repo = ref.watch(profileRepositoryProvider);
+  return repo.getAccountDeletionStatus();
+});
