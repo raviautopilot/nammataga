@@ -19,13 +19,13 @@ class ChangePasswordSheet extends ConsumerStatefulWidget {
     this.isForced = false,
   });
 
-  static Future<bool?> show(
+  static Future<dynamic> show(
     BuildContext context, {
     required String email,
     String? oldPassword,
     bool isForced = false,
   }) {
-    return showModalBottomSheet<bool>(
+    return showModalBottomSheet<dynamic>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -101,8 +101,12 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
           );
 
       if (mounted) {
-        TagaToast.success(context, msg, title: 'Password Changed');
-        Navigator.of(context).pop(true);
+        if (widget.isForced) {
+          Navigator.of(context).pop(_newPasswordController.text);
+        } else {
+          TagaToast.success(context, msg, title: 'Password Changed');
+          Navigator.of(context).pop(true);
+        }
       }
     } catch (e) {
       if (mounted) {

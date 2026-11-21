@@ -141,14 +141,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       }
 
       if (session.forceChangePassword) {
-        final changed = await ChangePasswordSheet.show(
+        TagaToast.info(
+          context,
+          'Temporary password detected. Change password before login.',
+          title: 'First Login',
+        );
+
+        final result = await ChangePasswordSheet.show(
           context,
           email: session.tempEmail ?? email,
           oldPassword: password,
           isForced: true,
         );
 
-        if (changed == true && mounted) {
+        final newPassword = result is String ? result : null;
+        if (newPassword != null && newPassword.isNotEmpty && mounted) {
+          _passwordController.text = newPassword;
+          setState(() {
+            _isLoading = true;
+            _errorMessage = null;
+          });
+
+          final newSession = await ref
+              .read(authProvider.notifier)
+              .login(
+                identifier: session.tempEmail ?? email,
+                password: newPassword,
+                rememberMe: _rememberMe,
+              );
+
+          if (mounted && newSession.isAuthenticated) {
+            TagaToast.success(
+              context,
+              'Welcome to TAGA, ${newSession.displayName}!',
+              title: 'Password Changed & Logged In',
+            );
+            widget.onLoginSuccess?.call();
+          }
+        } else if (result == true && mounted) {
           _passwordController.clear();
           TagaToast.success(
             context,
@@ -171,24 +201,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         final rawErrLower = rawErr.toLowerCase();
 
         bool isDeletionReview = e is DeletionPendingException ||
-            rawErrLower.contains('deletion') ||
-            rawErrLower.contains('administrator review') ||
-            rawErrLower.contains('pending') ||
-            rawErrLower.contains('request is awaiting') ||
-            rawErrLower.contains('account has been deleted') ||
-            rawErrLower.contains('cannot access your account') ||
-            rawErrLower.contains('403') ||
-            rawErrLower.contains('forbidden');
-
+            rawErrLower.contains('awaiting administrator review') ||
+            rawErrLower.contains('deletion request is awaiting');
         if (!isDeletionReview && e is DioException) {
           final dioErr = e;
           if (dioErr.response?.statusCode == 403) {
-            isDeletionReview = true;
-          } else if (dioErr.response?.data != null) {
-            final dataStr = dioErr.response!.data.toString().toLowerCase();
-            if (dataStr.contains('deletion') ||
-                dataStr.contains('pending') ||
-                dataStr.contains('review')) {
+            final dataStr = dioErr.response?.data?.toString().toLowerCase() ?? '';
+            if (dataStr.contains('deletion_pending') ||
+                dataStr.contains('awaiting administrator review')) {
               isDeletionReview = true;
             }
           }

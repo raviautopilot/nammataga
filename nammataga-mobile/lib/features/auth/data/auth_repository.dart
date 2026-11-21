@@ -23,13 +23,23 @@ class AuthRepository {
         data: {'email': identifier.trim(), 'password': password},
       );
 
-      if (response.statusCode == 403) {
-        throw const DeletionPendingException();
-      }
-
       final data = response.data is Map
           ? response.data as Map
           : jsonDecode(response.data.toString()) as Map;
+
+      // Check if user must change temporary password first (can occur with 200 or 403)
+      final bool forceChange = data['forceChangePassword'] == true ||
+          (data['message'] ?? '').toString().toLowerCase().contains('password change required');
+      if (forceChange) {
+        return MemberSession(
+          forceChangePassword: true,
+          tempEmail: (data['email'] ?? identifier).toString(),
+        );
+      }
+
+      if (response.statusCode == 403) {
+        throw const DeletionPendingException();
+      }
 
       if (data['status'] == 'deletion_pending') {
         throw const DeletionPendingException();
@@ -44,15 +54,6 @@ class AuthRepository {
           throw const DeletionPendingException();
         }
         throw Exception(errStr);
-      }
-
-      // Check if user must change temporary password first
-      final bool forceChange = data['forceChangePassword'] == true;
-      if (forceChange) {
-        return MemberSession(
-          forceChangePassword: true,
-          tempEmail: (data['email'] ?? identifier).toString(),
-        );
       }
 
       final String? token = data['token'];
@@ -93,7 +94,33 @@ class AuthRepository {
     } on DeletionPendingException {
       rethrow;
     } on DioException catch (e) {
+      final resData = e.response?.data;
+      Map? mapData;
+      if (resData is Map) {
+        mapData = resData;
+      } else if (resData is String && resData.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(resData);
+          if (decoded is Map) {
+            mapData = decoded;
+          }
+        } catch (_) {}
+      }
+
+      // Check if temporary password change required on 403 or error response
+      if (mapData != null) {
+        final bool isForceChange = mapData['forceChangePassword'] == true ||
+            (mapData['message'] ?? '').toString().toLowerCase().contains('password change required');
+        if (isForceChange) {
+          return MemberSession(
+            forceChangePassword: true,
+            tempEmail: (mapData['email'] ?? identifier).toString(),
+          );
+        }
+      }
+
       if (e.response?.statusCode == 403) {
+        // If 403 is received without forceChangePassword, check if it's deletion pending
         throw const DeletionPendingException();
       }
       final data = e.response?.data;

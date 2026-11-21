@@ -507,3 +507,83 @@ func TestDeletionRequests_EmailsDispatchedForAllSteps(t *testing.T) {
 	assert.Contains(t, sentAfterApprove[0].Subject, "Account Deletion Confirmation")
 	assert.Contains(t, sentAfterApprove[0].Body, "Summary of Actions Taken")
 }
+
+func TestExecuteAccountDeletion_ReAddAndReDeleteLifecycle(t *testing.T) {
+	_, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
+	// 1. Initial Member Creation
+	member := map[string]interface{}{
+		"id":             "cycle-uuid-1",
+		"tagaId":         "TAGA_CYCLE",
+		"name":           "Cycle Member",
+		"emailId":        "cycle@nammataga.com",
+		"mobile_number":  "9876599999",
+		"payment_status": "Paid",
+	}
+	membersData, _ := json.MarshalIndent([]map[string]interface{}{member}, "", "  ")
+	_ = os.WriteFile(config.Config.MembersFile, membersData, 0644)
+
+	// 2. Request deletion and approve deletion (1st time)
+	req1, err := service.CreateDeletionRequest(nil, "cycle-uuid-1", "TAGA_CYCLE", "Cycle Member", "cycle@nammataga.com", "First deletion")
+	require.NoError(t, err)
+
+	err = service.ExecuteAccountDeletion(nil, "cycle-uuid-1", "TAGA_CYCLE", "admin", "First deletion", req1.ID)
+	require.NoError(t, err)
+
+	// Verify member is removed from members.json
+	var activeMembers []map[string]interface{}
+	mData, _ := os.ReadFile(config.Config.MembersFile)
+	_ = json.Unmarshal(mData, &activeMembers)
+	assert.Len(t, activeMembers, 0, "Member should be deleted from active members.json")
+
+	// Verify member is in deleted_member.json
+	var deletedMembers []map[string]interface{}
+	dData, _ := os.ReadFile(config.Config.DeletedMembersFile)
+	_ = json.Unmarshal(dData, &deletedMembers)
+	assert.Len(t, deletedMembers, 1, "Member should be archived in deleted_member.json")
+
+	// 3. Admin re-adds the member
+	err = service.UnarchiveMember("TAGA_CYCLE", "cycle@nammataga.com")
+	require.NoError(t, err)
+
+	// Verify unarchived from deleted_member.json
+	dData2, _ := os.ReadFile(config.Config.DeletedMembersFile)
+	var deletedMembersAfterUnarchive []map[string]interface{}
+	_ = json.Unmarshal(dData2, &deletedMembersAfterUnarchive)
+	assert.Len(t, deletedMembersAfterUnarchive, 0, "Member should be unarchived from deleted_member.json")
+
+	// Put member back in active members.json with reused/new ID
+	reAddedMember := map[string]interface{}{
+		"id":             "cycle-uuid-1",
+		"tagaId":         "TAGA_CYCLE",
+		"name":           "Cycle Member ReAdded",
+		"emailId":        "cycle@nammataga.com",
+		"mobile_number":  "9876599999",
+		"payment_status": "Paid",
+	}
+	reAddedData, _ := json.MarshalIndent([]map[string]interface{}{reAddedMember}, "", "  ")
+	_ = os.WriteFile(config.Config.MembersFile, reAddedData, 0644)
+
+	// 4. Member requests deletion again (2nd time)
+	req2, err := service.CreateDeletionRequest(nil, "cycle-uuid-1", "TAGA_CYCLE", "Cycle Member ReAdded", "cycle@nammataga.com", "Second deletion")
+	require.NoError(t, err)
+	assert.Equal(t, model.DeletionStatusPending, req2.Status)
+
+	// 5. Admin approves deletion again (2nd time)
+	err = service.ExecuteAccountDeletion(nil, "cycle-uuid-1", "TAGA_CYCLE", "admin", "Second deletion", req2.ID)
+	require.NoError(t, err)
+
+	// Verify member is again removed from members.json
+	var activeAfterSecond []map[string]interface{}
+	mData2, _ := os.ReadFile(config.Config.MembersFile)
+	_ = json.Unmarshal(mData2, &activeAfterSecond)
+	assert.Len(t, activeAfterSecond, 0, "Member must be successfully deleted on second deletion approval")
+
+	// Verify exactly 1 clean archive record in deleted_member.json (no duplicate conflicts)
+	var deletedAfterSecond []map[string]interface{}
+	dData3, _ := os.ReadFile(config.Config.DeletedMembersFile)
+	_ = json.Unmarshal(dData3, &deletedAfterSecond)
+	assert.Len(t, deletedAfterSecond, 1, "Exactly one deduplicated archived record in deleted_member.json")
+	assert.Equal(t, "Second deletion", deletedAfterSecond[0]["deletion_reason"])
+}

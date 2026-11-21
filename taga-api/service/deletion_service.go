@@ -242,10 +242,21 @@ func ExecuteAccountDeletion(c *gin.Context, memberID, tagaID, deletedBy, deletio
 	// 2. Find target member and build filtered list
 	var targetMember map[string]interface{}
 	targetIdx := -1
+	cleanMemberID := strings.TrimSpace(memberID)
+	cleanTagaID := strings.TrimSpace(tagaID)
+
 	for idx, m := range members {
-		id := utils.GetStringFromMap(m, "id")
-		mTag := utils.GetStringFromMap(m, "tagaId")
-		if (memberID != "" && id == memberID) || (tagaID != "" && strings.EqualFold(mTag, tagaID)) {
+		id := strings.TrimSpace(utils.GetStringFromMap(m, "id"))
+		mTag := strings.TrimSpace(utils.GetStringFromMap(m, "tagaId"))
+		mEmail := strings.ToLower(strings.TrimSpace(utils.GetStringFromMap(m, "emailId")))
+		if mEmail == "" {
+			mEmail = strings.ToLower(strings.TrimSpace(utils.GetStringFromMap(m, "email")))
+		}
+
+		matchesID := cleanMemberID != "" && id == cleanMemberID
+		matchesTaga := cleanTagaID != "" && strings.EqualFold(mTag, cleanTagaID)
+
+		if matchesID || matchesTaga {
 			targetMember = m
 			targetIdx = idx
 			break
@@ -298,7 +309,7 @@ func ExecuteAccountDeletion(c *gin.Context, memberID, tagaID, deletedBy, deletio
 	}
 	archivedMember["deletion_reason"] = deletionReason
 
-	// 4. Save to deleted_member.json atomically
+	// 4. Save to deleted_member.json atomically (deduplicating if previously archived)
 	deletedFile := cfg.DeletedMembersFile
 	if deletedFile == "" {
 		deletedFile = "data/member/deleted_member.json"
@@ -308,9 +319,28 @@ func ExecuteAccountDeletion(c *gin.Context, memberID, tagaID, deletedBy, deletio
 	if dData, err := os.ReadFile(deletedFile); err == nil && len(dData) > 0 {
 		_ = json.Unmarshal(dData, &deletedMembers)
 	}
-	deletedMembers = append(deletedMembers, archivedMember)
 
-	deletedData, err := json.MarshalIndent(deletedMembers, "", "  ")
+	// Filter out any stale archived record matching this member ID, tagaId, or email
+	filteredDeleted := make([]map[string]interface{}, 0, len(deletedMembers))
+	for _, dm := range deletedMembers {
+		dID := strings.TrimSpace(utils.GetStringFromMap(dm, "id"))
+		dTaga := strings.TrimSpace(utils.GetStringFromMap(dm, "tagaId"))
+		dEmail := strings.ToLower(strings.TrimSpace(utils.GetStringFromMap(dm, "emailId")))
+		if dEmail == "" {
+			dEmail = strings.ToLower(strings.TrimSpace(utils.GetStringFromMap(dm, "email")))
+		}
+
+		matchesOld := (memberUUID != "" && dID == memberUUID) ||
+			(memberTagaID != "" && strings.EqualFold(dTaga, memberTagaID)) ||
+			(memberEmail != "" && dEmail == strings.ToLower(memberEmail))
+
+		if !matchesOld {
+			filteredDeleted = append(filteredDeleted, dm)
+		}
+	}
+	filteredDeleted = append(filteredDeleted, archivedMember)
+
+	deletedData, err := json.MarshalIndent(filteredDeleted, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal deleted members: %w", err)
 	}
@@ -462,6 +492,64 @@ func ResolveMemberUID(tagaID, email string, activeMembers []map[string]interface
 	}
 
 	return candidateUID
+}
+
+// UnarchiveMember removes a member from deleted_member.json when they are re-registered.
+func UnarchiveMember(tagaID, email string) error {
+	deletionLock.Lock()
+	defer deletionLock.Unlock()
+
+	cleanTagaID := strings.TrimSpace(tagaID)
+	cleanEmail := strings.ToLower(strings.TrimSpace(email))
+	if cleanTagaID == "" && cleanEmail == "" {
+		return nil
+	}
+
+	deletedFile := getDeletedMembersFilePath()
+	data, err := os.ReadFile(deletedFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	var archivedMembers []map[string]interface{}
+	if err := json.Unmarshal(data, &archivedMembers); err != nil {
+		return err
+	}
+
+	filtered := make([]map[string]interface{}, 0, len(archivedMembers))
+	removed := false
+	for _, am := range archivedMembers {
+		archivedTaga := strings.TrimSpace(utils.GetStringFromMap(am, "tagaId"))
+		archivedEmail := strings.ToLower(strings.TrimSpace(utils.GetStringFromMap(am, "emailId")))
+		if archivedEmail == "" {
+			archivedEmail = strings.ToLower(strings.TrimSpace(utils.GetStringFromMap(am, "email")))
+		}
+		if archivedEmail == "" {
+			archivedEmail = strings.ToLower(strings.TrimSpace(utils.GetStringFromMap(am, "username")))
+		}
+
+		matchesTaga := cleanTagaID != "" && strings.EqualFold(archivedTaga, cleanTagaID)
+		matchesEmail := cleanEmail != "" && archivedEmail == cleanEmail
+
+		if matchesTaga || matchesEmail {
+			removed = true
+			continue
+		}
+		filtered = append(filtered, am)
+	}
+
+	if removed {
+		updatedData, err := json.MarshalIndent(filtered, "", "  ")
+		if err != nil {
+			return err
+		}
+		return utils.WriteFileAtomic(deletedFile, updatedData, 0644)
+	}
+
+	return nil
 }
 
 // -----------------------------------------------------------------------------
@@ -918,14 +1006,14 @@ func CreateDeletionRequest(c *gin.Context, memberID, tagaID, memberName, memberE
 
 	// 1. Dispatch acknowledgement email to member
 	if memberEmail != "" {
-		go func(to, name, taga, rsn, reqAt string) {
-			if err := email.SendAccountDeletionRequestAcknowledgement(to, name, taga, rsn, reqAt); err != nil {
+		go func(to, name, taga, rsn, reqAt, mob string) {
+			if err := email.SendAccountDeletionRequestAcknowledgement(to, name, taga, rsn, reqAt, mob); err != nil {
 				if config.Logger != nil {
 					config.Logger.Warn("Failed to send deletion request acknowledgement email to member",
 						zap.String("to", to), zap.Error(err))
 				}
 			}
-		}(memberEmail, memberName, tagaID, newReq.Reason, newReq.RequestedAt)
+		}(memberEmail, memberName, tagaID, newReq.Reason, newReq.RequestedAt, mobileNumber)
 	}
 
 	// 2. Dispatch alert notification email to admin

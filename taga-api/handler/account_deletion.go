@@ -166,6 +166,13 @@ func RequestAccountDeletion(c *gin.Context) {
 
 	tagaID := utils.GetStringFromMap(foundMember, "tagaId")
 	memberName := utils.GetStringFromMap(foundMember, "name")
+	memberEmailFromProfile := utils.GetStringFromMap(foundMember, "emailId")
+	if memberEmailFromProfile == "" {
+		memberEmailFromProfile = utils.GetStringFromMap(foundMember, "email")
+	}
+	if emailStr == "" {
+		emailStr = memberEmailFromProfile
+	}
 
 	mobileNumber := utils.GetStringFromMap(foundMember, "mobile_number")
 	if mobileNumber == "" {

@@ -213,13 +213,6 @@ func MemberLoginHandler(c *gin.Context) {
 	}
 
 	if foundMember == nil {
-		if service.IsAccountArchivedOrDeleted(cleanIdentifier) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "This account has been deleted per association records. Login access is no longer available.",
-				"message": "This account has been deleted per association records. Login access is no longer available.",
-			})
-			return
-		}
 		respondError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}

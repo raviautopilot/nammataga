@@ -295,7 +295,7 @@ func SendTemporaryPasswordEmail(to, tempPassword string) error {
 }
 
 // SendAccountDeletionRequestAcknowledgement sends an acknowledgement email to a member when their deletion request is submitted.
-func SendAccountDeletionRequestAcknowledgement(to, memberName, tagaID, reason, requestedAt string) error {
+func SendAccountDeletionRequestAcknowledgement(to, memberName, tagaID, reason, requestedAt string, mobileNumberOpt ...string) error {
 	if to == "" {
 		return nil
 	}
@@ -305,6 +305,10 @@ func SendAccountDeletionRequestAcknowledgement(to, memberName, tagaID, reason, r
 	if tagaID == "" {
 		tagaID = "N/A"
 	}
+	mobileNumber := "N/A"
+	if len(mobileNumberOpt) > 0 && strings.TrimSpace(mobileNumberOpt[0]) != "" {
+		mobileNumber = strings.TrimSpace(mobileNumberOpt[0])
+	}
 	if requestedAt == "" {
 		requestedAt = time.Now().Format("02 Jan 2006, 03:04 PM")
 	} else if t, err := time.Parse(time.RFC3339, requestedAt); err == nil {
@@ -313,14 +317,9 @@ func SendAccountDeletionRequestAcknowledgement(to, memberName, tagaID, reason, r
 
 	subject := "⏳ TAGA Portal - Account Deletion Request Received"
 
-	reasonBlock := ""
-	if strings.TrimSpace(reason) != "" {
-		reasonBlock = fmt.Sprintf(`
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-                <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Stated Reason for Deletion:</p>
-                <p style="margin: 0; font-size: 14px; color: #334155; line-height: 1.5; white-space: pre-wrap;">%s</p>
-            </div>
-        `, reason)
+	reasonText := strings.TrimSpace(reason)
+	if reasonText == "" {
+		reasonText = "<i>No specific reason provided.</i>"
 	}
 
 	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
@@ -344,40 +343,51 @@ func SendAccountDeletionRequestAcknowledgement(to, memberName, tagaID, reason, r
         <!-- Body -->
         <div style="padding: 32px 24px;">
             <p style="margin: 0 0 16px 0; font-size: 15px; color: #374151;">
-                Dear <strong>%s</strong> (TAGA ID: %s),
+                Dear <strong>%s</strong>,
             </p>
             <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">
                 We have received your formal request to delete your TAGA Member account. Your request has been queued in our administrative system and is currently pending review by an association administrator.
             </p>
 
-            <!-- Info Card -->
+            <!-- Member Details Card (same layout and view as admin email) -->
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
                 <h3 style="margin: 0 0 16px 0; font-size: 14px; color: #1e3a8a; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Request Details</h3>
+                
                 <table width="100%%" border="0" cellpadding="0" cellspacing="0">
                     <tr>
-                        <td width="50%%" valign="top" style="padding-bottom: 12px;">
+                        <td width="50%%" valign="top" style="padding-bottom: 14px;">
                             <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Member Name</p>
-                            <p style="margin: 0; font-size: 14px; color: #0f172a; font-weight: 600;">%s</p>
+                            <p style="margin: 0; font-size: 15px; color: #0f172a; font-weight: 700;">%s</p>
                         </td>
-                        <td width="50%%" valign="top" style="padding-bottom: 12px;">
+                        <td width="50%%" valign="top" style="padding-bottom: 14px;">
                             <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">TAGA ID</p>
-                            <p style="margin: 0; font-size: 14px; color: #0f172a; font-weight: 600;">%s</p>
+                            <p style="margin: 0; font-size: 15px; color: #0f172a; font-weight: 700;">%s</p>
                         </td>
                     </tr>
                     <tr>
-                        <td width="50%%" valign="top" style="padding-bottom: 4px;">
+                        <td width="50%%" valign="top" style="padding-bottom: 14px;">
                             <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Registered Email</p>
                             <p style="margin: 0; font-size: 14px; color: #0f172a; font-weight: 500;">%s</p>
                         </td>
-                        <td width="50%%" valign="top" style="padding-bottom: 4px;">
-                            <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Submitted At</p>
+                        <td width="50%%" valign="top" style="padding-bottom: 14px;">
+                            <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Mobile Number</p>
+                            <p style="margin: 0; font-size: 14px; color: #0f172a; font-weight: 500;">%s</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" valign="top">
+                            <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Requested At</p>
                             <p style="margin: 0; font-size: 14px; color: #0f172a; font-weight: 500;">%s</p>
                         </td>
                     </tr>
                 </table>
             </div>
 
-            %s
+            <!-- Stated Reason Card -->
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Stated Reason for Deletion:</p>
+                <p style="margin: 0; font-size: 14px; color: #334155; line-height: 1.5; white-space: pre-wrap;">%s</p>
+            </div>
 
             <!-- Security Notice -->
             <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px 16px; border-radius: 4px; margin-bottom: 24px;">
@@ -395,7 +405,7 @@ func SendAccountDeletionRequestAcknowledgement(to, memberName, tagaID, reason, r
         </div>
     </div>
 </body>
-</html>`, memberName, tagaID, memberName, tagaID, to, requestedAt, reasonBlock)
+</html>`, memberName, memberName, tagaID, to, mobileNumber, requestedAt, reasonText)
 
 	return SendHTMLEmail(to, subject, htmlBody)
 }

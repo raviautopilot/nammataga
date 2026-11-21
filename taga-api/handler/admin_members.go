@@ -264,6 +264,10 @@ func AddMember(c *gin.Context) {
 	}
 
 	for _, m := range existingMembers {
+		if tagaID, ok := m["tagaId"].(string); ok && req.TagaID != "" && strings.EqualFold(strings.TrimSpace(tagaID), strings.TrimSpace(req.TagaID)) {
+			respondError(c, http.StatusBadRequest, "TAGA ID already registered")
+			return
+		}
 		if email, ok := m["emailId"].(string); ok && email == req.Email {
 			respondError(c, http.StatusBadRequest, "Email already registered")
 			return
@@ -337,6 +341,9 @@ func AddMember(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "Failed to save member")
 		return
 	}
+
+	// Remove any previous deletion archive record for this member upon re-registration
+	_ = service.UnarchiveMember(newMember.TagaID, newMember.EmailId)
 
 	if isPaid {
 		tagaID := newMember.TagaID
@@ -940,6 +947,10 @@ func BulkUploadMembers(c *gin.Context) {
 	if err := utils.WriteFileAtomic(cfg.MembersFile, data, 0644); err != nil {
 		respondError(c, http.StatusInternalServerError, "Failed to save members")
 		return
+	}
+
+	for _, reg := range registrations {
+		_ = service.UnarchiveMember(reg.TagaID, reg.EmailId)
 	}
 
 	respondOK(c, result)
@@ -1671,6 +1682,15 @@ func parseExcelFileForBulk(filePath string) ([]RegistrationRequest, error) {
 
 func validateRegistration(req *RegistrationRequest, existingMembers []map[string]interface{}) []RegistrationError {
 	var errors []RegistrationError
+	if strings.TrimSpace(req.TagaID) != "" {
+		for _, member := range existingMembers {
+			if tagaID, ok := member["tagaId"].(string); ok && strings.EqualFold(strings.TrimSpace(tagaID), strings.TrimSpace(req.TagaID)) {
+				errors = append(errors, RegistrationError{Field: "tagaId", Message: "TAGA ID already registered"})
+				break
+			}
+		}
+	}
+
 	if strings.TrimSpace(req.Name) == "" {
 		errors = append(errors, RegistrationError{Field: "name", Message: "Name is required"})
 	}
@@ -1796,7 +1816,12 @@ func storeMemberDetails(req *RegistrationRequest, tempPassword string, existingM
 		return fmt.Errorf("failed to marshal members: %w", err)
 	}
 
-	return os.WriteFile(membersFilePath, data, 0644)
+	if err := os.WriteFile(membersFilePath, data, 0644); err != nil {
+		return err
+	}
+
+	_ = service.UnarchiveMember(req.TagaID, req.EmailId)
+	return nil
 }
 
 func sendErrorEmailToAdmin(errors []map[string]interface{}) error {
