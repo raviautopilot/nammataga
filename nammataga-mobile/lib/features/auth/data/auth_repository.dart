@@ -153,7 +153,7 @@ class AuthRepository {
   String _extractErrorMessage(DioException e) {
     if (e.response?.data != null) {
       final data = e.response!.data;
-      if (data is Map<String, dynamic>) {
+      if (data is Map) {
         final err = data['error'] ?? data['message'];
         if (err != null && err.toString().isNotEmpty) {
           return err.toString();
@@ -161,7 +161,7 @@ class AuthRepository {
       } else if (data is String && data.isNotEmpty) {
         try {
           final decoded = jsonDecode(data);
-          if (decoded is Map<String, dynamic>) {
+          if (decoded is Map) {
             final err = decoded['error'] ?? decoded['message'];
             if (err != null && err.toString().isNotEmpty) {
               return err.toString();

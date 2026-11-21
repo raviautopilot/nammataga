@@ -172,7 +172,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             rawErr.toLowerCase().contains('pending') ||
             rawErr.toLowerCase().contains('request is awaiting') ||
             rawErr.toLowerCase().contains('account has been deleted') ||
-            rawErr.toLowerCase().contains('cannot access your account');
+            rawErr.toLowerCase().contains('cannot access your account') ||
+            rawErr.toLowerCase().contains('403') ||
+            rawErr.toLowerCase().contains('forbidden');
 
         if (isDeletionReview) {
           setState(() {
