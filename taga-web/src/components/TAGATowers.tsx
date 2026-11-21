@@ -335,12 +335,12 @@ export function TAGATowers({ isLoggedIn, isPaidMember, isAdmin = false, onNaviga
   const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && !isAdmin) {
       getMemberProfile()
         .then((p) => setUserProfile(p))
         .catch((err) => console.warn('Could not fetch profile for TAGA Towers:', err));
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isAdmin]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // STATE: Dates

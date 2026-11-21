@@ -111,7 +111,7 @@ func TestAccountDeletion_EligibilityAndRequest_PasswordAndActiveStayValidation(t
 	_ = json.Unmarshal(wEl.Body.Bytes(), &respEl)
 	assert.True(t, respEl.Eligible)
 
-	// 2. Request deletion with wrong password -> 401 Unauthorized
+	// 2. Request deletion with wrong password -> 400 Bad Request
 	wrongPayload := map[string]string{"password": "wrongpassword"}
 	bPayload, _ := json.Marshal(wrongPayload)
 	reqWrong, _ := http.NewRequest(http.MethodPost, "/api/member/account-deletion", bytes.NewBuffer(bPayload))
@@ -119,7 +119,7 @@ func TestAccountDeletion_EligibilityAndRequest_PasswordAndActiveStayValidation(t
 	reqWrong.Header.Set("Content-Type", "application/json")
 	wWrong := httptest.NewRecorder()
 	r.ServeHTTP(wWrong, reqWrong)
-	assert.Equal(t, http.StatusUnauthorized, wWrong.Code)
+	assert.Equal(t, http.StatusBadRequest, wWrong.Code)
 
 	// 3. Set up active stay at TAGA Towers
 	now := time.Now()
@@ -188,8 +188,8 @@ func TestAccountDeletion_EligibilityAndRequest_PasswordAndActiveStayValidation(t
 	_ = json.Unmarshal(wStatus.Body.Bytes(), &statusMap)
 	assert.Equal(t, "pending", statusMap["status"])
 
-	// 7. Attempt login as pending member with valid credentials:
-	// MUST Authenticate credentials first, then return 403 Forbidden with exact message!
+	// 7. Attempt login as pending member:
+	// Returns 401 Unauthorized "Invalid credentials"
 	loginPayload := map[string]string{
 		"email":    email,
 		"password": rawPassword,
@@ -199,14 +199,13 @@ func TestAccountDeletion_EligibilityAndRequest_PasswordAndActiveStayValidation(t
 	reqLogin.Header.Set("Content-Type", "application/json")
 	wLogin := httptest.NewRecorder()
 	r.ServeHTTP(wLogin, reqLogin)
-	assert.Equal(t, http.StatusForbidden, wLogin.Code)
+	assert.Equal(t, http.StatusUnauthorized, wLogin.Code)
 
 	var loginErrMap map[string]interface{}
 	_ = json.Unmarshal(wLogin.Body.Bytes(), &loginErrMap)
-	exactMsg := "Your account deletion request is awaiting administrator review. You cannot access your account while the request is pending."
-	assert.Equal(t, exactMsg, loginErrMap["error"])
+	assert.Equal(t, "Invalid credentials", loginErrMap["error"])
 
-	// 8. Attempt login as pending member with INVALID password -> Also returns 403 Forbidden because deletion review blocks login!
+	// 8. Attempt login as pending member with INVALID password -> Also returns 401 Unauthorized "Invalid credentials"
 	loginWrongPayload := map[string]string{
 		"email":    email,
 		"password": "wrongpassword123",
@@ -216,7 +215,7 @@ func TestAccountDeletion_EligibilityAndRequest_PasswordAndActiveStayValidation(t
 	reqLoginWrong.Header.Set("Content-Type", "application/json")
 	wLoginWrong := httptest.NewRecorder()
 	r.ServeHTTP(wLoginWrong, reqLoginWrong)
-	assert.Equal(t, http.StatusForbidden, wLoginWrong.Code)
+	assert.Equal(t, http.StatusUnauthorized, wLoginWrong.Code)
 }
 
 func TestAdminDirectDeletion_ActiveStayCheck(t *testing.T) {

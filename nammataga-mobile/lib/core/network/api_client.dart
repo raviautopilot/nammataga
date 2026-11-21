@@ -36,7 +36,12 @@ class ApiClient {
           return handler.next(options);
         },
         onError: (DioException error, handler) async {
-          if (error.response?.statusCode == 401) {
+          final path = error.requestOptions.path;
+          final isPasswordValidation = path.contains('/account-deletion') ||
+              path.contains('/login') ||
+              path.contains('/change-password');
+
+          if (error.response?.statusCode == 401 && !isPasswordValidation) {
             // Auto-clear auth storage on 401 unauthorized
             await StorageService.clearAuth();
           }

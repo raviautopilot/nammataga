@@ -191,10 +191,7 @@ func MemberLoginHandler(c *gin.Context) {
 
 	// 1. Check if identifier directly matches a pending deletion request BEFORE any password check
 	if service.IsMemberDeletionPending("", cleanIdentifier) {
-		c.JSON(http.StatusForbidden, gin.H{
-			"error":   service.PendingAccountMessage,
-			"message": service.PendingAccountMessage,
-		})
+		respondError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
 
@@ -225,13 +222,6 @@ func MemberLoginHandler(c *gin.Context) {
 	}
 
 	if foundMember == nil {
-		if service.IsAccountArchivedOrDeleted(cleanIdentifier) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "This account has been deleted per association records. Login access is no longer available.",
-				"message": "This account has been deleted per association records. Login access is no longer available.",
-			})
-			return
-		}
 		respondError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
@@ -248,17 +238,11 @@ func MemberLoginHandler(c *gin.Context) {
 	if service.IsMemberDeletionPending(memberID, memberEmail) ||
 		(tagaID != "" && service.IsMemberDeletionPending(tagaID, tagaID)) ||
 		service.IsMemberDeletionPending(memberID, cleanIdentifier) {
-		c.JSON(http.StatusForbidden, gin.H{
-			"error":   service.PendingAccountMessage,
-			"message": service.PendingAccountMessage,
-		})
+		respondError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
 	if delStatus, ok := foundMember["deletion_status"].(string); ok && strings.EqualFold(delStatus, "pending") {
-		c.JSON(http.StatusForbidden, gin.H{
-			"error":   service.PendingAccountMessage,
-			"message": service.PendingAccountMessage,
-		})
+		respondError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
 

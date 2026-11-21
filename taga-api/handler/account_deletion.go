@@ -155,12 +155,12 @@ func RequestAccountDeletion(c *gin.Context) {
 	// 1. Mandatory password confirmation
 	storedPassword := utils.GetStringFromMap(foundMember, "password")
 	if storedPassword == "" {
-		respondError(c, http.StatusUnauthorized, "Invalid credentials")
+		respondError(c, http.StatusBadRequest, "Invalid password")
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(payload.Password)); err != nil {
-		respondError(c, http.StatusUnauthorized, "Invalid password")
+		respondError(c, http.StatusBadRequest, "Invalid password")
 		return
 	}
 

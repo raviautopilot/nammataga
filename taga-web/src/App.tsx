@@ -563,7 +563,7 @@ export default function App() {
                                         </Button>
                                     );
                                 })}
-                                {!isAdmin && currentPage !== 'admin-login' && (
+                                {isLoggedIn && !isAdmin && currentPage !== 'admin-login' && (
                                     <Button
                                         variant="ghost"
                                         onClick={() => {

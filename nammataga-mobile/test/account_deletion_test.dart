@@ -441,7 +441,7 @@ void main() {
   });
 
   group('6. LoginScreen Pending Deletion Review Handling', () {
-    testWidgets('Displays dedicated amber dialog and banner when deletion review is pending', (tester) async {
+    testWidgets('Displays invalid credentials dialog and banner without disclosing deletion review', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -464,27 +464,25 @@ void main() {
       await tester.tap(signInButton);
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Verify dedicated amber dialog appeared
-      expect(find.text('Account Deletion Pending'), findsOneWidget);
+      // Verify dedicated amber dialog is NOT shown
+      expect(find.text('Account Deletion Pending'), findsNothing);
+      expect(find.textContaining('support@nammataga.com'), findsNothing);
+
+      // Verify explicit Invalid Credentials popup dialog is shown
+      expect(find.text('Invalid Credentials'), findsOneWidget);
       expect(
         find.text(
-          'Your account deletion request is awaiting administrator review. You cannot access your account while the request is pending.',
-        ),
-        findsWidgets,
-      );
-      expect(find.textContaining('support@nammataga.com'), findsWidgets);
-
-      // Dismiss dialog
-      await tester.tap(find.text('Understood'));
-      await tester.pump(const Duration(milliseconds: 300));
-
-      // Verify amber banner remains visible on login screen
-      expect(
-        find.text(
-          'Your account deletion request is awaiting administrator review. You cannot access your account while the request is pending.',
+          'The email address or password you entered is incorrect. Please check your credentials and try again.',
         ),
         findsOneWidget,
       );
+
+      // Dismiss dialog
+      await tester.tap(find.text('Try Again'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Verify Invalid credentials banner is visible on login screen
+      expect(find.text('Invalid credentials'), findsOneWidget);
     });
   });
 }
