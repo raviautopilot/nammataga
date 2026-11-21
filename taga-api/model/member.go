@@ -27,7 +27,9 @@ type Member struct {
 	WorkingDistrict          string `json:"working_district"`
 	CreatedAt                string `json:"created_at,omitempty"`
 	// Payment fields
-	PaymentStatus      string `json:"payment_status,omitempty"`
-	SubscriptionActive bool   `json:"subscription_active,omitempty"`
-	DeletionStatus     string `json:"deletion_status,omitempty"`
+	PaymentStatus          string `json:"payment_status,omitempty"`
+	SubscriptionActive     bool   `json:"subscription_active,omitempty"`
+	SubscriptionYear       string `json:"subscription_year,omitempty"`
+	SubscriptionValidUntil string `json:"subscription_valid_until,omitempty"`
+	DeletionStatus         string `json:"deletion_status,omitempty"`
 }

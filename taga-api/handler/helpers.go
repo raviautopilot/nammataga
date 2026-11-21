@@ -14,6 +14,8 @@ import (
 	"time"
 	"taga-api/config"
 	"taga-api/model"
+	"taga-api/service"
+	"taga-api/utils"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -246,12 +248,34 @@ func sendEmailWithReplyTo(to, replyTo, subject, body string) error {
 
 // MemberBasicInfo holds essential identity and payment fields for member lookup
 type MemberBasicInfo struct {
-	ID                 string
-	TagaID             string
-	Email              string
-	Name               string
-	PaymentStatus      string
-	SubscriptionActive bool
+	ID                     string
+	TagaID                 string
+	Email                  string
+	Name                   string
+	PaymentStatus          string
+	SubscriptionActive     bool
+	SubscriptionYear       string
+	SubscriptionValidUntil string
+}
+
+// isOfflineSubscriptionValid checks whether an offline paid member map is valid at time 'now'.
+func isOfflineSubscriptionValid(m map[string]interface{}, now time.Time) bool {
+	validUntil, _ := m["subscription_valid_until"].(string)
+	year, _ := m["subscription_year"].(string)
+	return utils.IsSubscriptionValid(validUntil, year, now)
+}
+
+// isMemberInfoOfflinePaidValid checks whether MemberBasicInfo is valid at time 'now'.
+func isMemberInfoOfflinePaidValid(info *MemberBasicInfo, now time.Time) bool {
+	if info == nil {
+		return false
+	}
+	return utils.IsSubscriptionValid(info.SubscriptionValidUntil, info.SubscriptionYear, now)
+}
+
+// isMemberOfflinePaidValid checks whether model.Member is valid at time 'now'.
+func isMemberOfflinePaidValid(m model.Member, now time.Time) bool {
+	return utils.IsSubscriptionValid(m.SubscriptionValidUntil, m.SubscriptionYear, now)
 }
 
 // getMemberDetailsByEmail returns basic member info for a given email (case-insensitive)
@@ -270,13 +294,17 @@ func getMemberDetailsByEmail(email string) *MemberBasicInfo {
 			name, _ := m["name"].(string)
 			pStatus, _ := m["payment_status"].(string)
 			subActive, _ := m["subscription_active"].(bool)
+			subYear, _ := m["subscription_year"].(string)
+			subValidUntil, _ := m["subscription_valid_until"].(string)
 			return &MemberBasicInfo{
-				ID:                 id,
-				TagaID:             tagaId,
-				Email:              mEmail,
-				Name:               name,
-				PaymentStatus:      pStatus,
-				SubscriptionActive: subActive,
+				ID:                     id,
+				TagaID:                 tagaId,
+				Email:                  mEmail,
+				Name:                   name,
+				PaymentStatus:          pStatus,
+				SubscriptionActive:     subActive,
+				SubscriptionYear:       subYear,
+				SubscriptionValidUntil: subValidUntil,
 			}
 		}
 	}
@@ -289,47 +317,14 @@ func syncMemberEmailInSubscriptions(memberUUID, tagaID, oldEmail, newEmail strin
 	if newEmail == "" {
 		return
 	}
-	subscriptionsFileLock.Lock()
-	defer subscriptionsFileLock.Unlock()
-
-	filePath := getMemberSubscriptionsFilePath()
-	data, err := os.ReadFile(filePath)
-	if err != nil {
+	if err := service.SyncMemberEmailInSubscriptions(memberUUID, tagaID, oldEmail, newEmail); err != nil {
+		config.Logger.Error("Failed to sync member email in subscriptions", zap.Error(err))
 		return
 	}
-
-	var subscriptions []model.MemberSubscription
-	if err := json.Unmarshal(data, &subscriptions); err != nil {
-		return
-	}
-
-	updated := false
-	now := time.Now()
-	for i, sub := range subscriptions {
-		matches := false
-		if memberUUID != "" && sub.MemberID == memberUUID {
-			matches = true
-		} else if tagaID != "" && sub.MemberID == tagaID {
-			matches = true
-		} else if oldEmail != "" && strings.EqualFold(sub.MemberEmail, oldEmail) {
-			matches = true
-		}
-
-		if matches {
-			subscriptions[i].MemberEmail = newEmail
-			subscriptions[i].UpdatedAt = now
-			updated = true
-		}
-	}
-
-	if updated {
-		updatedData, _ := json.MarshalIndent(subscriptions, "", "  ")
-		_ = os.WriteFile(filePath, updatedData, 0644)
-		config.Logger.Info("Synced member email in subscriptions",
-			zap.String("old_email", oldEmail),
-			zap.String("new_email", newEmail),
-			zap.String("member_id", memberUUID))
-	}
+	config.Logger.Info("Synced member email in subscriptions",
+		zap.String("old_email", oldEmail),
+		zap.String("new_email", newEmail),
+		zap.String("member_id", memberUUID))
 }
 
 // getMemberTagaIdByEmail returns the tagaId for a given email

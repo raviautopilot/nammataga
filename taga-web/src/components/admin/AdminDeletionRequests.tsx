@@ -84,7 +84,8 @@ export default function AdminDeletionRequestsButton() {
       const map: Record<string, MemberListItem> = {};
       (membersRes.members || []).forEach((m) => {
         if (m.id) map[m.id.toLowerCase()] = m;
-        if (m.taga_id) map[m.taga_id.toLowerCase()] = m;
+        if (m.tagaId) map[m.tagaId.toLowerCase()] = m;
+        if ((m as any).taga_id) map[String((m as any).taga_id).toLowerCase()] = m;
         if (m.email) map[m.email.toLowerCase()] = m;
       });
       setMemberMap(map);
@@ -247,8 +248,8 @@ export default function AdminDeletionRequestsButton() {
                     memberMap[req.email?.toLowerCase()];
 
                   const mobile =
-                    req.mobile ||
                     req.mobile_number ||
+                    req.mobile ||
                     enrichedMember?.mobile_number ||
                     '-';
 
@@ -256,10 +257,14 @@ export default function AdminDeletionRequestsButton() {
                     req.subscription_status ||
                     req.payment_status ||
                     enrichedMember?.payment_status ||
-                    'unknown';
+                    '';
 
                   const isSubscriptionPaid =
+                    req.is_paid === true ||
+                    req.subscription_active === true ||
                     paymentStatus.toLowerCase() === 'paid' ||
+                    paymentStatus.toLowerCase() === 'active' ||
+                    enrichedMember?.payment_status?.toLowerCase() === 'paid' ||
                     enrichedMember?.membership_status?.toLowerCase() === 'active';
 
                   return (
@@ -336,12 +341,12 @@ export default function AdminDeletionRequestsButton() {
                           <CreditCard className="w-4 h-4 text-slate-400 shrink-0" />
                           <span className="text-slate-500 mr-1">Subscription:</span>
                           {isSubscriptionPaid ? (
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] py-0">
-                              Paid / Active
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] py-0 font-medium">
+                              Active / Paid
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200 text-[11px] py-0">
-                              Unpaid / Inactive
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[11px] py-0 font-medium">
+                              Inactive / Unpaid
                             </Badge>
                           )}
                         </div>

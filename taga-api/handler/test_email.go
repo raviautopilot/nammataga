@@ -116,6 +116,18 @@ func TestEmail(c *gin.Context) {
 	_ = service.SendAdminEditRequestEmail(testEmailAddress, "SUDHAN", editFields)
 	_ = service.SendMemberRequestProcessedEmail(testEmailAddress, "SUDHAN", editFields)
 
+	// 8. Account Deletion Request Acknowledgement (Member)
+	_ = email.SendAccountDeletionRequestAcknowledgement(testEmailAddress, "Sudhan Palanivel", "TAGA-001", "Relocating to native place and retiring from agricultural service.", "")
+
+	// 9. Account Deletion Request Alert (Admin)
+	_ = email.SendAccountDeletionRequestAdminAlert(testEmailAddress, "Sudhan Palanivel", "TAGA-001", testEmailAddress, "+917604832246", "Relocating to native place and retiring from agricultural service.", "")
+
+	// 10. Account Deletion Confirmation (Member Approved)
+	_ = email.SendAccountDeletionConfirmation(testEmailAddress, "Sudhan Palanivel", "TAGA-001")
+
+	// 11. Account Deletion Rejection (Member Rejected)
+	_ = email.SendAccountDeletionRejection(testEmailAddress, "Sudhan Palanivel", "TAGA-001", "Pending welfare society dues must be settled before account can be retired. Please contact the district office bearer.")
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "All premium email template samples sent successfully to " + testEmailAddress,
 	})

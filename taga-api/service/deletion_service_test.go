@@ -14,6 +14,7 @@ import (
 	"taga-api/config"
 	"taga-api/model"
 	"taga-api/service"
+	"taga-api/service/email"
 )
 
 func setupTestEnvironment(t *testing.T) (string, func()) {
@@ -363,4 +364,146 @@ func TestDeletionRequests_CreateListReject(t *testing.T) {
 	// 6. Verify pending status is now cleared
 	isPending := service.IsMemberDeletionPending("uuid-1", "one@nammataga.com")
 	assert.False(t, isPending, "Member account should be unlocked (not pending)")
+}
+
+func TestDeletionRequests_MobileNumberAndSubscriptionEnrichment(t *testing.T) {
+	_, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
+	// Seed members: one Paid, one Unpaid
+	members := []map[string]interface{}{
+		{
+			"id":             "mem-paid-1",
+			"tagaId":         "TAGAPAID1",
+			"name":           "Paid Member",
+			"emailId":        "paid@nammataga.com",
+			"mobile_number":  "9876543210",
+			"payment_status": "Paid",
+		},
+		{
+			"id":             "mem-unpaid-2",
+			"tagaId":         "TAGAUNPAID2",
+			"name":           "Unpaid Member",
+			"emailId":        "unpaid@nammataga.com",
+			"mobile_number":  "9123456789",
+			"payment_status": "Unpaid",
+		},
+	}
+	mData, err := json.Marshal(members)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(config.Config.MembersFile, mData, 0644))
+
+	// 1. Create request for Paid member without passing mobile explicitly
+	req1, err := service.CreateDeletionRequest(nil, "mem-paid-1", "TAGAPAID1", "Paid Member", "paid@nammataga.com", "Moving abroad")
+	require.NoError(t, err)
+	assert.Equal(t, "9876543210", req1.MobileNumber, "Mobile number should be enriched from members.json on creation")
+	assert.True(t, req1.IsPaid, "Should be marked as Paid")
+	assert.True(t, req1.SubscriptionActive, "Subscription should be active")
+	assert.Equal(t, "Paid", req1.SubscriptionStatus)
+
+	// 2. Create request for Unpaid member with explicit mobile
+	req2, err := service.CreateDeletionRequest(nil, "mem-unpaid-2", "TAGAUNPAID2", "Unpaid Member", "unpaid@nammataga.com", "Financial reasons", "9998887776")
+	require.NoError(t, err)
+	assert.Equal(t, "9998887776", req2.MobileNumber)
+	assert.False(t, req2.IsPaid, "Should be marked as Unpaid")
+	assert.False(t, req2.SubscriptionActive)
+	assert.Equal(t, "Unpaid", req2.SubscriptionStatus)
+
+	// 3. List requests and verify both are correctly enriched
+	list, err := service.ListDeletionRequests("")
+	require.NoError(t, err)
+	require.Len(t, list, 2)
+
+	for _, item := range list {
+		if item.MemberID == "mem-paid-1" {
+			assert.Equal(t, "9876543210", item.MobileNumber)
+			assert.True(t, item.IsPaid)
+			assert.True(t, item.SubscriptionActive)
+			assert.Equal(t, "Paid", item.SubscriptionStatus)
+		} else if item.MemberID == "mem-unpaid-2" {
+			assert.Equal(t, "9998887776", item.MobileNumber)
+			assert.False(t, item.IsPaid)
+			assert.False(t, item.SubscriptionActive)
+			assert.Equal(t, "Unpaid", item.SubscriptionStatus)
+		}
+	}
+}
+
+func TestDeletionRequests_EmailsDispatchedForAllSteps(t *testing.T) {
+	_, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
+	config.Config.AdminEmail = "nammataga@gmail.com"
+	config.Config.ResetPasswordURL = "https://www.nammataga.com"
+
+	member := map[string]interface{}{
+		"id":             "mem-email-test",
+		"tagaId":         "TAGAEMAIL",
+		"name":           "Email Tester",
+		"emailId":        "emailtest@nammataga.com",
+		"mobile_number":  "9876500000",
+		"payment_status": "Paid",
+	}
+	mData, _ := json.Marshal([]map[string]interface{}{member})
+	_ = os.WriteFile(config.Config.MembersFile, mData, 0644)
+
+	email.ClearLastSentEmails()
+
+	// 1. Step 1: Create Deletion Request -> Must send Ack to member and Alert to admin
+	req, err := service.CreateDeletionRequest(nil, "mem-email-test", "TAGAEMAIL", "Email Tester", "emailtest@nammataga.com", "Retirement", "9876500000")
+	require.NoError(t, err)
+
+	// Wait briefly for asynchronous goroutines
+	time.Sleep(150 * time.Millisecond)
+
+	sentAfterCreate := email.GetLastSentEmails()
+	require.GreaterOrEqual(t, len(sentAfterCreate), 2, "Both acknowledgement and admin alert emails should be dispatched")
+
+	var memberAckFound, adminAlertFound bool
+	for _, m := range sentAfterCreate {
+		if m.To == "emailtest@nammataga.com" && strings.Contains(m.Subject, "Account Deletion Request Received") {
+			memberAckFound = true
+			assert.Contains(t, m.Body, "Email Tester")
+			assert.Contains(t, m.Body, "TAGAEMAIL")
+		}
+		if m.To == "nammataga@gmail.com" && strings.Contains(m.Subject, "[ADMIN] New Account Deletion Request") {
+			adminAlertFound = true
+			assert.Contains(t, m.Body, "Email Tester")
+			assert.Contains(t, m.Body, "9876500000")
+		}
+	}
+	assert.True(t, memberAckFound, "Member acknowledgement email must be sent")
+	assert.True(t, adminAlertFound, "Admin alert email must be sent")
+
+	// 2. Step 2: Reject Deletion Request -> Must send rejection email to member with remarks
+	email.ClearLastSentEmails()
+	_, err = service.RejectDeletionRequest(nil, req.ID, "admin@nammataga.com", "Pending loan clearance needed")
+	require.NoError(t, err)
+
+	time.Sleep(150 * time.Millisecond)
+
+	sentAfterReject := email.GetLastSentEmails()
+	require.Len(t, sentAfterReject, 1, "Rejection email should be dispatched to member")
+	assert.Equal(t, "emailtest@nammataga.com", sentAfterReject[0].To)
+	assert.Contains(t, sentAfterReject[0].Subject, "Account Deletion Request Update")
+	assert.Contains(t, sentAfterReject[0].Body, "Pending loan clearance needed")
+	assert.Contains(t, sentAfterReject[0].Body, "Your account remains fully active")
+
+	// 3. Step 3: Approve Deletion Request (Create fresh request first)
+	req2, err := service.CreateDeletionRequest(nil, "mem-email-test", "TAGAEMAIL", "Email Tester", "emailtest@nammataga.com", "Retirement 2", "9876500000")
+	require.NoError(t, err)
+
+	time.Sleep(150 * time.Millisecond)
+	email.ClearLastSentEmails()
+
+	err = service.ExecuteAccountDeletion(nil, "mem-email-test", "TAGAEMAIL", "admin@nammataga.com", "Approved retirement", req2.ID)
+	require.NoError(t, err)
+
+	time.Sleep(150 * time.Millisecond)
+
+	sentAfterApprove := email.GetLastSentEmails()
+	require.Len(t, sentAfterApprove, 1, "Confirmation email should be dispatched to member on deletion approval")
+	assert.Equal(t, "emailtest@nammataga.com", sentAfterApprove[0].To)
+	assert.Contains(t, sentAfterApprove[0].Subject, "Account Deletion Confirmation")
+	assert.Contains(t, sentAfterApprove[0].Body, "Summary of Actions Taken")
 }

@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 	"taga-api/config"
 	"taga-api/model"
+	"taga-api/utils"
 )
 
 var (
@@ -70,16 +72,14 @@ func SaveMember(member model.Member) error {
 		allMembers = append(allMembers, member)
 	}
 
-	// Write to file
+	// Write to file atomically
 	updatedData, err := json.MarshalIndent(allMembers, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(cfg.MembersFile, updatedData, 0644)
+	return utils.WriteFileAtomic(cfg.MembersFile, updatedData, 0644)
 }
-
-
 
 // UpdateMemberPaymentStatus updates only payment fields for a member
 func UpdateMemberPaymentStatus(email string, isPaid bool) error {
@@ -101,11 +101,14 @@ func UpdateMemberPaymentStatus(email string, isPaid bool) error {
 
 	// Find and update only the specific member
 	found := false
+	now := time.Now()
 	for i, m := range allMembers {
 		if m.EmailId == email {
 			if isPaid {
 				allMembers[i].PaymentStatus = "Paid"
 				allMembers[i].SubscriptionActive = true
+				allMembers[i].SubscriptionYear = utils.FinancialYear(now)
+				allMembers[i].SubscriptionValidUntil = utils.SubscriptionValidUntil(now)
 			} else {
 				allMembers[i].PaymentStatus = "Unpaid"
 				allMembers[i].SubscriptionActive = false
@@ -119,13 +122,13 @@ func UpdateMemberPaymentStatus(email string, isPaid bool) error {
 		return fmt.Errorf("member not found: %s", email)
 	}
 
-	// Write back only the updated data
+	// Write back only the updated data atomically
 	updatedData, err := json.MarshalIndent(allMembers, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal members: %w", err)
 	}
 
-	return os.WriteFile(cfg.MembersFile, updatedData, 0644)
+	return utils.WriteFileAtomic(cfg.MembersFile, updatedData, 0644)
 }
 
 // GetAllMembers returns all members

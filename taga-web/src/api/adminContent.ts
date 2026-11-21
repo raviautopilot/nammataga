@@ -883,6 +883,8 @@ export interface AdminDeletionRequest {
   processed_by?: string;
   subscription_status?: string;
   payment_status?: string;
+  is_paid?: boolean;
+  subscription_active?: boolean;
 }
 
 export interface AdminDeletionRequestsResponse {

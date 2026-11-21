@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"taga-api/config"
-	"taga-api/model"
 	"taga-api/service/email"
 	"taga-api/utils"
 	"time"
@@ -49,13 +48,8 @@ func getReminderDate(reminderType string, now time.Time) time.Time {
 
 // isPaidForCurrentYear checks if a member has an active annual subscription for the current membership year.
 func isPaidForCurrentYear(email string) bool {
-	filePath := filepath.Join("data", "subscriptions", "member_subscriptions.json")
-	data, err := os.ReadFile(filePath)
+	subscriptions, err := ReadMemberSubscriptions()
 	if err != nil {
-		return false
-	}
-	var subscriptions []model.MemberSubscription
-	if err := json.Unmarshal(data, &subscriptions); err != nil {
 		return false
 	}
 

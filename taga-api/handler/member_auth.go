@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"taga-api/config"
 	"taga-api/model"
@@ -40,26 +38,15 @@ func checkAnnualSubscriptionStatus(memberID string) bool {
 
 	tagaId := getMemberTagaIdByUUID(memberID)
 	memberEmail := getMemberEmailByUUID(memberID)
-	cfg := config.GetConfig()
-	subsFile := filepath.Join(filepath.Dir(cfg.MembersFile), "..", "subscriptions", "member_subscriptions.json")
-	if _, err := os.Stat(subsFile); os.IsNotExist(err) {
-		subsFile = getMemberSubscriptionsFilePath()
-	}
 
-	data, err := os.ReadFile(subsFile)
+	subscriptions, err := service.ReadMemberSubscriptions()
 	if err != nil {
-		config.Logger.Warn("Failed to read subscriptions file", zap.Error(err))
-		return false
-	}
-
-	var subscriptions []model.MemberSubscription
-	if err := json.Unmarshal(data, &subscriptions); err != nil {
-		config.Logger.Warn("Failed to parse subscriptions", zap.Error(err))
+		config.Logger.Warn("Failed to read subscriptions", zap.Error(err))
 		return false
 	}
 
 	for _, sub := range subscriptions {
-		matchesMember := (tagaId != "" && sub.MemberID == tagaId) ||
+		matchesMember := (tagaId != "" && strings.EqualFold(sub.MemberID, tagaId)) ||
 			(memberID != "" && sub.MemberID == memberID) ||
 			(memberEmail != "" && strings.EqualFold(sub.MemberEmail, memberEmail))
 
@@ -314,10 +301,12 @@ func MemberLoginHandler(c *gin.Context) {
 
 	isPaid := checkAnnualSubscriptionStatus(memberID)
 	if !isPaid {
-		if subActive, ok := foundMember["subscription_active"].(bool); ok && subActive {
-			isPaid = true
-		} else if pStatus, ok := foundMember["payment_status"].(string); ok && strings.EqualFold(pStatus, "Paid") {
-			isPaid = true
+		if isOfflineSubscriptionValid(foundMember, time.Now()) {
+			if subActive, ok := foundMember["subscription_active"].(bool); ok && subActive {
+				isPaid = true
+			} else if pStatus, ok := foundMember["payment_status"].(string); ok && strings.EqualFold(pStatus, "Paid") {
+				isPaid = true
+			}
 		}
 	}
 
@@ -346,6 +335,8 @@ func MemberLoginHandler(c *gin.Context) {
 		"isPaid":                   isPaid,
 		"subscription_active":      isPaid,
 		"payment_status":           foundMember["payment_status"],
+		"subscription_year":        foundMember["subscription_year"],
+		"subscription_valid_until": foundMember["subscription_valid_until"],
 	}
 
 	respondOK(c, MemberLoginResponse{
@@ -460,7 +451,7 @@ func ChangeMemberPasswordHandler(c *gin.Context) {
 
 	cfg := config.GetConfig()
 	data, _ := json.MarshalIndent(members, "", "  ")
-	if err := os.WriteFile(cfg.MembersFile, data, 0644); err != nil {
+	if err := utils.WriteFileAtomic(cfg.MembersFile, data, 0644); err != nil {
 		respondError(c, http.StatusInternalServerError, "Failed to save")
 		return
 	}

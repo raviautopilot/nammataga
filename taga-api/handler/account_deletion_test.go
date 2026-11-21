@@ -68,10 +68,11 @@ func createTestMember(t *testing.T, id, tagaID, email, rawPassword string) {
 		"tagaId":        tagaID,
 		"emailId":       email,
 		"username":      email,
-		"name":          "Test User",
-		"password":      string(hashed),
-		"first_login":   false,
+		"name":           "Test User",
+		"password":       string(hashed),
+		"first_login":    false,
 		"payment_status": "Paid",
+		"mobile_number":  "9876543210",
 	}
 
 	var members []map[string]interface{}
@@ -316,6 +317,12 @@ func TestAdminReview_ListApproveReject(t *testing.T) {
 	_ = json.Unmarshal(wList.Body.Bytes(), &listResp)
 	requestsList := listResp["requests"].([]interface{})
 	assert.Len(t, requestsList, 1)
+
+	firstReq := requestsList[0].(map[string]interface{})
+	assert.Equal(t, "9876543210", firstReq["mobile_number"], "Mobile number should be enriched in admin deletion requests list")
+	assert.Equal(t, true, firstReq["is_paid"], "Subscription status should be enriched as Paid")
+	assert.Equal(t, true, firstReq["subscription_active"])
+	assert.Equal(t, "Paid", firstReq["subscription_status"])
 
 	// 2. Admin rejects without remarks -> 400 Bad Request
 	emptyRemarks := map[string]string{"remarks": "   "}

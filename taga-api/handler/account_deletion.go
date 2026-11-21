@@ -167,6 +167,17 @@ func RequestAccountDeletion(c *gin.Context) {
 	tagaID := utils.GetStringFromMap(foundMember, "tagaId")
 	memberName := utils.GetStringFromMap(foundMember, "name")
 
+	mobileNumber := utils.GetStringFromMap(foundMember, "mobile_number")
+	if mobileNumber == "" {
+		mobileNumber = utils.GetStringFromMap(foundMember, "mobileNumber")
+	}
+	if mobileNumber == "" {
+		mobileNumber = utils.GetStringFromMap(foundMember, "phone")
+	}
+	if mobileNumber == "" {
+		mobileNumber = utils.GetStringFromMap(foundMember, "mobile")
+	}
+
 	// 2. Active Stay Check
 	hasActiveStay, err := service.HasActiveStayAtTagaTowers(memberIDStr, tagaID)
 	if err != nil {
@@ -182,7 +193,7 @@ func RequestAccountDeletion(c *gin.Context) {
 	}
 
 	// 3. Create deletion request
-	req, err := service.CreateDeletionRequest(c, memberIDStr, tagaID, memberName, emailStr, payload.Reason)
+	req, err := service.CreateDeletionRequest(c, memberIDStr, tagaID, memberName, emailStr, payload.Reason, mobileNumber)
 	if err != nil {
 		if strings.Contains(err.Error(), "already pending") {
 			c.JSON(http.StatusBadRequest, gin.H{

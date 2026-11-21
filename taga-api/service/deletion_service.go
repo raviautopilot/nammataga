@@ -157,7 +157,10 @@ func getMemberSubscriptionsFilePath() string {
 
 // CancelActiveSubscriptionsForMember cancels any active subscription for the member.
 func CancelActiveSubscriptionsForMember(memberID, tagaID, email string) error {
-	subsPath := getMemberSubscriptionsFilePath()
+	SubscriptionsLock.Lock()
+	defer SubscriptionsLock.Unlock()
+
+	subsPath := GetMemberSubscriptionsFilePath()
 	data, err := os.ReadFile(subsPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -503,7 +506,242 @@ func saveAllDeletionRequestsUnsafe(reqs []model.DeletionRequest) error {
 	return utils.WriteFileAtomic(filePath, data, 0644)
 }
 
-// ListDeletionRequests returns all deletion requests, optionally filtered by status.
+func getMembersFilePath() string {
+	cfg := config.GetConfig()
+	if cfg.MembersFile != "" {
+		return cfg.MembersFile
+	}
+	return "data/member/members.json"
+}
+
+func getDeletedMembersFilePath() string {
+	cfg := config.GetConfig()
+	if cfg.DeletedMembersFile != "" {
+		return cfg.DeletedMembersFile
+	}
+	return "data/member/deleted_member.json"
+}
+
+func getMemberMobileFromFiles(memberID, tagaID, email string) string {
+	cleanID := strings.TrimSpace(memberID)
+	cleanTaga := strings.TrimSpace(tagaID)
+	cleanEmail := strings.ToLower(strings.TrimSpace(email))
+
+	// 1. Try active members.json
+	membersFile := getMembersFilePath()
+	if data, err := os.ReadFile(membersFile); err == nil && len(data) > 0 {
+		var members []map[string]interface{}
+		if err := json.Unmarshal(data, &members); err == nil {
+			for _, m := range members {
+				id := utils.GetStringFromMap(m, "id")
+				t := utils.GetStringFromMap(m, "tagaId")
+				em := strings.ToLower(utils.GetStringFromMap(m, "emailId"))
+				if em == "" {
+					em = strings.ToLower(utils.GetStringFromMap(m, "email"))
+				}
+				if em == "" {
+					em = strings.ToLower(utils.GetStringFromMap(m, "username"))
+				}
+
+				if (cleanID != "" && id == cleanID) ||
+					(cleanTaga != "" && strings.EqualFold(t, cleanTaga)) ||
+					(cleanEmail != "" && em == cleanEmail) {
+					mob := utils.GetStringFromMap(m, "mobile_number")
+					if mob == "" {
+						mob = utils.GetStringFromMap(m, "mobileNumber")
+					}
+					if mob == "" {
+						mob = utils.GetStringFromMap(m, "phone")
+					}
+					if mob == "" {
+						mob = utils.GetStringFromMap(m, "mobile")
+					}
+					if mob != "" {
+						return mob
+					}
+				}
+			}
+		}
+	}
+
+	// 2. Try deleted_member.json
+	deletedFile := getDeletedMembersFilePath()
+	if data, err := os.ReadFile(deletedFile); err == nil && len(data) > 0 {
+		var archived []map[string]interface{}
+		if err := json.Unmarshal(data, &archived); err == nil {
+			for _, m := range archived {
+				id := utils.GetStringFromMap(m, "id")
+				t := utils.GetStringFromMap(m, "tagaId")
+				em := strings.ToLower(utils.GetStringFromMap(m, "emailId"))
+				if em == "" {
+					em = strings.ToLower(utils.GetStringFromMap(m, "email"))
+				}
+				if em == "" {
+					em = strings.ToLower(utils.GetStringFromMap(m, "username"))
+				}
+
+				if (cleanID != "" && id == cleanID) ||
+					(cleanTaga != "" && strings.EqualFold(t, cleanTaga)) ||
+					(cleanEmail != "" && em == cleanEmail) {
+					mob := utils.GetStringFromMap(m, "mobile_number")
+					if mob == "" {
+						mob = utils.GetStringFromMap(m, "mobileNumber")
+					}
+					if mob == "" {
+						mob = utils.GetStringFromMap(m, "phone")
+					}
+					if mob == "" {
+						mob = utils.GetStringFromMap(m, "mobile")
+					}
+					if mob != "" {
+						return mob
+					}
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+func checkMemberSubscriptionStatus(memberID, tagaID, email string) (bool, string) {
+	cleanID := strings.TrimSpace(memberID)
+	cleanTaga := strings.TrimSpace(tagaID)
+	cleanEmail := strings.ToLower(strings.TrimSpace(email))
+
+	// 1. Check member_subscriptions.json for active subscription
+	subsPath := getMemberSubscriptionsFilePath()
+	if sData, err := os.ReadFile(subsPath); err == nil && len(sData) > 0 {
+		var subs []map[string]interface{}
+		if err := json.Unmarshal(sData, &subs); err == nil {
+			for _, s := range subs {
+				sMemberID := utils.GetStringFromMap(s, "member_id")
+				sEmail := strings.ToLower(utils.GetStringFromMap(s, "member_email"))
+				sStatus := strings.ToLower(utils.GetStringFromMap(s, "status"))
+
+				matches := (cleanID != "" && sMemberID == cleanID) ||
+					(cleanTaga != "" && strings.EqualFold(sMemberID, cleanTaga)) ||
+					(cleanEmail != "" && sEmail == cleanEmail)
+
+				if matches && sStatus == "active" {
+					return true, "Paid"
+				}
+			}
+		}
+	}
+
+	// 2. Check members.json
+	membersFile := getMembersFilePath()
+	if data, err := os.ReadFile(membersFile); err == nil && len(data) > 0 {
+		var members []map[string]interface{}
+		if err := json.Unmarshal(data, &members); err == nil {
+			for _, m := range members {
+				id := utils.GetStringFromMap(m, "id")
+				t := utils.GetStringFromMap(m, "tagaId")
+				em := strings.ToLower(utils.GetStringFromMap(m, "emailId"))
+				if em == "" {
+					em = strings.ToLower(utils.GetStringFromMap(m, "email"))
+				}
+				if em == "" {
+					em = strings.ToLower(utils.GetStringFromMap(m, "username"))
+				}
+
+				matches := (cleanID != "" && id == cleanID) ||
+					(cleanTaga != "" && strings.EqualFold(t, cleanTaga)) ||
+					(cleanEmail != "" && em == cleanEmail)
+
+				if matches {
+					pStatus := utils.GetStringFromMap(m, "payment_status")
+					mStatus := utils.GetStringFromMap(m, "membership_status")
+					subActive := false
+					if val, ok := m["subscription_active"].(bool); ok {
+						subActive = val
+					}
+
+					if strings.EqualFold(pStatus, "Paid") || strings.EqualFold(pStatus, "active") ||
+						strings.EqualFold(mStatus, "active") || subActive {
+						return true, "Paid"
+					}
+
+					if pStatus != "" {
+						return false, pStatus
+					}
+					return false, "Unpaid"
+				}
+			}
+		}
+	}
+
+	// 3. Fallback to deleted_member.json
+	deletedFile := getDeletedMembersFilePath()
+	if data, err := os.ReadFile(deletedFile); err == nil && len(data) > 0 {
+		var archived []map[string]interface{}
+		if err := json.Unmarshal(data, &archived); err == nil {
+			for _, m := range archived {
+				id := utils.GetStringFromMap(m, "id")
+				t := utils.GetStringFromMap(m, "tagaId")
+				em := strings.ToLower(utils.GetStringFromMap(m, "emailId"))
+				if em == "" {
+					em = strings.ToLower(utils.GetStringFromMap(m, "email"))
+				}
+
+				matches := (cleanID != "" && id == cleanID) ||
+					(cleanTaga != "" && strings.EqualFold(t, cleanTaga)) ||
+					(cleanEmail != "" && em == cleanEmail)
+
+				if matches {
+					pStatus := utils.GetStringFromMap(m, "payment_status")
+					if strings.EqualFold(pStatus, "Paid") {
+						return true, "Paid"
+					}
+					if pStatus != "" {
+						return false, pStatus
+					}
+				}
+			}
+		}
+	}
+
+	return false, "Unpaid"
+}
+
+func enrichDeletionRequest(r *model.DeletionRequest) {
+	if r.TagaIDSnake == "" {
+		r.TagaIDSnake = r.TagaID
+	}
+
+	// 1. Mobile number enrichment
+	if strings.TrimSpace(r.MobileNumber) == "" {
+		r.MobileNumber = getMemberMobileFromFiles(r.MemberID, r.TagaID, r.Email)
+	}
+	r.Mobile = r.MobileNumber
+
+	// 2. Subscription & payment status enrichment
+	isPaid, status := checkMemberSubscriptionStatus(r.MemberID, r.TagaID, r.Email)
+	r.IsPaid = isPaid
+	r.SubscriptionActive = isPaid
+	if r.SubscriptionStatus == "" || r.SubscriptionStatus == "unknown" {
+		r.SubscriptionStatus = status
+	}
+	if r.PaymentStatus == "" || r.PaymentStatus == "unknown" {
+		r.PaymentStatus = status
+	}
+	if isPaid {
+		r.SubscriptionStatus = "Paid"
+		r.PaymentStatus = "Paid"
+	}
+}
+
+func enrichDeletionRequests(reqs []model.DeletionRequest) []model.DeletionRequest {
+	enriched := make([]model.DeletionRequest, len(reqs))
+	for i := range reqs {
+		enriched[i] = reqs[i]
+		enrichDeletionRequest(&enriched[i])
+	}
+	return enriched
+}
+
+// ListDeletionRequests returns all deletion requests enriched with mobile number and subscription status.
 func ListDeletionRequests(statusFilter string) ([]model.DeletionRequest, error) {
 	deletionLock.Lock()
 	defer deletionLock.Unlock()
@@ -513,12 +751,14 @@ func ListDeletionRequests(statusFilter string) ([]model.DeletionRequest, error) 
 		return nil, err
 	}
 
+	enriched := enrichDeletionRequests(reqs)
+
 	if statusFilter == "" {
-		return reqs, nil
+		return enriched, nil
 	}
 
-	filtered := make([]model.DeletionRequest, 0, len(reqs))
-	for _, r := range reqs {
+	filtered := make([]model.DeletionRequest, 0, len(enriched))
+	for _, r := range enriched {
 		if strings.EqualFold(string(r.Status), statusFilter) {
 			filtered = append(filtered, r)
 		}
@@ -526,7 +766,7 @@ func ListDeletionRequests(statusFilter string) ([]model.DeletionRequest, error) 
 	return filtered, nil
 }
 
-// GetDeletionRequestByID retrieves a deletion request by ID.
+// GetDeletionRequestByID retrieves a deletion request by ID with enrichment.
 func GetDeletionRequestByID(requestID string) (*model.DeletionRequest, error) {
 	deletionLock.Lock()
 	defer deletionLock.Unlock()
@@ -538,6 +778,7 @@ func GetDeletionRequestByID(requestID string) (*model.DeletionRequest, error) {
 
 	for _, r := range reqs {
 		if r.ID == requestID {
+			enrichDeletionRequest(&r)
 			return &r, nil
 		}
 	}
@@ -563,6 +804,7 @@ func GetPendingDeletionRequest(memberID, tagaID, email string) (bool, *model.Del
 			(email != "" && strings.EqualFold(r.Email, email))
 
 		if matches {
+			enrichDeletionRequest(&r)
 			return true, &r, nil
 		}
 	}
@@ -588,6 +830,7 @@ func GetLatestDeletionRequest(memberID, tagaID, email string) (*model.DeletionRe
 			(email != "" && strings.EqualFold(r.Email, email))
 
 		if matches {
+			enrichDeletionRequest(&r)
 			latest = &r
 			break
 		}
@@ -596,8 +839,8 @@ func GetLatestDeletionRequest(memberID, tagaID, email string) (*model.DeletionRe
 	return latest, nil
 }
 
-// CreateDeletionRequest creates a new pending deletion request.
-func CreateDeletionRequest(c *gin.Context, memberID, tagaID, memberName, email, reason string) (*model.DeletionRequest, error) {
+// CreateDeletionRequest creates a new pending deletion request, stores mobile number, and sends notification emails.
+func CreateDeletionRequest(c *gin.Context, memberID, tagaID, memberName, memberEmail, reason string, mobileNumberOpt ...string) (*model.DeletionRequest, error) {
 	deletionLock.Lock()
 	defer deletionLock.Unlock()
 
@@ -620,22 +863,40 @@ func CreateDeletionRequest(c *gin.Context, memberID, tagaID, memberName, email, 
 		if r.Status == model.DeletionStatusPending {
 			if (memberID != "" && r.MemberID == memberID) ||
 				(tagaID != "" && strings.EqualFold(r.TagaID, tagaID)) ||
-				(email != "" && strings.EqualFold(r.Email, email)) {
+				(memberEmail != "" && strings.EqualFold(r.Email, memberEmail)) {
 				return nil, fmt.Errorf("account deletion request is already pending")
 			}
 		}
 	}
 
+	// Resolve mobile number
+	mobileNumber := ""
+	if len(mobileNumberOpt) > 0 {
+		mobileNumber = strings.TrimSpace(mobileNumberOpt[0])
+	}
+	if mobileNumber == "" {
+		mobileNumber = getMemberMobileFromFiles(memberID, tagaID, memberEmail)
+	}
+
+	// Resolve subscription status
+	isPaid, paymentStatus := checkMemberSubscriptionStatus(memberID, tagaID, memberEmail)
+
 	newReq := model.DeletionRequest{
-		ID:          uuid.New().String(),
-		MemberID:    memberID,
-		TagaID:      tagaID,
-		TagaIDSnake: tagaID,
-		MemberName:  memberName,
-		Email:       email,
-		Status:      model.DeletionStatusPending,
-		Reason:      strings.TrimSpace(reason),
-		RequestedAt: time.Now().Format(time.RFC3339),
+		ID:                 uuid.New().String(),
+		MemberID:           memberID,
+		TagaID:             tagaID,
+		TagaIDSnake:        tagaID,
+		MemberName:         memberName,
+		Email:              memberEmail,
+		MobileNumber:       mobileNumber,
+		Mobile:             mobileNumber,
+		Status:             model.DeletionStatusPending,
+		Reason:             strings.TrimSpace(reason),
+		RequestedAt:        time.Now().Format(time.RFC3339),
+		SubscriptionStatus: paymentStatus,
+		PaymentStatus:      paymentStatus,
+		IsPaid:             isPaid,
+		SubscriptionActive: isPaid,
 	}
 
 	reqs = append(reqs, newReq)
@@ -648,11 +909,40 @@ func CreateDeletionRequest(c *gin.Context, memberID, tagaID, memberName, email, 
 
 	// Audit log
 	if c != nil {
-		_ = audit.Log(c, tagaID, email,
+		_ = audit.Log(c, tagaID, memberEmail,
 			audit.ActionCreate, audit.ModuleMember,
 			"deletion_request", newReq.ID,
 			fmt.Sprintf("Member %s (tagaId: %s) requested account deletion", memberName, tagaID),
 			nil, newReq)
+	}
+
+	// 1. Dispatch acknowledgement email to member
+	if memberEmail != "" {
+		go func(to, name, taga, rsn, reqAt string) {
+			if err := email.SendAccountDeletionRequestAcknowledgement(to, name, taga, rsn, reqAt); err != nil {
+				if config.Logger != nil {
+					config.Logger.Warn("Failed to send deletion request acknowledgement email to member",
+						zap.String("to", to), zap.Error(err))
+				}
+			}
+		}(memberEmail, memberName, tagaID, newReq.Reason, newReq.RequestedAt)
+	}
+
+	// 2. Dispatch alert notification email to admin
+	cfg := config.GetConfig()
+	adminEmail := cfg.AdminEmail
+	if adminEmail == "" {
+		adminEmail = "nammataga@gmail.com"
+	}
+	if adminEmail != "" {
+		go func(admEmail, name, taga, memEmail, mob, rsn, reqAt string) {
+			if err := email.SendAccountDeletionRequestAdminAlert(admEmail, name, taga, memEmail, mob, rsn, reqAt); err != nil {
+				if config.Logger != nil {
+					config.Logger.Warn("Failed to send deletion request alert email to admin",
+						zap.String("admin_email", admEmail), zap.Error(err))
+				}
+			}
+		}(adminEmail, memberName, tagaID, memberEmail, mobileNumber, newReq.Reason, newReq.RequestedAt)
 	}
 
 	return &newReq, nil

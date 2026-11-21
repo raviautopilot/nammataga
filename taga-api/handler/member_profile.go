@@ -46,10 +46,12 @@ func GetMemberProfileByToken(c *gin.Context) {
 			delete(member, "password")
 			isPaid := checkAnnualSubscriptionStatus(memberID.(string))
 			if !isPaid {
-				if subActive, ok := member["subscription_active"].(bool); ok && subActive {
-					isPaid = true
-				} else if pStatus, ok := member["payment_status"].(string); ok && strings.EqualFold(pStatus, "Paid") {
-					isPaid = true
+				if isOfflineSubscriptionValid(member, time.Now()) {
+					if subActive, ok := member["subscription_active"].(bool); ok && subActive {
+						isPaid = true
+					} else if pStatus, ok := member["payment_status"].(string); ok && strings.EqualFold(pStatus, "Paid") {
+						isPaid = true
+					}
 				}
 			}
 			member["isPaid"] = isPaid

@@ -15,8 +15,10 @@ import (
 
 	"taga-api/config"
 	"taga-api/model"
+	"taga-api/service"
 	"taga-api/service/audit"
 	"taga-api/service/member"
+	"taga-api/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -53,19 +55,7 @@ func getMembershipYearEnd(now time.Time) time.Time {
 // hasMemberPaidOneTime checks if a member has already paid a one‑time subscription.
 // For one‑time fees, any existing record (regardless of status) means they cannot pay again.
 func hasMemberPaidOneTime(subscriptionID, email string) bool {
-	filePath := getMemberSubscriptionsFilePath()
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return false
-	}
-	var subscriptions []model.MemberSubscription
-	json.Unmarshal(data, &subscriptions)
-	for _, sub := range subscriptions {
-		if strings.EqualFold(sub.MemberEmail, email) && sub.SubscriptionID == subscriptionID {
-			return true
-		}
-	}
-	return false
+	return service.HasMemberPaidOneTime(subscriptionID, email)
 }
 
 func HasMemberPaidOneTimeForTest(subscriptionID, email string) bool {
@@ -360,12 +350,7 @@ func VerifySubscriptionPayment(c *gin.Context) {
 	// Get subscription name
 	subscriptionName := getSubscriptionName(req.SubscriptionID)
 
-	// ===== For annual subscriptions: expire any existing active ones =====
-	if req.SubscriptionID == "annual-subscription" {
-		expireExistingAnnualSubscriptions(req.Email)
-	}
-
-	// Save member subscription
+	// Create member subscription record
 	memberSub := model.MemberSubscription{
 		ID:               uuid.New().String(),
 		MemberID:         memberID,
@@ -384,7 +369,17 @@ func VerifySubscriptionPayment(c *gin.Context) {
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
-	saveMemberSubscription(memberSub)
+
+	// For annual subscriptions: perform atomic renewal (expires previous active ones and saves new)
+	if req.SubscriptionID == "annual-subscription" {
+		if err := service.RenewAnnualSubscription(memberSub, req.Email, memberID, memberID); err != nil {
+			config.Logger.Error("Failed to renew annual subscription", zap.Error(err))
+		}
+	} else {
+		if err := service.SaveMemberSubscription(memberSub); err != nil {
+			config.Logger.Error("Failed to save member subscription", zap.Error(err))
+		}
+	}
 
 	// Update member payment status only for annual subscription
 	if req.SubscriptionID == "annual-subscription" {
@@ -541,35 +536,13 @@ func buildSubscriptionEmailBody(data AdminSubscriptionData) string {
 
 // expireExistingAnnualSubscriptions sets all active annual subscriptions for a given email to "expired".
 func expireExistingAnnualSubscriptions(email string) {
-	filePath := getMemberSubscriptionsFilePath()
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return
-	}
-
-	var subscriptions []model.MemberSubscription
-	json.Unmarshal(data, &subscriptions)
-
 	memberInfo := getMemberDetailsByEmail(email)
-	modified := false
-	now := time.Now()
-	for i, sub := range subscriptions {
-		matches := strings.EqualFold(sub.MemberEmail, email)
-		if !matches && memberInfo != nil {
-			matches = (memberInfo.ID != "" && sub.MemberID == memberInfo.ID) ||
-				(memberInfo.TagaID != "" && sub.MemberID == memberInfo.TagaID)
-		}
-		if matches && sub.SubscriptionID == "annual-subscription" && sub.Status == "active" {
-			subscriptions[i].Status = "expired"
-			subscriptions[i].UpdatedAt = now
-			modified = true
-		}
+	var memberID, tagaID string
+	if memberInfo != nil {
+		memberID = memberInfo.ID
+		tagaID = memberInfo.TagaID
 	}
-
-	if modified {
-		updatedData, _ := json.MarshalIndent(subscriptions, "", "  ")
-		os.WriteFile(filePath, updatedData, 0644)
-	}
+	_ = service.ExpireExistingAnnualSubscriptions(email, tagaID, memberID)
 }
 
 // GetMemberSubscriptionStatus godoc
@@ -636,11 +609,11 @@ func getPaymentTransactionsFilePath() string {
 
 
 
-var subscriptionsFileLock sync.RWMutex
+var paymentTransactionsLock sync.RWMutex
 
 func updatePaymentTransaction(orderID, status, paymentID string) {
-	subscriptionsFileLock.Lock()
-	defer subscriptionsFileLock.Unlock()
+	paymentTransactionsLock.Lock()
+	defer paymentTransactionsLock.Unlock()
 
 	filePath := getPaymentTransactionsFilePath()
 	data, err := os.ReadFile(filePath)
@@ -660,72 +633,25 @@ func updatePaymentTransaction(orderID, status, paymentID string) {
 	}
 
 	updatedData, _ := json.MarshalIndent(transactions, "", "  ")
-	os.WriteFile(filePath, updatedData, 0644)
+	_ = utils.WriteFileAtomic(filePath, updatedData, 0644)
 }
 
 func saveMemberSubscription(subscription model.MemberSubscription) {
-	subscriptionsFileLock.Lock()
-	defer subscriptionsFileLock.Unlock()
-
-	filePath := getMemberSubscriptionsFilePath()
-	os.MkdirAll(filepath.Dir(filePath), 0755)
-
-	var subscriptions []model.MemberSubscription
-	data, err := os.ReadFile(filePath)
-	if err == nil {
-		json.Unmarshal(data, &subscriptions)
-	}
-
-	subscriptions = append(subscriptions, subscription)
-	updatedData, _ := json.MarshalIndent(subscriptions, "", "  ")
-	os.WriteFile(filePath, updatedData, 0644)
+	_ = service.SaveMemberSubscription(subscription)
 }
 
 func getActiveMemberSubscription(email string) (*model.MemberSubscription, error) {
-	filePath := getMemberSubscriptionsFilePath()
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	var subscriptions []model.MemberSubscription
-	json.Unmarshal(data, &subscriptions)
-
 	memberInfo := getMemberDetailsByEmail(email)
-
-	for _, s := range subscriptions {
-		matches := strings.EqualFold(s.MemberEmail, email)
-		if !matches && memberInfo != nil {
-			matches = (memberInfo.ID != "" && s.MemberID == memberInfo.ID) ||
-				(memberInfo.TagaID != "" && s.MemberID == memberInfo.TagaID)
-		}
-		if matches && s.Status == "active" {
-			return &s, nil
-		}
+	var memberID, tagaID string
+	if memberInfo != nil {
+		memberID = memberInfo.ID
+		tagaID = memberInfo.TagaID
 	}
-	return nil, fmt.Errorf("no active subscription found")
+	return service.GetActiveMemberSubscription(email, tagaID, memberID)
 }
 
 func updateSubscriptionStatus(subscriptionID, status string) {
-	filePath := getMemberSubscriptionsFilePath()
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return
-	}
-
-	var subscriptions []model.MemberSubscription
-	json.Unmarshal(data, &subscriptions)
-
-	for i, s := range subscriptions {
-		if s.ID == subscriptionID {
-			subscriptions[i].Status = status
-			subscriptions[i].UpdatedAt = time.Now()
-			break
-		}
-	}
-
-	updatedData, _ := json.MarshalIndent(subscriptions, "", "  ")
-	os.WriteFile(filePath, updatedData, 0644)
+	_ = service.UpdateSubscriptionStatus(subscriptionID, status)
 }
 
 
@@ -794,7 +720,9 @@ func GetMemberPaidSubscriptions(c *gin.Context) {
 	// Check members.json for offline payment or active status
 	if memberInfo != nil {
 		if strings.EqualFold(memberInfo.PaymentStatus, "Paid") || memberInfo.SubscriptionActive {
-			isAnnualPaid = true
+			if isMemberInfoOfflinePaidValid(memberInfo, now) {
+				isAnnualPaid = true
+			}
 		}
 	}
 
@@ -830,11 +758,8 @@ func GetMemberPaidSubscriptions(c *gin.Context) {
 	}
 
 	// 3. Scan member's subscription records for one‑time fees (matched by email, UUID, or TagaID)
-	filePath := getMemberSubscriptionsFilePath()
-	data, err := os.ReadFile(filePath)
+	subscriptions, err := service.ReadMemberSubscriptions()
 	if err == nil {
-		var subscriptions []model.MemberSubscription
-		json.Unmarshal(data, &subscriptions)
 		seen := make(map[string]bool)
 		for _, sub := range subscriptions {
 			matches := strings.EqualFold(sub.MemberEmail, email)

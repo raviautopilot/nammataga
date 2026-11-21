@@ -19,6 +19,7 @@ import (
 	"taga-api/service"
 	"taga-api/service/audit"
 	"taga-api/service/member"
+	"taga-api/utils"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -81,6 +82,8 @@ type AddMemberRequest struct {
 	CpsGpfNumber             string `json:"cpsGpfNumber"`
 	PaymentStatus            string `json:"paymentStatus"`
 	PaymentStatusSnake       string `json:"payment_status"`
+	SubscriptionYear         string `json:"subscription_year"`
+	SubscriptionValidUntil   string `json:"subscription_valid_until"`
 }
 
 type UpdateMemberRequest struct {
@@ -104,21 +107,25 @@ type UpdateMemberRequest struct {
 	CpsGpfNumber             string `json:"cps_gpf_number"`
 	PaymentStatus            string `json:"payment_status"`
 	PaymentStatusCamel       string `json:"paymentStatus"`
+	SubscriptionYear         string `json:"subscription_year"`
+	SubscriptionValidUntil   string `json:"subscription_valid_until"`
 }
 
 type MemberListItem struct {
-	ID               string `json:"id"`
-	TagaID           string `json:"tagaId"`
-	Name             string `json:"name"`
-	Initial          string `json:"initial"`
-	Gender           string `json:"gender"`
-	District         string `json:"district"`
-	Designation      string `json:"designation"`
-	RecruitmentBatch string `json:"recruitment_batch"`
-	MobileNumber     string `json:"mobile_number"`
-	Email            string `json:"email"`
-	PaymentStatus    string `json:"payment_status"`
-	MembershipStatus string `json:"membership_status"`
+	ID                     string `json:"id"`
+	TagaID                 string `json:"tagaId"`
+	Name                   string `json:"name"`
+	Initial                string `json:"initial"`
+	Gender                 string `json:"gender"`
+	District               string `json:"district"`
+	Designation            string `json:"designation"`
+	RecruitmentBatch       string `json:"recruitment_batch"`
+	MobileNumber           string `json:"mobile_number"`
+	Email                  string `json:"email"`
+	PaymentStatus          string `json:"payment_status"`
+	MembershipStatus       string `json:"membership_status"`
+	SubscriptionYear       string `json:"subscription_year,omitempty"`
+	SubscriptionValidUntil string `json:"subscription_valid_until,omitempty"`
 }
 
 type MemberListResponse struct {
@@ -282,6 +289,18 @@ func AddMember(c *gin.Context) {
 		dob = "1995-10-01"
 	}
 	isPaid := strings.EqualFold(paymentStatus, "Paid")
+	now := time.Now()
+	var subYear, subValidUntil string
+	if isPaid {
+		subYear = req.SubscriptionYear
+		if subYear == "" {
+			subYear = utils.FinancialYear(now)
+		}
+		subValidUntil = req.SubscriptionValidUntil
+		if subValidUntil == "" {
+			subValidUntil = utils.SubscriptionValidUntil(now)
+		}
+	}
 
 	newMember := model.Member{
 		ID:                       service.ResolveMemberUID(req.TagaID, req.Email, existingMembers),
@@ -307,9 +326,11 @@ func AddMember(c *gin.Context) {
 		CpsGpfNumber:             req.CpsGpfNumber,
 		Password:                 string(hashedPassword),
 		FirstLogin:               true,
-		CreatedAt:                time.Now().Format(time.RFC3339),
+		CreatedAt:                now.Format(time.RFC3339),
 		PaymentStatus:            paymentStatus,
 		SubscriptionActive:       isPaid,
+		SubscriptionYear:         subYear,
+		SubscriptionValidUntil:   subValidUntil,
 	}
 
 	if err := member.SaveMember(newMember); err != nil {
@@ -463,7 +484,23 @@ func UpdateMember(c *gin.Context) {
 		}
 		if pStatus != "" {
 			members[i]["payment_status"] = pStatus
-			members[i]["subscription_active"] = strings.EqualFold(pStatus, "Paid")
+			isPaid := strings.EqualFold(pStatus, "Paid")
+			members[i]["subscription_active"] = isPaid
+			if isPaid {
+				now := time.Now()
+				subYear := req.SubscriptionYear
+				if subYear == "" {
+					subYear = utils.FinancialYear(now)
+				}
+				subValidUntil := req.SubscriptionValidUntil
+				if subValidUntil == "" {
+					subValidUntil = utils.SubscriptionValidUntil(now)
+				}
+				members[i]["subscription_year"] = subYear
+				members[i]["subscription_valid_until"] = subValidUntil
+			} else {
+				members[i]["subscription_active"] = false
+			}
 		}
 
 		members[i]["updated_at"] = time.Now().Format(time.RFC3339)
@@ -482,7 +519,7 @@ func UpdateMember(c *gin.Context) {
 		return
 	}
 
-	if err := os.WriteFile(cfg.MembersFile, updatedData, 0644); err != nil {
+	if err := utils.WriteFileAtomic(cfg.MembersFile, updatedData, 0644); err != nil {
 		respondError(c, http.StatusInternalServerError, "Failed to save members")
 		return
 	}
@@ -695,31 +732,14 @@ func cleanupPaymentTransactions(memberID, memberTagaID string) {
 	}
 
 	updatedData, _ := json.MarshalIndent(filtered, "", "  ")
-	os.WriteFile(txnsPath, updatedData, 0644)
+	_ = utils.WriteFileAtomic(txnsPath, updatedData, 0644)
 }
 
 func cleanupMemberSubscriptions(memberID, memberTagaID string) {
-	subsPath := filepath.Join("data", "subscriptions", "member_subscriptions.json")
-	data, err := os.ReadFile(subsPath)
-	if err != nil {
+	if memberID == "" && memberTagaID == "" {
 		return
 	}
-
-	var subs []map[string]interface{}
-	if err := json.Unmarshal(data, &subs); err != nil {
-		return
-	}
-
-	filtered := make([]map[string]interface{}, 0, len(subs))
-	for _, s := range subs {
-		id, _ := s["member_id"].(string)
-		if id != memberID && id != memberTagaID {
-			filtered = append(filtered, s)
-		}
-	}
-
-	updatedData, _ := json.MarshalIndent(filtered, "", "  ")
-	_ = os.WriteFile(subsPath, updatedData, 0644)
+	_ = service.CleanupMemberSubscriptions(memberID, memberTagaID)
 }
 
 // BulkUploadMembers godoc
@@ -883,6 +903,11 @@ func BulkUploadMembers(c *gin.Context) {
 			"subscription_end_date":     nil,
 			"subscription_updated_at":   nil,
 		}
+		if isPaid {
+			now := time.Now()
+			newMember["subscription_year"] = utils.FinancialYear(now)
+			newMember["subscription_valid_until"] = utils.SubscriptionValidUntil(now)
+		}
 		existingMembers = append(existingMembers, newMember)
 		existingEmailMap[strings.ToLower(reg.EmailId)] = true
 		existingMobileMap[reg.MobileNumber] = true
@@ -912,7 +937,7 @@ func BulkUploadMembers(c *gin.Context) {
 		return
 	}
 
-	if err := os.WriteFile(cfg.MembersFile, data, 0644); err != nil {
+	if err := utils.WriteFileAtomic(cfg.MembersFile, data, 0644); err != nil {
 		respondError(c, http.StatusInternalServerError, "Failed to save members")
 		return
 	}
@@ -968,7 +993,11 @@ func GetMembersList(c *gin.Context) {
 
 		paymentStatus := getPaymentStatusFromMember(m, subscriptionMap)
 		if paymentFilter != "" && paymentFilter != "all" {
-			if !strings.EqualFold(paymentStatus, paymentFilter) {
+			if strings.EqualFold(paymentFilter, "unpaid") {
+				if !strings.EqualFold(paymentStatus, "unpaid") && !strings.EqualFold(paymentStatus, "expired") {
+					continue
+				}
+			} else if !strings.EqualFold(paymentStatus, paymentFilter) {
 				continue
 			}
 		}
@@ -991,18 +1020,20 @@ func GetMembersList(c *gin.Context) {
 		}
 
 		memberListItem := MemberListItem{
-			ID:               getString(m, "id"),
-			TagaID:           getString(m, "tagaId"),
-			Name:             getString(m, "name"),
-			Initial:          getString(m, "initial"),
-			Gender:           getString(m, "gender"),
-			District:         getString(m, "working_district"),
-			Designation:      getString(m, "designation"),
-			RecruitmentBatch: getString(m, "recruitment_batch"),
-			MobileNumber:     getString(m, "mobile_number"),
-			Email:            email,
-			PaymentStatus:    paymentStatus,
-			MembershipStatus: getMembershipStatus(m, subscriptionMap),
+			ID:                     getString(m, "id"),
+			TagaID:                 getString(m, "tagaId"),
+			Name:                   getString(m, "name"),
+			Initial:                getString(m, "initial"),
+			Gender:                 getString(m, "gender"),
+			District:               getString(m, "working_district"),
+			Designation:            getString(m, "designation"),
+			RecruitmentBatch:       getString(m, "recruitment_batch"),
+			MobileNumber:           getString(m, "mobile_number"),
+			Email:                  email,
+			PaymentStatus:          paymentStatus,
+			MembershipStatus:       getMembershipStatus(m, subscriptionMap),
+			SubscriptionYear:       getString(m, "subscription_year"),
+			SubscriptionValidUntil: getString(m, "subscription_valid_until"),
 		}
 		memberList = append(memberList, memberListItem)
 	}
@@ -1100,7 +1131,7 @@ func GetMemberStats(c *gin.Context) {
 		if getMembershipStatus(m, subscriptionMap) == "Active" {
 			active++
 		}
-		if paymentStatus == "Unpaid" {
+		if paymentStatus == "Unpaid" || paymentStatus == "Expired" {
 			unpaid++
 		}
 
@@ -1159,7 +1190,11 @@ func ExportMembersToExcel(c *gin.Context) {
 
 		if paymentStatus != "" && paymentStatus != "all" {
 			memberPaymentStatus := getMapString(memberMap, "payment_status")
-			if !strings.EqualFold(memberPaymentStatus, paymentStatus) {
+			if strings.EqualFold(paymentStatus, "unpaid") {
+				if !strings.EqualFold(memberPaymentStatus, "unpaid") && !strings.EqualFold(memberPaymentStatus, "expired") {
+					continue
+				}
+			} else if !strings.EqualFold(memberPaymentStatus, paymentStatus) {
 				continue
 			}
 		}
@@ -1849,30 +1884,19 @@ func sendErrorEmailToAdmin(errors []map[string]interface{}) error {
 func loadSubscriptionPaymentMap() map[string]bool {
 	subscriptionMap := make(map[string]bool)
 
-	filePath := filepath.Join("data", "subscriptions", "member_subscriptions.json")
-	data, err := os.ReadFile(filePath)
+	subscriptions, err := service.ReadMemberSubscriptions()
 	if err != nil {
-		return subscriptionMap
-	}
-
-	var subscriptions []map[string]interface{}
-	if err := json.Unmarshal(data, &subscriptions); err != nil {
 		return subscriptionMap
 	}
 
 	now := time.Now()
 	for _, sub := range subscriptions {
-		subID, _ := sub["subscription_id"].(string)
-		if subID != "annual-subscription" {
+		if sub.SubscriptionID != "annual-subscription" {
 			continue
 		}
-		if email, ok := sub["member_email"].(string); ok {
-			if status, ok := sub["status"].(string); ok && status == "active" {
-				if endDateStr, ok := sub["end_date"].(string); ok {
-					if endDate, err := time.Parse(time.RFC3339, endDateStr); err == nil && now.Before(endDate) {
-						subscriptionMap[email] = true
-					}
-				}
+		if sub.Status == "active" && now.Before(sub.EndDate) {
+			if sub.MemberEmail != "" {
+				subscriptionMap[sub.MemberEmail] = true
 			}
 		}
 	}
@@ -1880,20 +1904,31 @@ func loadSubscriptionPaymentMap() map[string]bool {
 }
 
 func getPaymentStatusFromMember(m map[string]interface{}, subscriptionMap map[string]bool) string {
+	email := getString(m, "emailId")
+	if isPaid, exists := subscriptionMap[email]; exists && isPaid {
+		return "Paid"
+	}
+
+	now := time.Now()
 	if pStatus, ok := m["payment_status"].(string); ok && pStatus != "" {
 		if strings.EqualFold(pStatus, "Paid") {
-			return "Paid"
+			if isOfflineSubscriptionValid(m, now) {
+				return "Paid"
+			}
+			return "Expired"
 		}
 		if strings.EqualFold(pStatus, "Unpaid") {
 			return "Unpaid"
 		}
+		if strings.EqualFold(pStatus, "Expired") {
+			return "Expired"
+		}
 	}
 	if subActive, ok := m["subscription_active"].(bool); ok && subActive {
-		return "Paid"
-	}
-	email := getString(m, "emailId")
-	if isPaid, exists := subscriptionMap[email]; exists && isPaid {
-		return "Paid"
+		if isOfflineSubscriptionValid(m, now) {
+			return "Paid"
+		}
+		return "Expired"
 	}
 	return "Unpaid"
 }
@@ -1918,12 +1953,19 @@ func getAllMembersFromStorage() ([]map[string]interface{}, error) {
 		return nil, err
 	}
 
+	now := time.Now()
 	result := make([]map[string]interface{}, len(members))
 	for i, m := range members {
 		membershipStatus := "Inactive"
-		paymentStatusLower := strings.ToLower(m.PaymentStatus)
-		if paymentStatusLower == "paid" || m.SubscriptionActive {
-			membershipStatus = "Active"
+		paymentStatus := m.PaymentStatus
+		if strings.EqualFold(paymentStatus, "Paid") || m.SubscriptionActive {
+			if isMemberOfflinePaidValid(m, now) {
+				membershipStatus = "Active"
+				paymentStatus = "Paid"
+			} else {
+				membershipStatus = "Inactive"
+				paymentStatus = "Expired"
+			}
 		}
 
 		result[i] = map[string]interface{}{
@@ -1947,8 +1989,10 @@ func getAllMembersFromStorage() ([]map[string]interface{}, error) {
 			"date_of_birth":             m.DateOfBirth,
 			"residential_address":       m.ResidentialAddress,
 			"permanent_address":         m.PermanentAddress,
-			"payment_status":            m.PaymentStatus,
+			"payment_status":            paymentStatus,
 			"membership_status":         membershipStatus,
+			"subscription_year":         m.SubscriptionYear,
+			"subscription_valid_until":  m.SubscriptionValidUntil,
 		}
 	}
 	return result, nil
