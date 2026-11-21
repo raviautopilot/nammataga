@@ -18,6 +18,7 @@ import (
 	"taga-api/config"
 	"taga-api/model"
 	"taga-api/router"
+	"taga-api/service"
 	"taga-api/service/jwt"
 )
 
@@ -189,7 +190,7 @@ func TestAccountDeletion_EligibilityAndRequest_PasswordAndActiveStayValidation(t
 	assert.Equal(t, "pending", statusMap["status"])
 
 	// 7. Attempt login as pending member:
-	// Returns 401 Unauthorized "Invalid credentials"
+	// Returns 403 Forbidden with exact professional message!
 	loginPayload := map[string]string{
 		"email":    email,
 		"password": rawPassword,
@@ -199,13 +200,13 @@ func TestAccountDeletion_EligibilityAndRequest_PasswordAndActiveStayValidation(t
 	reqLogin.Header.Set("Content-Type", "application/json")
 	wLogin := httptest.NewRecorder()
 	r.ServeHTTP(wLogin, reqLogin)
-	assert.Equal(t, http.StatusUnauthorized, wLogin.Code)
+	assert.Equal(t, http.StatusForbidden, wLogin.Code)
 
 	var loginErrMap map[string]interface{}
 	_ = json.Unmarshal(wLogin.Body.Bytes(), &loginErrMap)
-	assert.Equal(t, "Invalid credentials", loginErrMap["error"])
+	assert.Equal(t, service.PendingAccountMessage, loginErrMap["error"])
 
-	// 8. Attempt login as pending member with INVALID password -> Also returns 401 Unauthorized "Invalid credentials"
+	// 8. Attempt login as pending member with INVALID password -> Also returns 403 Forbidden because deletion review blocks login!
 	loginWrongPayload := map[string]string{
 		"email":    email,
 		"password": "wrongpassword123",
@@ -215,7 +216,7 @@ func TestAccountDeletion_EligibilityAndRequest_PasswordAndActiveStayValidation(t
 	reqLoginWrong.Header.Set("Content-Type", "application/json")
 	wLoginWrong := httptest.NewRecorder()
 	r.ServeHTTP(wLoginWrong, reqLoginWrong)
-	assert.Equal(t, http.StatusUnauthorized, wLoginWrong.Code)
+	assert.Equal(t, http.StatusForbidden, wLoginWrong.Code)
 }
 
 func TestAdminDirectDeletion_ActiveStayCheck(t *testing.T) {

@@ -441,7 +441,7 @@ void main() {
   });
 
   group('6. LoginScreen Pending Deletion Review Handling', () {
-    testWidgets('Displays invalid credentials dialog and banner without disclosing deletion review', (tester) async {
+    testWidgets('Displays dedicated amber dialog and banner when deletion review is pending', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -464,25 +464,27 @@ void main() {
       await tester.tap(signInButton);
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Verify dedicated amber dialog is NOT shown
-      expect(find.text('Account Deletion Pending'), findsNothing);
-      expect(find.textContaining('support@nammataga.com'), findsNothing);
-
-      // Verify explicit Invalid Credentials popup dialog is shown
-      expect(find.text('Invalid Credentials'), findsOneWidget);
+      // Verify dedicated amber dialog is displayed
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('Account Deletion Pending'), findsWidgets);
+      expect(find.textContaining('awaiting administrator review'), findsWidgets);
       expect(
-        find.text(
-          'The email address or password you entered is incorrect. Please check your credentials and try again.',
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.textContaining('support@nammataga.com'),
         ),
         findsOneWidget,
       );
 
       // Dismiss dialog
-      await tester.tap(find.text('Try Again'));
+      await tester.tap(find.text('Understood'));
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Verify Invalid credentials banner is visible on login screen
-      expect(find.text('Invalid credentials'), findsOneWidget);
+      // Verify dialog is closed and amber warning banner is visible on login screen
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.text('Account Deletion Pending'), findsOneWidget);
+      expect(find.textContaining('awaiting administrator review'), findsOneWidget);
+      expect(find.textContaining('support@nammataga.com'), findsOneWidget);
     });
   });
 }

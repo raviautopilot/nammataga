@@ -166,17 +166,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     } catch (e) {
       if (mounted) {
         final rawErr = e.toString().replaceAll('Exception: ', '').trim();
-        final isAuthFailure = rawErr.toLowerCase().contains('invalid') ||
-            rawErr.toLowerCase().contains('credential') ||
-            rawErr.toLowerCase().contains('unauthorized') ||
-            rawErr.toLowerCase().contains('password') ||
-            rawErr.toLowerCase().contains('401') ||
+        final isDeletionReview =
             rawErr.toLowerCase().contains('deletion') ||
             rawErr.toLowerCase().contains('administrator review') ||
             rawErr.toLowerCase().contains('pending') ||
             rawErr.toLowerCase().contains('request is awaiting') ||
             rawErr.toLowerCase().contains('account has been deleted') ||
             rawErr.toLowerCase().contains('cannot access your account');
+
+        if (isDeletionReview) {
+          setState(() {
+            _errorMessage =
+                'Your account deletion request is awaiting administrator review. You cannot access your account while the request is pending.';
+          });
+          HapticFeedback.mediumImpact();
+          _showDeletionPendingDialog();
+          return;
+        }
+
+        final isAuthFailure = rawErr.toLowerCase().contains('invalid') ||
+            rawErr.toLowerCase().contains('credential') ||
+            rawErr.toLowerCase().contains('unauthorized') ||
+            rawErr.toLowerCase().contains('password') ||
+            rawErr.toLowerCase().contains('401');
 
         setState(() {
           _errorMessage = isAuthFailure ? 'Invalid credentials' : rawErr;
@@ -198,6 +210,118 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _showDeletionPendingDialog() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+        contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFDE68A), width: 1),
+              ),
+              child: const Icon(
+                LucideIcons.clock,
+                color: Color(0xFFD97706),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Account Deletion Pending',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF92400E),
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Your account deletion request is awaiting administrator review. You cannot access your account while the request is pending.',
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF475569),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Need Help or Wish to Inquire?',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF92400E),
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Contact TAGA Administration:\n• Email: support@nammataga.com\n• Helpline: +91 44 2855 0000',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF78350F),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD97706),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text(
+                'Understood',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showInvalidCredentialsDialog(String message) {
@@ -656,81 +780,110 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         children: [
           // Clear Alert Banner when authentication fails
           if (_errorMessage != null) ...[
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0xFFFCA5A5),
-                  width: 1.2,
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0AE11D48),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFEE2E2),
-                      shape: BoxShape.circle,
+            Builder(
+              builder: (context) {
+                final isDeletionErr = _errorMessage?.toLowerCase().contains('deletion') == true ||
+                    _errorMessage?.toLowerCase().contains('pending') == true ||
+                    _errorMessage?.toLowerCase().contains('review') == true;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isDeletionErr ? const Color(0xFFFFFBEB) : const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDeletionErr ? const Color(0xFFFDE68A) : const Color(0xFFFCA5A5),
+                      width: 1.2,
                     ),
-                    child: const Icon(
-                      LucideIcons.alertCircle,
-                      color: Color(0xFFDC2626),
-                      size: 18,
-                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDeletionErr ? const Color(0x0AD97706) : const Color(0x0AE11D48),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _errorMessage!,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF991B1B),
-                            letterSpacing: -0.1,
-                          ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: isDeletionErr ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2),
+                          shape: BoxShape.circle,
                         ),
-                        if (_errorMessage == 'Invalid credentials') ...[
-                          const SizedBox(height: 2),
-                          const Text(
-                            'The email address or password you entered is incorrect. Please verify your credentials and try again.',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: Color(0xFFB91C1C),
-                              height: 1.35,
+                        child: Icon(
+                          isDeletionErr ? LucideIcons.clock : LucideIcons.alertCircle,
+                          color: isDeletionErr ? const Color(0xFFD97706) : const Color(0xFFDC2626),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isDeletionErr ? 'Account Deletion Pending' : _errorMessage!,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.bold,
+                                color: isDeletionErr ? const Color(0xFF92400E) : const Color(0xFF991B1B),
+                                letterSpacing: -0.1,
+                              ),
                             ),
-                          ),
-                        ],
-                      ],
-                    ),
+                            if (isDeletionErr) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                _errorMessage!,
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  color: Color(0xFF78350F),
+                                  height: 1.35,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Support: support@nammataga.com | +91 44 2855 0000',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: Color(0xFF78350F),
+                                  height: 1.35,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ] else if (_errorMessage == 'Invalid credentials') ...[
+                              const SizedBox(height: 2),
+                              const Text(
+                                'The email address or password you entered is incorrect. Please verify your credentials and try again.',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: Color(0xFFB91C1C),
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          LucideIcons.x,
+                          size: 15,
+                          color: isDeletionErr ? const Color(0xFF92400E) : const Color(0xFF991B1B),
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () {
+                          setState(() => _errorMessage = null);
+                        },
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(
-                      LucideIcons.x,
-                      size: 15,
-                      color: Color(0xFF991B1B),
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () {
-                      setState(() => _errorMessage = null);
-                    },
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ],
 

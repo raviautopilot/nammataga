@@ -15,7 +15,7 @@ import {
   SelectTrigger, SelectValue
 } from './ui/select';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Lock } from 'lucide-react';
+import { Eye, EyeOff, Lock, Clock, AlertCircle } from 'lucide-react';
 import { memberLoginAPI } from '../api/member';
 
 // API for membership and forgot password (keep these)
@@ -172,7 +172,11 @@ setIsLoading(false);
 
     setError(errorMsg);
 
-    toast.error(errorMsg);
+    if (errorMsg.toLowerCase().includes('deletion') || errorMsg.toLowerCase().includes('pending') || errorMsg.toLowerCase().includes('review')) {
+      toast.warning(errorMsg);
+    } else {
+      toast.error(errorMsg);
+    }
 
   } finally {
     setIsLoading(false);
@@ -313,9 +317,26 @@ const handleForgotPasswordSubmit = async (
           <form onSubmit={handleSubmit} className="space-y-4" data-testid="testid-login-form">
 
             {error && (
-              <Alert variant="destructive" data-testid="testid-error-message">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+              error.toLowerCase().includes('deletion') || error.toLowerCase().includes('pending') || error.toLowerCase().includes('review') ? (
+                <div className="bg-amber-50 border border-amber-300 rounded-lg p-3.5 text-amber-900 flex items-start gap-3" data-testid="testid-deletion-pending-alert">
+                  <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="text-xs space-y-1">
+                    <p className="font-semibold text-amber-900 text-sm">Account Deletion Pending</p>
+                    <p className="text-amber-800 leading-relaxed">{error}</p>
+                    <p className="text-amber-800/80 font-medium pt-1">
+                      Helpline: support@nammataga.com | +91 44 2855 0000
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <Alert variant="destructive" data-testid="testid-error-message">
+                  <AlertCircle className="w-4 h-4" />
+                  <AlertDescription>
+                    <p className="font-semibold text-sm">Invalid credentials</p>
+                    <p className="text-xs text-red-700/90 mt-0.5">The email address or password you entered is incorrect. Please check your credentials and try again.</p>
+                  </AlertDescription>
+                </Alert>
+              )
             )}
 
             <div>
