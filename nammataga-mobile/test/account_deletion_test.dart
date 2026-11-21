@@ -464,17 +464,10 @@ void main() {
       await tester.tap(signInButton);
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Verify dedicated amber dialog is displayed
+      // Verify dedicated amber dialog is displayed with clean message
       expect(find.byType(AlertDialog), findsOneWidget);
       expect(find.text('Account Deletion Pending'), findsWidgets);
       expect(find.textContaining('awaiting administrator review'), findsWidgets);
-      expect(
-        find.descendant(
-          of: find.byType(AlertDialog),
-          matching: find.textContaining('support@nammataga.com'),
-        ),
-        findsOneWidget,
-      );
 
       // Dismiss dialog
       await tester.tap(find.text('Understood'));
@@ -484,7 +477,6 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.text('Account Deletion Pending'), findsOneWidget);
       expect(find.textContaining('awaiting administrator review'), findsOneWidget);
-      expect(find.textContaining('support@nammataga.com'), findsOneWidget);
     });
 
     testWidgets('Displays Invalid Credentials dialog and error when wrong password', (tester) async {

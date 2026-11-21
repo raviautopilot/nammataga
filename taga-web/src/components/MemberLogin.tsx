@@ -323,9 +323,6 @@ const handleForgotPasswordSubmit = async (
                   <div className="text-xs space-y-1">
                     <p className="font-semibold text-amber-900 text-sm">Account Deletion Pending</p>
                     <p className="text-amber-800 leading-relaxed">{error}</p>
-                    <p className="text-amber-800/80 font-medium pt-1">
-                      Helpline: support@nammataga.com | +91 44 2855 0000
-                    </p>
                   </div>
                 </div>
               ) : (

@@ -274,51 +274,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Your account deletion request is awaiting administrator review. You cannot access your account while the request is pending.',
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.5,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF475569),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFBEB),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFFDE68A)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Need Help or Wish to Inquire?',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF92400E),
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Contact TAGA Administration:\n• Email: support@nammataga.com\n• Helpline: +91 44 2855 0000',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF78350F),
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        content: const Text(
+          'Your account deletion request is awaiting administrator review. You cannot access your account while the request is pending.',
+          style: TextStyle(
+            fontSize: 14,
+            height: 1.5,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF475569),
+          ),
         ),
         actions: [
           SizedBox(
@@ -858,16 +821,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               Text(
                                 _errorMessage!,
                                 style: const TextStyle(
-                                  fontSize: 11.5,
-                                  color: Color(0xFF78350F),
-                                  height: 1.35,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Support: support@nammataga.com | +91 44 2855 0000',
-                                style: TextStyle(
                                   fontSize: 11.5,
                                   color: Color(0xFF78350F),
                                   height: 1.35,
