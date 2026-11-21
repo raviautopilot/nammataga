@@ -85,17 +85,22 @@ export function AboutUs({ onNavigateToAnnouncements, isAdmin }: AboutUsProps = {
         // ✅ ensure stats is always array
         setStats(Array.isArray(statsData) ? statsData : []);
 
-        // Fetch active announcements for the home screen banner
-        try {
-          const notifRes = await fetch(`${API_BASE_URL}/member/notifications`);
-          if (notifRes.ok) {
-            const notifs = await notifRes.json();
-            if (Array.isArray(notifs) && notifs.length > 0) {
-              setLatestAnnouncement(notifs[0]);
+        // Fetch active announcements for the home screen banner (only when authenticated as member)
+        const token = localStorage.getItem('member_token') || localStorage.getItem('token');
+        if (token) {
+          try {
+            const notifRes = await fetch(`${API_BASE_URL}/member/notifications`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (notifRes.ok) {
+              const notifs = await notifRes.json();
+              if (Array.isArray(notifs) && notifs.length > 0) {
+                setLatestAnnouncement(notifs[0]);
+              }
             }
+          } catch {
+            // ignore notification fetch error
           }
-        } catch {
-          // ignore notification fetch error
         }
       } catch (err) {
         console.error("API ERROR:", err);

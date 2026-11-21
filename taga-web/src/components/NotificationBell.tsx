@@ -21,6 +21,11 @@ export function NotificationBell({
   const fetchNotifications = useCallback(async () => {
     try {
       const token = localStorage.getItem('member_token') || localStorage.getItem('token');
+      if (!token || !isLoggedIn) {
+        setHasNotifications(false);
+        return;
+      }
+
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const targetMemberId = memberId || user.id || user.emailId;
 
@@ -29,10 +34,9 @@ export function NotificationBell({
         url += `?member_id=${encodeURIComponent(targetMemberId)}`;
       }
 
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${token}`
+      };
 
       const response = await fetch(url, { headers });
       if (response.ok) {
@@ -49,13 +53,27 @@ export function NotificationBell({
       console.error('Failed to fetch notifications:', error);
       setHasNotifications(false);
     }
-  }, [memberId]);
+  }, [memberId, isLoggedIn]);
 
   useEffect(() => {
+    if (!isLoggedIn) {
+      setHasNotifications(false);
+      return;
+    }
+    const token = localStorage.getItem('member_token') || localStorage.getItem('token');
+    if (!token) {
+      setHasNotifications(false);
+      return;
+    }
+
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
   }, [fetchNotifications, isLoggedIn]);
+
+  if (!isLoggedIn) {
+    return null;
+  }
 
   const handleClick = () => {
     if (onClick) {

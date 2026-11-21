@@ -510,7 +510,7 @@ export default function App() {
                                 );
                             })}
                             <div className="ml-2 flex items-center space-x-2">
-                                {!isAdmin && currentPage !== 'admin-login' && (
+                                {isLoggedIn && !isAdmin && currentPage !== 'admin-login' && (
                                     <div className="flex items-center pl-2 border-l border-border/60">
                                         <NotificationBell isLoggedIn={isLoggedIn} onClick={handleBellClick} />
                                     </div>
@@ -524,7 +524,7 @@ export default function App() {
                         </nav>
 
                         <div className="flex items-center space-x-1 lg:hidden">
-                            {!isAdmin && currentPage !== 'admin-login' && (
+                            {isLoggedIn && !isAdmin && currentPage !== 'admin-login' && (
                                 <NotificationBell isLoggedIn={isLoggedIn} onClick={handleBellClick} />
                             )}
                             <Button

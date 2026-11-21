@@ -189,6 +189,10 @@ export function Membership({
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem('member_token') || localStorage.getItem('token');
+      if (!token) {
+        setNotificationsLoading(false);
+        return;
+      }
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const memberId = user.id || user.emailId;
 
@@ -196,10 +200,9 @@ export function Membership({
         ? `${API_BASE}/member/notifications?member_id=${encodeURIComponent(memberId)}`
         : `${API_BASE}/member/notifications`;
 
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${token}`
+      };
 
       const response = await axios.get(url, { headers });
 
