@@ -55,15 +55,18 @@ class AuthNotifier extends AsyncNotifier<MemberSession> {
     state = const AsyncValue.loading();
     final repository = ref.read(authRepositoryProvider);
 
-    state = await AsyncValue.guard(() async {
-      return await repository.login(
+    try {
+      final session = await repository.login(
         identifier: identifier,
         password: password,
         rememberMe: rememberMe,
       );
-    });
-
-    return state.requireValue;
+      state = AsyncValue.data(session);
+      return session;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
   }
 
   /// Submit password recovery

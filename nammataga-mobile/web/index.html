@@ -70,6 +70,17 @@
       }
     };
   </script>
+
+  <!-- Prevent stale caching in web simulation: Unregister any service workers -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (var reg of registrations) {
+          reg.unregister();
+        }
+      });
+    }
+  </script>
 </head>
 <body>
   <!--

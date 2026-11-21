@@ -36,11 +36,19 @@ func SetupRouter() *gin.Engine {
 
 	// CORS configuration based on environment
 	isProd := env == "production" || env == "staging"
-	allowOrigins := []string{}
+	corsConfig := cors.Config{
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}
 	if !isProd {
-		allowOrigins = []string{"*"}
+		corsConfig.AllowOriginFunc = func(origin string) bool {
+			return true // Echo requesting origin so AllowCredentials: true is valid in all web browsers
+		}
 	} else {
-		allowOrigins = []string{
+		corsConfig.AllowOrigins = []string{
 			"https://dev.nammataga.com",
 			"https://tst.nammataga.com",
 			"https://stg.nammataga.com",
@@ -49,14 +57,7 @@ func SetupRouter() *gin.Engine {
 		}
 	}
 
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     allowOrigins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+	r.Use(cors.New(corsConfig))
 
 	// Middleware
 	r.Use(middleware.GinZapLogger())

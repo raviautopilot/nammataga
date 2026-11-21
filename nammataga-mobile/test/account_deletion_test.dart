@@ -486,5 +486,45 @@ void main() {
       expect(find.textContaining('awaiting administrator review'), findsOneWidget);
       expect(find.textContaining('support@nammataga.com'), findsOneWidget);
     });
+
+    testWidgets('Displays Invalid Credentials dialog and error when wrong password', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authRepositoryProvider.overrideWithValue(FakeInvalidCredentialsAuthRepository()),
+          ],
+          child: const MaterialApp(home: LoginScreen()),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Enter valid format email and password
+      await tester.enterText(find.byType(TextFormField).first, 'sivakumar@gmail.com');
+      await tester.enterText(find.byType(TextFormField).last, 'wrongPassword');
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Ensure Sign In is visible and tap it
+      final signInButton = find.text('Sign In');
+      await tester.ensureVisible(signInButton);
+      await tester.tap(signInButton);
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Verify Invalid Credentials dialog is displayed
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('Invalid Credentials'), findsWidgets);
+      expect(find.textContaining('incorrect'), findsWidgets);
+    });
   });
+}
+
+class FakeInvalidCredentialsAuthRepository extends AuthRepository {
+  @override
+  Future<MemberSession> login({
+    required String identifier,
+    required String password,
+    bool rememberMe = false,
+  }) async {
+    throw Exception('Invalid credentials');
+  }
 }

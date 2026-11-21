@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import '../../../core/storage/secure_storage_service.dart';
 import '../../../core/widgets/app_exit_scope.dart';
 import '../../../core/widgets/bouncy_button.dart';
 import '../../../core/widgets/taga_toast.dart';
+import '../domain/auth_exceptions.dart';
 import '../providers/auth_provider.dart';
 import 'widgets/ambient_background.dart';
 import 'widgets/change_password_sheet.dart';
@@ -166,15 +168,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     } catch (e) {
       if (mounted) {
         final rawErr = e.toString().replaceAll('Exception: ', '').trim();
-        final isDeletionReview =
-            rawErr.toLowerCase().contains('deletion') ||
-            rawErr.toLowerCase().contains('administrator review') ||
-            rawErr.toLowerCase().contains('pending') ||
-            rawErr.toLowerCase().contains('request is awaiting') ||
-            rawErr.toLowerCase().contains('account has been deleted') ||
-            rawErr.toLowerCase().contains('cannot access your account') ||
-            rawErr.toLowerCase().contains('403') ||
-            rawErr.toLowerCase().contains('forbidden');
+        final rawErrLower = rawErr.toLowerCase();
+
+        bool isDeletionReview = e is DeletionPendingException ||
+            rawErrLower.contains('deletion') ||
+            rawErrLower.contains('administrator review') ||
+            rawErrLower.contains('pending') ||
+            rawErrLower.contains('request is awaiting') ||
+            rawErrLower.contains('account has been deleted') ||
+            rawErrLower.contains('cannot access your account') ||
+            rawErrLower.contains('403') ||
+            rawErrLower.contains('forbidden');
+
+        if (!isDeletionReview && e is DioException) {
+          final dioErr = e;
+          if (dioErr.response?.statusCode == 403) {
+            isDeletionReview = true;
+          } else if (dioErr.response?.data != null) {
+            final dataStr = dioErr.response!.data.toString().toLowerCase();
+            if (dataStr.contains('deletion') ||
+                dataStr.contains('pending') ||
+                dataStr.contains('review')) {
+              isDeletionReview = true;
+            }
+          }
+        }
 
         if (isDeletionReview) {
           setState(() {
@@ -186,11 +204,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           return;
         }
 
-        final isAuthFailure = rawErr.toLowerCase().contains('invalid') ||
-            rawErr.toLowerCase().contains('credential') ||
-            rawErr.toLowerCase().contains('unauthorized') ||
-            rawErr.toLowerCase().contains('password') ||
-            rawErr.toLowerCase().contains('401');
+        final isAuthFailure = rawErrLower.contains('invalid') ||
+            rawErrLower.contains('credential') ||
+            rawErrLower.contains('unauthorized') ||
+            rawErrLower.contains('password') ||
+            rawErrLower.contains('401');
 
         setState(() {
           _errorMessage = isAuthFailure ? 'Invalid credentials' : rawErr;

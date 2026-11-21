@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/secure_storage_service.dart';
+import '../domain/auth_exceptions.dart';
 import '../domain/member_session.dart';
 
 class AuthRepository {
@@ -22,13 +23,27 @@ class AuthRepository {
         data: {'email': identifier.trim(), 'password': password},
       );
 
-      final data = response.data is Map<String, dynamic>
-          ? response.data as Map<String, dynamic>
-          : jsonDecode(response.data.toString()) as Map<String, dynamic>;
+      if (response.statusCode == 403) {
+        throw const DeletionPendingException();
+      }
+
+      final data = response.data is Map
+          ? response.data as Map
+          : jsonDecode(response.data.toString()) as Map;
+
+      if (data['status'] == 'deletion_pending') {
+        throw const DeletionPendingException();
+      }
 
       // Explicit error verification in JSON body
       if (data['error'] != null && data['error'].toString().isNotEmpty) {
-        throw Exception(data['error'].toString());
+        final errStr = data['error'].toString();
+        if (errStr.toLowerCase().contains('deletion') ||
+            errStr.toLowerCase().contains('administrator review') ||
+            errStr.toLowerCase().contains('pending')) {
+          throw const DeletionPendingException();
+        }
+        throw Exception(errStr);
       }
 
       // Check if user must change temporary password first
@@ -75,10 +90,45 @@ class AuthRepository {
         isPaid: isPaid,
         user: userData,
       );
+    } on DeletionPendingException {
+      rethrow;
     } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw const DeletionPendingException();
+      }
+      final data = e.response?.data;
+      if (data is Map) {
+        final errText = (data['error'] ?? data['message'] ?? '').toString().toLowerCase();
+        if (data['status'] == 'deletion_pending' ||
+            errText.contains('deletion') ||
+            errText.contains('administrator review') ||
+            errText.contains('pending')) {
+          throw const DeletionPendingException();
+        }
+      } else if (data is String) {
+        final errText = data.toLowerCase();
+        if (errText.contains('deletion') ||
+            errText.contains('administrator review') ||
+            errText.contains('pending') ||
+            errText.contains('deletion_pending')) {
+          throw const DeletionPendingException();
+        }
+      }
       final errorMsg = _extractErrorMessage(e);
+      if (errorMsg.toLowerCase().contains('deletion') ||
+          errorMsg.toLowerCase().contains('administrator review') ||
+          errorMsg.toLowerCase().contains('pending')) {
+        throw const DeletionPendingException();
+      }
       throw Exception(errorMsg);
     } catch (e) {
+      if (e is DeletionPendingException) rethrow;
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains('deletion') ||
+          errStr.contains('administrator review') ||
+          errStr.contains('pending')) {
+        throw const DeletionPendingException();
+      }
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }

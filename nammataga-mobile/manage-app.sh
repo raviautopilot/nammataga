@@ -169,6 +169,7 @@ start_web() {
         --dart-define=API_ENV="$TARGET_ENV" \
         --dart-define=API_BASE_URL="$TARGET_API" \
         --dart-define=IS_WEB_PREVIEW=true \
+        --pwa-strategy=none \
         --no-wasm-dry-run \
         > "$LOG_FILE" 2>&1
 
