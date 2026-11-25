@@ -377,7 +377,7 @@ class ContactGlassHub extends ConsumerWidget {
                           label: 'Email',
                           icon: LucideIcons.mail,
                           onTap: () =>
-                              _launch('mailto:${contact.primaryEmail}'),
+                              _launch('mailto:nammataga@gmail.com'),
                         ),
                       ),
                       const SizedBox(width: 8),

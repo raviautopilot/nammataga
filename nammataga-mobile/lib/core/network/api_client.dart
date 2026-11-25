@@ -45,11 +45,42 @@ class ApiClient {
             // Auto-clear auth storage on 401 unauthorized
             await StorageService.clearAuth();
           }
-          return handler.next(error);
+
+          final formattedError = _formatNetworkError(error);
+          return handler.next(formattedError);
         },
       ),
     );
 
     return dio;
+  }
+
+  /// Replaces raw Dio connection/timeout messages with user-friendly offline messages.
+  static DioException _formatNetworkError(DioException error) {
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout) {
+      return error.copyWith(
+        message:
+            'Connection timed out. Please check your internet connection and try again.',
+      );
+    }
+
+    final rawMsg = '${error.error ?? ''} ${error.message ?? ''}'.toLowerCase();
+    final isOffline = error.type == DioExceptionType.connectionError ||
+        rawMsg.contains('socketexception') ||
+        rawMsg.contains('failed host lookup') ||
+        rawMsg.contains('network is unreachable') ||
+        rawMsg.contains('connection refused') ||
+        rawMsg.contains('connection reset');
+
+    if (isOffline) {
+      return error.copyWith(
+        message:
+            'No internet connection. Please check your Wi-Fi or mobile data and try again.',
+      );
+    }
+
+    return error;
   }
 }

@@ -242,6 +242,71 @@ func DeleteBooking(c *gin.Context) {
 		fmt.Sprintf("Member %s (ID: %s) cancelled room booking %s", booking.BookerName, booking.BookerID, booking.ID),
 		booking, nil)
 
+	// ========== SEND CANCELLATION EMAIL TO ADMIN & MEMBER (SAME TEMPLATE) ==========
+	room, _ := service.GetRoomByID(booking.RoomID)
+	roomName := booking.RoomID
+	if room != nil && room.Name != "" {
+		roomName = room.Name
+	}
+
+	bookingForStr := string(booking.BookingFor)
+	if bookingForStr == "" {
+		bookingForStr = "self"
+	}
+
+	customerEmail := getMemberEmailByTagaID(booking.BookerID)
+	bookerName := booking.BookerName
+	if (bookerName == "" || bookerName == "User") && booking.BookerID != "" {
+		if realName := getMemberNameByTagaID(booking.BookerID); realName != "" {
+			bookerName = realName
+		}
+	}
+
+	emailData := AdminRoomBookingData{
+		BookingID:     booking.ID,
+		PaymentID:     booking.RazorpayPaymentID,
+		OrderID:       booking.RazorpayOrderID,
+		Amount:        booking.AdvanceAmount * 100,
+		CustomerEmail: customerEmail,
+		CustomerPhone: booking.BookerPhone,
+		RoomName:      roomName,
+		RoomNumber:    "",
+		BedCount:      booking.BedCount,
+		CheckInDate:   booking.CheckInDate.Format("2006-01-02"),
+		CheckOutDate:  booking.CheckOutDate.Format("2006-01-02"),
+		BookerName:    bookerName,
+		BookerTagaID:  booking.BookerID,
+		BookerPhone:   booking.BookerPhone,
+		BookingFor:    bookingForStr,
+		GuestDetails:  "",
+		PaymentType:   "room_booking_cancelled",
+	}
+
+	if len(booking.GuestDetails) > 0 {
+		guestJSON, _ := json.Marshal(booking.GuestDetails)
+		emailData.GuestDetails = string(guestJSON)
+	}
+
+	amountInRupees := float64(booking.AdvanceAmount)
+	subject := fmt.Sprintf("❌ TAGA Room Booking Cancelled - %s - ₹%.2f", roomName, amountInRupees)
+	emailBody := buildRoomCancellationEmailBody(emailData)
+
+	cancelEmailKey := "cancel_" + booking.ID
+	if !hasEmailBeenSent(cancelEmailKey) {
+		adminEmail := config.GetConfig().AdminEmail
+		if adminEmail == "" {
+			adminEmail = "nammataga@gmail.com"
+		}
+		go sendEmailWithRetry(adminEmail, subject, emailBody, cancelEmailKey, "room_booking_cancelled", 2)
+
+		if customerEmail != "" {
+			go sendEmailWithReplyToAndRetry(customerEmail, adminEmail, subject, emailBody, cancelEmailKey, "room_booking_cancelled", 2)
+		} else {
+			config.Logger.Warn("Customer email not found, skipping cancellation email to member")
+		}
+	}
+	// ========== END OF CANCELLATION EMAIL ==========
+
 	c.JSON(http.StatusOK, gin.H{"message": "Booking cancelled"})
 }
 
@@ -628,6 +693,14 @@ func BuildRoomBookingEmailBodyForTest(data AdminRoomBookingData) string {
 }
 
 func buildRoomBookingEmailBody(data AdminRoomBookingData) string {
+	return buildRoomEmailBody(data, false)
+}
+
+func buildRoomCancellationEmailBody(data AdminRoomBookingData) string {
+	return buildRoomEmailBody(data, true)
+}
+
+func buildRoomEmailBody(data AdminRoomBookingData, isCancelled bool) string {
 	amountInRupees := float64(data.Amount) / 100.0
 
 	var body strings.Builder
@@ -679,22 +752,33 @@ func buildRoomBookingEmailBody(data AdminRoomBookingData) string {
 		bookingForDisplay = "Guest"
 	}
 
+	pageTitle := "TAGA Towers Booking Confirmation"
+	headerGradient := "linear-gradient(135deg, #065f46 0%, #047857 100%)"
+	badgeText := "CONFIRMED BOOKING"
+	headingText := "TAGA Towers Reservation"
+	if isCancelled {
+		pageTitle = "TAGA Towers Booking Cancellation"
+		headerGradient = "linear-gradient(135deg, #991b1b 0%, #dc2626 100%)"
+		badgeText = "CANCELLED BOOKING"
+		headingText = "TAGA Towers Reservation Cancelled"
+	}
+
 	fmt.Fprintf(&body, `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TAGA Towers Booking Confirmation</title>
+    <title>%s</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; margin: 0; padding: 20px;">
     <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
         
         <!-- Header -->
-        <div style="background: linear-gradient(135deg, #065f46 0%%, #047857 100%%); color: white; padding: 30px 20px; text-align: center;">
+        <div style="background: %s; color: white; padding: 30px 20px; text-align: center;">
             <div style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; background: rgba(255, 255, 255, 0.2); margin-bottom: 16px;">
-                CONFIRMED BOOKING
+                %s
             </div>
-            <h2 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700;">TAGA Towers Reservation</h2>
+            <h2 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700;">%s</h2>
             <p style="margin: 0; font-size: 15px; opacity: 0.9;">Booking ID: <strong>%s</strong></p>
         </div>
 
@@ -745,6 +829,7 @@ func buildRoomBookingEmailBody(data AdminRoomBookingData) string {
     </div>
 </body>
 </html>`,
+		pageTitle, headerGradient, badgeText, headingText,
 		data.BookingID, amountInRupees, data.PaymentID, data.OrderID,
 		data.RoomName, data.BedCount, data.CheckInDate, data.CheckOutDate,
 		data.BookerName, data.BookerTagaID, data.CustomerEmail, data.CustomerPhone, bookingForDisplay,
